@@ -2,27 +2,43 @@
 logger_compile <- function(year = "2021",
                            type = "HOBO",
                            logger_path = "D:/river/Logger_Data_dl_20220104/"){
-  ### first create a sub-function to get file paths
+  
+  ###############################################################
+  ### 1. ### first create a sub-function to get file paths ######
+  ###############################################################
   get_files <- function(year,
                         type,
                         logger_path){
+    
+    # define whether we are compiling Hydro or HOBO files
     if (type == "hydro") {
       type2 = "HYDRO"
     } else{
       type2 = "HOBO"
     }
+    
+    # define file path for data files based on the TNC folder naming convention
     file_path <- paste0(logger_path,
                         paste0(year, " data/"),
                         paste0(type2, "_", year, "/"))
+    
+    # make vector of the names of the files to compile
     file_list <- list.files(file_path)
+    
+    # make vector of the full paths of the files to compile
     full_paths <-
       sapply(file_list, function(x) {
         paste0(file_path, x)
       }, USE.NAMES = F)
     
-    return(full_paths)
+    # return vector of full paths of the files to compile
+    return(full_paths) 
   } # close get_files function
   
+  ###############################################################
+  ######## end sub-function to create vector of file paths ######
+  ###############################################################
+
   ### get the file paths for the desired year and logger type
   logger_file_paths <- get_files(year, type, logger_path)
   
@@ -63,7 +79,7 @@ logger_compile <- function(year = "2021",
     logger_data_list <- lapply(
       logger_file_paths,
       FUN = function(x) {
-        logger_data_df = readxl::read_xlsx(path = test_path,
+        logger_data_df = readxl::read_xlsx(path = x,
                                            sheet = year) %>%
           rename(
             year = 1,
@@ -88,9 +104,10 @@ logger_compile <- function(year = "2021",
     )
   } # close HYDRO if statement
   
-  logger_data_compiled <- do.call(rbind, logger_data_list) %>%
-    filter(as.numeric(gsub("TNC_", "", site)) < 30)
+  # bind all data together into one dataframe
+  logger_data_compiled <- do.call(rbind, logger_data_list)
   
+  # return the compiled dataframe
   return(logger_data_compiled)
   
 }

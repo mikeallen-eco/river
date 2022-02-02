@@ -1,0 +1,147 @@
+# To do: errors discovereed
+1. see 3 QC filter steps for hobo
+2. TNC_25_CLDHY_2_masterfile_2017.xlsx sheet name is "2021"
+  note: I fixed this in temp copy to allow compile to run
+3. possible naming issue in HYDRO data: is CLDHY-2 the same as CLDHY_2? In file: TNC_81_CLDHY2_2020_masterfile.xlsx
+
+# To do: questions
+1. ask about how to filter flagged data
+2. temp data: trim spikes on ends
+3. temp data: trim anomalous spikes within timeseries
+4. do data: are the abrupt dips to 0 real? if not: are they flagged?
+5. do data: hydro 2019-2021 has very large spikes
+
+# load libraries
+```{r}
+library(dplyr)
+library(here)
+library(readxl)
+library(lubridate)
+library(ggplot2)
+here <- here::here # resolve namespace conflict
+# load function to compile data files for hobo or hydro loggers 
+source(here("scripts", "logger_compile_function.R"))
+# load function to plot temp or do over time for each site/year 
+source(here("scripts", "logger_plot_function.R"))
+
+# set path to folder where the latest logger data files are kept
+logger_path <- "D:/river/Logger_Data_dl_20220104/" 
+```
+
+# Read and compile HOBO data using logger_compile function
+```{r}
+hobo <- logger_compile("2016", type = "hobo") %>%
+  bind_rows(logger_compile("2017", type = "hobo")) %>%
+  bind_rows(logger_compile("2018", type = "hobo")) %>%
+  bind_rows(logger_compile("2019", type = "hobo")) %>%
+  bind_rows(logger_compile("2020", type = "hobo")) %>%
+  bind_rows(logger_compile("2021", type = "hobo")) %>%
+  # remove rows with year = NA (removes ~50k rows)
+  filter(is.na(year) != TRUE) %>%
+# temporary fix for 10460 rows in TNC_24_CLDHO_1_2019_masterfile.xlsx
+# with wrong year, site, and logger values (increasing sequentially)
+  mutate(site = case_when(year != year(datetime) ~ "TNC_24",
+                          TRUE ~ site),
+         logger = case_when(year != year(datetime) ~ "CLDHO_1",
+                            TRUE ~ logger),
+         year = case_when(year != year(datetime) ~ year(datetime),
+                          TRUE ~ year)) %>%
+# fix name (TNC to TNC_16) in TNC_16_PKHO_10_2017_masterfile.xlsx
+# affected 15372 rows
+  mutate(site = case_when(site == "TNC" ~ "TNC_16",
+                          TRUE ~ site)) %>%
+  # remove 17952 rows from various files with large negative numbers
+  filter(temp != -9999.00,
+         temp != -888.88)
+
+
+# to filter sites by site number if needed
+ # %>% filter(as.numeric(gsub("TNC_", "", site)) < 30)
+```
+# Various QC checks for HOBO data
+```{r}
+
+str(hobo)
+unique(hobo$year) # 2016:2021
+unique(hobo$site)
+length(unique(hobo$site)) # 16
+unique(hobo$logger)
+length(unique(hobo$logger)) # 16
+ 
+# checks for things that were fixed above
+nrow(hobo[hobo$year != lubridate::year(hobo$datetime),]) # now 0
+nrow(hobo[hobo$site == "TNC",]) # now 0
+nrow(hobo[hobo$temp <= 0,]) # now 0
+
+```
+# Plotting HOBO data by site for QC
+```{r}
+# make all HOBO temperature data by site & year for QC
+for(i in as.character(unique(hobo$year))){
+logger_plot(hobo, i, "temp")
+print(paste0("saving ", i, " plot"))
+ggsave(paste0("figures/QC_plots/hobo_temp/", i, "_hobo_temp.png"), 
+              width = 9, height = 9, dpi = 100)
+}
+
+# make all HOBO temperature data by site & year for QC
+for(i in as.character(unique(hobo$year))){
+logger_plot(hobo, i, "do")
+print(paste0("saving ", i, " plot"))
+ggsave(paste0("figures/QC_plots/hobo_do/", i, "_hobo_do.png"), 
+              width = 9, height = 9, dpi = 100)
+}
+```
+# Read and compile HYDRO data using logger_compile function
+```{r}
+
+hydro <- logger_compile("2016", type = "hydro") %>%
+  bind_rows(logger_compile("2017", type = "hydro")) %>%
+  bind_rows(logger_compile("2018", type = "hydro")) %>%
+  bind_rows(logger_compile("2019", type = "hydro")) %>%
+  bind_rows(logger_compile("2020", type = "hydro")) %>%
+  bind_rows(logger_compile("2021", type = "hydro")) %>%
+  # remove a 12 row with NA year (and other fields)
+  filter(is.na(year) != TRUE,
+         is.na(temp) != TRUE)
+
+# note: TNC_25_CLDHY_2_masterfile_2017.xlsx sheet name was "2021"
+#   I corrected it so the code would run; inform TNC
+
+```
+# Various QC checks for HYDRO data
+```{r}
+str(hydro)
+unique(hydro$year) # 2016:2021
+unique(hydro$site)
+length(unique(hydro$site)) # 9
+unique(hydro$logger)
+length(unique(hydro$logger)) # 7 
+# note: possible naming issue: is CLDHY-2 the same as CLDHY_2?
+# file: TNC_81_CLDHY2_2020_masterfile.xlsx
+test = hydro[hydro$logger == "CLDHY-2",]
+
+# checks for things that were fixed above
+nrow(hydro[is.na(hydro$temp),]) # 0
+nrow(hydro[hydro$year != lubridate::year(hydro$datetime),]) # 0
+nrow(hydro[hydro$temp <= 0,]) # 0
+nrow(hydro[is.na(hydro$temp) == TRUE,]) # 0
+```
+# Plotting HYDRO data by site for QC
+```{r}
+# make all HYDRO temperature data by site & year for QC
+for(i in as.character(unique(hydro$year))){
+logger_plot(hydro, i, "temp")
+print(paste0("saving ", i, " plot"))
+ggsave(paste0("figures/QC_plots/hydro_temp/", i, "_hydro_temp.png"), 
+              width = 9, height = 9, dpi = 100)
+}
+
+# make all HYDRO temperature data by site & year for QC
+for(i in as.character(unique(hydro$year))){
+logger_plot(hydro, i, "do")
+print(paste0("saving ", i, " plot"))
+ggsave(paste0("figures/QC_plots/hydro_do/", i, "_hydro_do.png"), 
+              width = 9, height = 9, dpi = 100)
+}
+```
