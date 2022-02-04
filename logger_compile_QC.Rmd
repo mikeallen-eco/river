@@ -5,11 +5,7 @@
 3. possible naming issue in HYDRO data: is CLDHY-2 the same as CLDHY_2? In file: TNC_81_CLDHY2_2020_masterfile.xlsx
 
 # To do: questions
-1. ask about how to filter flagged data
-2. temp data: trim spikes on ends
-3. temp data: trim anomalous spikes within timeseries
-4. do data: are the abrupt dips to 0 real? if not: are they flagged?
-5. do data: hydro 2019-2021 has very large spikes
+1. Some "troughs" in DO remain
 
 # load libraries
 ```{r}
@@ -54,7 +50,6 @@ hobo <- logger_compile("2016", type = "hobo") %>%
   filter(temp != -9999.00,
          temp != -888.88)
 
-
 # to filter sites by site number if needed
  # %>% filter(as.numeric(gsub("TNC_", "", site)) < 30)
 ```
@@ -67,6 +62,13 @@ unique(hobo$site)
 length(unique(hobo$site)) # 16
 unique(hobo$logger)
 length(unique(hobo$logger)) # 16
+table(hobo$FLAG_temp)
+table(hobo$FLAG_DO)
+table(hobo$FLAG_other)
+table(hobo$FLAG_cnt)
+unique(hobo$logger)
+
+hobo_flag5 = hobo[hobo$FLAG_DO == 5,] #
  
 # checks for things that were fixed above
 nrow(hobo[hobo$year != lubridate::year(hobo$datetime),]) # now 0
@@ -80,7 +82,8 @@ nrow(hobo[hobo$temp <= 0,]) # now 0
 for(i in as.character(unique(hobo$year))){
 logger_plot(hobo, i, "temp")
 print(paste0("saving ", i, " plot"))
-ggsave(paste0("figures/QC_plots/hobo_temp/", i, "_hobo_temp.png"), 
+ggsave(filename = paste0("output/Initial_QC/hobo_temp/", i, 
+              "_hobo_temp.png"), 
               width = 9, height = 9, dpi = 100)
 }
 
@@ -88,9 +91,37 @@ ggsave(paste0("figures/QC_plots/hobo_temp/", i, "_hobo_temp.png"),
 for(i in as.character(unique(hobo$year))){
 logger_plot(hobo, i, "do")
 print(paste0("saving ", i, " plot"))
-ggsave(paste0("figures/QC_plots/hobo_do/", i, "_hobo_do.png"), 
+ggsave(paste0("output/Initial_QC/hobo_do/", i, "_hobo_do.png"), 
               width = 9, height = 9, dpi = 100)
 }
+
+# do the same but now without flagged data
+# make versions of the data without any flagged observations
+hobo_no_temp_flags <- hobo %>%
+  filter(FLAG_temp == 0)
+
+hobo_no_DO_flags <- hobo %>%
+  filter(FLAG_DO == 0)
+
+# make all HOBO temperature data by site & year for QC
+for(i in as.character(unique(hobo$year))){
+logger_plot(hobo_no_temp_flags, i, "temp")
+print(paste0("saving ", i, " plot"))
+ggsave(filename = paste0("output/Initial_QC/hobo_temp/", i, 
+              "_hobo_temp_noflag.png"), 
+              width = 9, height = 9, dpi = 100)
+}
+
+# make all HOBO temperature data by site & year for QC
+for(i in as.character(unique(hobo$year))){
+logger_plot(hobo_no_DO_flags, i, "do")
+print(paste0("saving ", i, " plot"))
+ggsave(paste0("output/Initial_QC/hobo_do/", i, 
+              "_hobo_do_noflag.png"), 
+              width = 9, height = 9, dpi = 100)
+}
+
+rm(hobo_no_temp_flags, hobo_no_DO_flags)
 ```
 # Read and compile HYDRO data using logger_compile function
 ```{r}
@@ -109,6 +140,8 @@ hydro <- logger_compile("2016", type = "hydro") %>%
 #   I corrected it so the code would run; inform TNC
 
 ```
+
+
 # Various QC checks for HYDRO data
 ```{r}
 str(hydro)
@@ -119,7 +152,7 @@ unique(hydro$logger)
 length(unique(hydro$logger)) # 7 
 # note: possible naming issue: is CLDHY-2 the same as CLDHY_2?
 # file: TNC_81_CLDHY2_2020_masterfile.xlsx
-test = hydro[hydro$logger == "CLDHY-2",]
+hydro[hydro$logger == "CLDHY-2",]
 
 # checks for things that were fixed above
 nrow(hydro[is.na(hydro$temp),]) # 0
@@ -133,7 +166,8 @@ nrow(hydro[is.na(hydro$temp) == TRUE,]) # 0
 for(i in as.character(unique(hydro$year))){
 logger_plot(hydro, i, "temp")
 print(paste0("saving ", i, " plot"))
-ggsave(paste0("figures/QC_plots/hydro_temp/", i, "_hydro_temp.png"), 
+ggsave(paste0("output/Initial_QC/hydro_temp/", i, 
+              "_hydro_temp.png"), 
               width = 9, height = 9, dpi = 100)
 }
 
@@ -141,7 +175,48 @@ ggsave(paste0("figures/QC_plots/hydro_temp/", i, "_hydro_temp.png"),
 for(i in as.character(unique(hydro$year))){
 logger_plot(hydro, i, "do")
 print(paste0("saving ", i, " plot"))
-ggsave(paste0("figures/QC_plots/hydro_do/", i, "_hydro_do.png"), 
+ggsave(paste0("output/Initial_QC/hydro_do/", i, "_hydro_do.png"), 
               width = 9, height = 9, dpi = 100)
 }
+
+# do the same but now without flagged data
+# make versions of the data without any flagged observations
+hydro_no_temp_flags <- hydro %>%
+  filter(FLAG_Temp == 0)
+
+hydro_no_DO_flags <- hydro %>%
+  filter(FLAG_DO == 0)
+
+# make all HYDRO temperature data by site & year for QC
+for(i in as.character(unique(hydro$year))){
+logger_plot(hydro_no_temp_flags, i, "temp")
+print(paste0("saving ", i, " plot"))
+ggsave(paste0("output/Initial_QC/hydro_temp/", i, "_hydro_temp_noflag.png"), 
+              width = 9, height = 9, dpi = 100)
+}
+
+# make all HYDRO temperature data by site & year for QC
+for(i in as.character(unique(hydro$year))){
+logger_plot(hydro_no_DO_flags, i, "do")
+print(paste0("saving ", i, " plot"))
+ggsave(paste0("output/Initial_QC/hydro_do/", i, 
+              "_hydro_do_noflag.png"), 
+              width = 9, height = 9, dpi = 100)
+}
+
+rm(hydro_no_temp_flags, hydro_no_DO_flags)
 ```
+
+# Make final hobo-hydro file with temp and DO
+```{r}
+p <- hobo %>%
+  select(site, year, datetime, logger, temp, do, do_adj, do_sat,
+         FLAG_Temp = FLAG_temp, FLAG_DO) %>%
+  mutate(spcon = NA, turb = NA, FLAG_NTU = NA, FLAG_SpCnd = NA,
+         logger_type = "hobo") %>%
+  bind_rows(mutate(hydro, logger_type = "hydro")) %>%
+  select(site:logger_type)
+
+# saveRDS(p, "output/compiled_hydro_hobo.rds")
+```
+

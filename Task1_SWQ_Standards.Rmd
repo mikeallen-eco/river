@@ -1,0 +1,81 @@
+---
+title: "Task 1. SWQ Standards"
+author: "Mike Allen"
+date: "2/4/2022"
+output: html_document
+---
+# Task 1: Surface Water Quality Standards (SWQS)
+a. Analyze logger data to determine if select monitoring reaches are impaired for sensitive aquatic life (e.g., macroinvertebrates, trout) in freshwater streams. 
+- Analyze daily/monthly data at each monitoring location against state SWQS criteria. Which sites are meeting/not meeting SWQS (do temperatures and dissolved oxygen meet criteria required to support aquatic life and trout?)?
+b. How often do sites exceed SWQS for temperature (how many days per year)?
+c. How often do sites exceed SWQS for dissolved oxygen (how many days per year)?
+
+
+# Product 1:
+• Data visualization (figures, maps, plots) of seasonal, monthly, and diel fluctuations in flow, physiochemical conditions to address the items in Task 1 with respect to state water quality criteria.
+
+• Meetings as needed to refine objectives and desired outputs.
+
+• Summary statistics and statistical analysis of same along with associated interpretative text.
+
+# Load libraries etc.
+```{r}
+library(dplyr)
+library(lubridate)
+
+p <- readRDS("output/compiled_hydro_hobo.rds")
+
+```
+
+b. How often do sites exceed SWQS for temperature (how many days per year)?
+
+From the QAPP:
+	1. FW2-TP - Temperature	Shall not exceed a daily maximum of 22 degrees Celsius or rolling seven-day average of the daily maximum of 19 degrees Celsius, unless due to natural conditions
+	  - How many days exceed 22 C
+	  - How many days 7-d rolling average of daily max exceed 19 C
+	
+	2. FW2-TM - Shall not exceed a daily maximum of 25 degrees Celsius or rolling seven-day average of the daily maximum of 23 degrees Celsius, unless due to natural conditions	
+    - How many days exceed 25 C
+    - How many days 7-d rolling average of daily max exceed 23 C
+
+	3. FW2-NT - Shall not exceed a daily maximum of 31 degrees Celsius or rolling seven-day average of the daily maximum of 28 degrees Celsius, unless due to natural conditions	
+
+```{r}
+library(wesanderson)
+unique(p$site)
+#  [1] "TNC_10" "TNC_18" "TNC_19" "TNC_2"  "TNC_28" "TNC_5"  "TNC_8" 
+#  [8] "TNC_9"  "TNC_16" "TNC_24" "TNC_4"  "TNC_13" "TNC_81" "TNC_80"
+# [15] "TNC_23" "TNC_25" "TNC_26" "TNC_27"
+
+for(station in unique(p$site)){
+  
+# station = "TNC_80"
+p %>%
+  filter(FLAG_Temp == 0,
+         site == station) %>%
+  ggplot() +
+  geom_hline(yintercept = 22, color = "gray", lty = 3, size = 1) +
+  geom_hline(yintercept = 25, color = "gray", lty = 2, size = 1) +
+  geom_hline(yintercept = 31, color = "gray", lty = 1, size = 1) +  geom_point(aes(x = yday(datetime), y = temp, color = logger), 
+             shape = 1, alpha = 0.5, size = 0.1) +
+  facet_wrap(~year) +
+  scale_color_manual(values = wes_palette("Darjeeling1")) +
+  theme_bw() +
+  theme(text = element_text(size = 14),
+        legend.position = "none",
+        strip.background = element_rect(fill = "white")) +
+  labs(y = "Temperature (degrees C)", x = "Day of year",
+       title = station) +
+  scale_y_continuous(limits = c(0,35))
+
+ggsave(paste0("output/Task1/temp_by_site", station, "_temp.png"),
+       height = 6, width = 6, dpi = 400)
+
+}
+```
+
+c. How often do sites exceed SWQS for dissolved oxygen (how many days per year)?
+```{r}
+
+```
+
