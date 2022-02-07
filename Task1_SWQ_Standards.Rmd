@@ -21,12 +21,44 @@ c. How often do sites exceed SWQS for dissolved oxygen (how many days per year)?
 # Load libraries etc.
 ```{r}
 library(dplyr)
+library(knitr)
+library(kableExtra)
 library(lubridate)
+library(wesanderson)
+library(ggplot2)
+library(forcats)
 
-p <- readRDS("output/compiled_hydro_hobo.rds")
+# read in compiled logger data (including flagged data)
+p <- readRDS("output/compiled_hydro_hobo.rds") %>%
+  mutate(order = as.numeric(substr(site, 5, 6)),
+         site = fct_reorder(site, order)) %>%
+  filter(order < 80)
+
+# full list of tmax sites and days
+tmax_all <- 
+
+tmax <- p %>%
+  filter(FLAG_Temp == 0) %>%
+  mutate(day = yday(datetime)) %>%
+  group_by(site, year, day) %>%
+  summarise(max_temp = max(temp),
+            .groups = "drop") %>%
+  group_by(site, year) %>%
+  mutate(roll_temp = zoo::rollmean(max_temp, 7, fill = NA)) %>%
+  droplevels() %>%
+  ungroup() %>%
+  # remove obvious outliers at start of time series
+  filter(as.logical(1-(site == "TNC_25" & year == 2018 & day == 122))) %>%
+  filter(as.logical(1-(site == "TNC_23" & year == 2018 & day == 122))) %>%
+  filter(as.logical(1-(site == "TNC_23" & year == 2021 & day == 118))) %>%
+  right_join(expand.grid(site = unique(p$site), year = 2016:2021, day = 82:339)) %>%
+  arrange(site, year, day)
+
+
 
 ```
 
+# Temperature SWQS
 b. How often do sites exceed SWQS for temperature (how many days per year)?
 
 From the QAPP:
@@ -39,39 +71,99 @@ From the QAPP:
     - How many days 7-d rolling average of daily max exceed 23 C
 
 	3. FW2-NT - Shall not exceed a daily maximum of 31 degrees Celsius or rolling seven-day average of the daily maximum of 28 degrees Celsius, unless due to natural conditions	
+	
+# Temperature SWQS 1: plot daily max temp for each site/year vs. thresholds
+To do: 
+1. add in NAs to days with missing values so lines don't interpolate
 
 ```{r}
-library(wesanderson)
-unique(p$site)
-#  [1] "TNC_10" "TNC_18" "TNC_19" "TNC_2"  "TNC_28" "TNC_5"  "TNC_8" 
-#  [8] "TNC_9"  "TNC_16" "TNC_24" "TNC_4"  "TNC_13" "TNC_81" "TNC_80"
-# [15] "TNC_23" "TNC_25" "TNC_26" "TNC_27"
-
-for(station in unique(p$site)){
-  
-# station = "TNC_80"
-p %>%
-  filter(FLAG_Temp == 0,
-         site == station) %>%
+# plot daily max vs. thresholds
+tmax %>%
   ggplot() +
-  geom_hline(yintercept = 22, color = "gray", lty = 3, size = 1) +
-  geom_hline(yintercept = 25, color = "gray", lty = 2, size = 1) +
-  geom_hline(yintercept = 31, color = "gray", lty = 1, size = 1) +  geom_point(aes(x = yday(datetime), y = temp, color = logger), 
-             shape = 1, alpha = 0.5, size = 0.1) +
-  facet_wrap(~year) +
-  scale_color_manual(values = wes_palette("Darjeeling1")) +
+  geom_hline(yintercept = 22, color = "gray", lty = 3, size = .75) +
+  geom_hline(yintercept = 25, color = "gray", lty = 2, size = .75) +
+  geom_hline(yintercept = 31, color = "gray", lty = 1, size = .75) + 
+  geom_line(aes(x = day, y = max_temp, 
+                 color = as.factor(year)),
+             alpha = 0.75) +
+  facet_wrap(~site) +
+  scale_color_brewer(palette = "Dark2") +
   theme_bw() +
   theme(text = element_text(size = 14),
-        legend.position = "none",
         strip.background = element_rect(fill = "white")) +
-  labs(y = "Temperature (degrees C)", x = "Day of year",
-       title = station) +
-  scale_y_continuous(limits = c(0,35))
+  labs(y = "Daily maximum temperature (C)", x = "Day of year",
+       color = "Year")
 
-ggsave(paste0("output/Task1/temp_by_site", station, "_temp.png"),
-       height = 6, width = 6, dpi = 400)
+ggsave("output/Task1/tmax_by_day_year_site.png", 
+       height = 7, width = 9, dpi = 400)
+```
+# Temperature SWQS 1: plot rolling-average daily max temp for each site/year vs. thresholds
+To do: 
 
-}
+```{r}
+# plot rolling average daily max vs. thresholds
+tmax %>%
+  ggplot() +
+  geom_hline(yintercept = 19, color = "gray", lty = 3, size = .75) +
+  geom_hline(yintercept = 23, color = "gray", lty = 2, size = .75) +
+  geom_hline(yintercept = 28, color = "gray", lty = 1, size = .75) +
+  geom_line(aes(x = day, y = roll_temp, 
+                 color = as.factor(year)),
+             alpha = 0.75) +
+  facet_wrap(~site) +
+  scale_color_brewer(palette = "Dark2") +
+  theme_bw() +
+  theme(text = element_text(size = 14),
+        strip.background = element_rect(fill = "white")) +
+  labs(y = "Daily maximum temperature: \n7-day rolling average (C)", x = "Day of year",
+       color = "Year")
+
+ggsave("output/Task1/tmax_by_day_year_site_rolling.png", 
+       height = 7, width = 9, dpi = 400)
+```
+# create table of number of temp measurement days per year per site
+```{r}
+# create table with Kable
+tmax_table <- tmax %>%
+  droplevels() %>%
+  filter(is.na(max_temp) != T)
+day_table <- table(tmax_table$site, tmax_table$year) %>%
+  kbl(caption = "Number of days of temperature data by site and year.") %>%
+  kable_classic(full_width = F, html_font = "Cambria")
+
+# save the table to HTML file
+save_kable(day_table, "output/Task1/tmax_n_table.html")
+
+# remove tmax_table object
+rm(tmax_table)
+```
+
+# Calculate number of days exceeding temperature thresholds
+```{r}
+temp_count <- tmax %>%
+  filter(is.na(max_temp)==F) %>%
+  mutate(max_22 = ifelse(max_temp > 22, 1, 0),
+         max_25 = ifelse(max_temp > 25, 1, 0),
+         max_31 = ifelse(max_temp > 31, 1, 0),
+         roll_19 = ifelse(roll_temp > 19, 1, 0),
+         roll_23 = ifelse(roll_temp > 23, 1, 0),
+         roll_28 = ifelse(roll_temp > 28, 1, 0)) %>%
+  group_by(site, year) %>%
+  summarise(max_22 = sum(max_22),
+            max_25 = sum(max_25),
+            max_31 = sum(max_31),
+            roll_19 = sum(roll_19, na.rm = T),
+            roll_23 = sum(roll_23, na.rm = T),
+            roll_28 = sum(roll_28, na.rm = T)) %>%
+  tidyr::pivot_longer(cols = 3:8)
+
+ggplot(temp_count) +
+  geom_line(aes(x = year, y = value, color = name)) +
+  geom_point(aes(x = year, y = value, color = name), size = 2) +
+  facet_wrap(~site) +
+  scale_color_brewer(palette = "Dark2")
+
+
 ```
 
 c. How often do sites exceed SWQS for dissolved oxygen (how many days per year)?

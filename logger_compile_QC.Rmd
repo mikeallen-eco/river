@@ -219,4 +219,38 @@ p <- hobo %>%
 
 # saveRDS(p, "output/compiled_hydro_hobo.rds")
 ```
+# plot time series for each site/year vs. thresholds (showing loggers)
+```{r}
+
+unique(p$site)
+#  [1] "TNC_10" "TNC_18" "TNC_19" "TNC_2"  "TNC_28" "TNC_5"  "TNC_8" 
+#  [8] "TNC_9"  "TNC_16" "TNC_24" "TNC_4"  "TNC_13" "TNC_81" "TNC_80"
+# [15] "TNC_23" "TNC_25" "TNC_26" "TNC_27"
+
+for(station in unique(p$site)){
+  
+# station = "TNC_80"
+p %>%
+  filter(FLAG_Temp == 0,
+         site == station) %>%
+  ggplot() +
+  geom_hline(yintercept = 22, color = "gray", lty = 3, size = 1) +
+  geom_hline(yintercept = 25, color = "gray", lty = 2, size = 1) +
+  geom_hline(yintercept = 31, color = "gray", lty = 1, size = 1) +  geom_point(aes(x = yday(datetime), y = temp, color = logger), 
+             shape = 1, alpha = 0.5, size = 0.1) +
+  facet_wrap(~year) +
+  scale_color_manual(values = wes_palette("Darjeeling1")) +
+  theme_bw() +
+  theme(text = element_text(size = 14),
+        legend.position = "none",
+        strip.background = element_rect(fill = "white")) +
+  labs(y = "Temperature (degrees C)", x = "Day of year",
+       title = station) +
+  scale_y_continuous(limits = c(0,35))
+
+ggsave(paste0("output/Initial_QC/temp_by_date_year_site_logger/", 
+              station, "_temp.png"),
+       height = 6, width = 6, dpi = 400)
+}
+```
 
