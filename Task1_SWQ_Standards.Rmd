@@ -27,6 +27,7 @@ library(lubridate)
 library(wesanderson)
 library(ggplot2)
 library(forcats)
+library(tidyr)
 
 # read in compiled logger data (including flagged data)
 p <- readRDS("output/compiled_hydro_hobo.rds") %>%
@@ -54,6 +55,43 @@ tmax <- p %>%
   right_join(expand.grid(site = unique(p$site), year = 2016:2021, day = 82:339)) %>%
   arrange(site, year, day)
 
+# summarize number of days above temperature thresholds
+temp_count <- tmax %>%
+  filter(is.na(max_temp)==F) %>%
+  mutate(max_22 = ifelse(max_temp > 22, 1, 0),
+         max_25 = ifelse(max_temp > 25, 1, 0),
+         max_31 = ifelse(max_temp > 31, 1, 0),
+         roll_19 = ifelse(roll_temp > 19, 1, 0),
+         roll_23 = ifelse(roll_temp > 23, 1, 0),
+         roll_28 = ifelse(roll_temp > 28, 1, 0),
+         FW2_TP = case_when(max_22 > 0 ~ 1,
+                            roll_19 > 0 ~ 1, 
+                            TRUE ~ 0),
+         FW2_TM = case_when(max_25 > 0 ~ 1,
+                            roll_23 > 0 ~ 1, 
+                            TRUE ~ 0),
+         FW2_NT = case_when(max_31 > 0 ~ 1,
+                            roll_28 > 0 ~ 1,
+                            TRUE ~ 0)) %>%
+  group_by(site, year) %>%
+  summarise(max_22 = sum(max_22),
+            max_25 = sum(max_25),
+            max_31 = sum(max_31),
+            roll_19 = sum(roll_19, na.rm = T),
+            roll_23 = sum(roll_23, na.rm = T),
+            roll_28 = sum(roll_28, na.rm = T),
+            Trout_Production = sum(FW2_TP),
+            Trout_Maintenance = sum(FW2_TM),
+            Non.Trout = sum(FW2_NT),
+            .groups = "drop") %>%
+  pivot_longer(cols = 9:11, names_to = "Threshold",
+                      values_to = "days_over") %>%
+  mutate(Threshold = gsub(gsub(Threshold, pattern = "_", 
+                          replacement = " "), pattern = "\\.",
+                          replacement = "-")) %>%
+  ungroup()
+
+# Read in point coordinates
 
 
 ```
@@ -72,10 +110,179 @@ From the QAPP:
 
 	3. FW2-NT - Shall not exceed a daily maximum of 31 degrees Celsius or rolling seven-day average of the daily maximum of 28 degrees Celsius, unless due to natural conditions	
 	
-# Temperature SWQS 1: plot daily max temp for each site/year vs. thresholds
+## Temperature SWQS 1: plot daily max temp for each site/year vs. thresholds
 To do: 
-1. add in NAs to days with missing values so lines don't interpolate
+1. label threshold lines
+```{r}
+# plot daily max vs. thresholds
+tmax %>%
+  ggplot() +
+  geom_hline(yintercept = 22, color = "gray", lty = 3, size = .75) +
+  geom_hline(yintercept = 25, color = "gray", lty = 2, size = .75) +
+  geom_hline(yintercept = 31, color = "gray", lty = 1, size = .75) + 
+  geom_line(aes(x = day, y = max_temp, 
+                 color = as.factor(year)),
+             alpha = 0.75) +
+  facet_wrap(~site) +
+  scale_color_brewer(palette = "Dark2") +
+  scale_x_continuous(breaks = c(91, 152, 213, 274, 335),
+                     labels = c("Apr", "Jun", "Aug", 
+                                "Oct", "Dec")) +
+  theme_bw() +
+  theme(text = element_text(size = 14),
+        strip.background = element_rect(fill = "white")) +
+  labs(y = "Daily maximum temperature (C)", x = "Day of year",
+       color = "Year")
 
+# ggsave("output/Task1/PlotA_tmax_by_day_year_site.png",
+#        height = 7, width = 9, dpi = 400)
+```
+## Temperature SWQS 1: plot rolling-average daily max temp for each site/year vs. thresholds
+To do:
+1. make x-axis actual dates (Apr 1, May 1, etc.)
+2. label threshold lines
+```{r}
+# plot rolling average daily max vs. thresholds
+tmax %>%
+  ggplot() +
+  geom_hline(yintercept = 19, color = "gray", lty = 3, size = .75) +
+  geom_hline(yintercept = 23, color = "gray", lty = 2, size = .75) +
+  geom_hline(yintercept = 28, color = "gray", lty = 1, size = .75) +
+  geom_line(aes(x = day, y = roll_temp, 
+                 color = as.factor(year)),
+             alpha = 0.75) +
+  facet_wrap(~site) +
+  scale_color_brewer(palette = "Dark2") +
+  scale_x_continuous(breaks = c(91, 152, 213, 274, 335),
+                     labels = c("Apr", "Jun", "Aug", 
+                                "Oct", "Dec")) +
+  theme_bw() +
+  theme(text = element_text(size = 14),
+        axis.text.x = element_text(size = 12),
+        strip.background = element_rect(fill = "white")) +
+  labs(y = "Daily maximum temperature (C)\n7-day rolling average", x = "Day of year",
+       color = "Year")
+
+# ggsave("output/Task1/PlotB_tmax_by_day_year_site_rolling.png",
+# height = 7, width = 9, dpi = 400)
+```
+## create table of number of temp measurement days per year per site
+```{r}
+# create table with Kable
+tmax_table <- tmax %>%
+  droplevels() %>%
+  filter(is.na(max_temp) != T)
+day_table <- table(tmax_table$site, tmax_table$year) %>%
+  kbl(caption = "Number of days of temperature data by site and year.") %>%
+  kable_classic(full_width = F, html_font = "Cambria")
+
+# save the table to HTML file
+save_kable(day_table, "output/Task1/TableA_tmax_n_table.html")
+
+# remove tmax_table object
+rm(tmax_table)
+```
+
+## Calculate number of days exceeding temperature thresholds
+```{r}
+temp_count %>%
+  filter(!(site == "TNC_9" & year == 2016)) %>%
+ggplot() +
+  geom_line(aes(x = year, y = days_over, color = Threshold)) +
+  geom_point(aes(x = year, y = days_over, color = Threshold), 
+             size = 3) +
+  facet_wrap(~site) +
+  scale_color_brewer(palette = "Dark2") +
+  theme_bw() +
+  theme(text = element_text(size = 14),
+        axis.text.x = element_text(size = 8),
+        strip.background = element_rect(fill = "white"),
+        legend.position = "top",
+        legend.justification="center",
+        legend.margin=margin(0,0,0,0),
+        legend.box.margin=margin(-8,-8,-8,-8)) +
+  labs(x = "", y = "Days above temp. threshold")
+
+# ggsave("output/Task1/PlotC_days_above_temp_threshold1.png",
+#        height = 7, width = 9, dpi = 400)
+```
+## Table of "Days above TM temp. threshold"
+```{r}
+days_over_table <- temp_count %>%
+  filter(Threshold == "Trout Maintenance") %>%
+  filter(!(site == "TNC_9" & year == 2016)) %>%
+  select(site, year, days_over) %>%
+  pivot_wider(id_cols = site, names_from = year,
+              values_from = days_over) %>%
+  kbl(caption = "Days with tempertature readings over the Trout Maintenance threshold by site and year.") %>%
+  kable_classic(full_width = F, html_font = "Cambria")
+
+# save the table to HTML file
+save_kable(days_over_table, "output/Task1/TableB_tmax_days_over_TM_table.html")
+
+rm(days_over_table)
+```
+## "days over temp threshold" boxplots by site
+To do:
+1. make points bigger
+```{r}
+x11(width = 8, height = 6)
+  temp_count %>%
+  # filter(Threshold == "Trout Maintenance") %>%
+  filter(!(site == "TNC_9" & year == 2016)) %>%
+  group_by(site) %>%
+  mutate(mean_days = mean(days_over)) %>%
+  ungroup() %>%
+  mutate(site = fct_reorder(as.factor(site), 
+                            days_over, 
+                            .fun = "mean",
+                            .desc = T)) %>%
+  ggplot() +
+  geom_boxplot(aes(y = site, x = days_over), 
+               outlier.color = "transparent",
+               color = "darkgray") +
+  geom_point(aes(y = site, x = days_over, 
+                 color = as.factor(year)), size = 3, 
+             alpha =0.75, shape = 16) +
+  scale_color_manual(values = c(wes_palettes$Darjeeling1,
+                                wes_palettes$Darjeeling2)) +
+  theme_bw() +
+  theme(text = element_text(size = 14),
+        legend.position = c(0.687,0.14),
+        legend.justification="left",
+        legend.margin=margin(2,2,2,2),
+        legend.box.margin=margin(0,0,0,0),
+        legend.key.size = unit(0.25, "cm"),
+        legend.background = element_rect(color = "darkgray"),
+        strip.background = element_rect(fill = "white")) +
+  labs(y = "", x = "Days above temperature threshold", 
+       color = "Year") +
+    facet_wrap(~Threshold)
+
+
+ggsave("output/Task1/PlotD_days_above_temp_threshold2a.png", width = 8,
+       height = 6, dpi = 400)
+```
+# Dissolved Oxygen SWQS
+c. How often do sites exceed SWQS for dissolved oxygen (how many days per year)?
+
+FW2-TP
+Not less than 7.0 at any time 
+
+FW2-TM
+24-hour average not less than 6.0. Not less than 5.0 at any time
+
+FW2-NT
+24-hour average not less than 5.0, but not less than 4.0 at any time 
+FW2-TM, FW2-NT
+Supersaturated dissolved oxygen values shall be expressed as their corresponding 100 percent saturation values for purposes of calculating 24 hour averages
+
+
+
+## DO SWQS 1: plot daily  for each site/year vs. thresholds
+To do: 
+1. make x-axis actual dates (Apr 1, May 1, etc.)
+2. label threshold lines
 ```{r}
 # plot daily max vs. thresholds
 tmax %>%
@@ -94,80 +301,7 @@ tmax %>%
   labs(y = "Daily maximum temperature (C)", x = "Day of year",
        color = "Year")
 
-ggsave("output/Task1/tmax_by_day_year_site.png", 
-       height = 7, width = 9, dpi = 400)
-```
-# Temperature SWQS 1: plot rolling-average daily max temp for each site/year vs. thresholds
-To do: 
-
-```{r}
-# plot rolling average daily max vs. thresholds
-tmax %>%
-  ggplot() +
-  geom_hline(yintercept = 19, color = "gray", lty = 3, size = .75) +
-  geom_hline(yintercept = 23, color = "gray", lty = 2, size = .75) +
-  geom_hline(yintercept = 28, color = "gray", lty = 1, size = .75) +
-  geom_line(aes(x = day, y = roll_temp, 
-                 color = as.factor(year)),
-             alpha = 0.75) +
-  facet_wrap(~site) +
-  scale_color_brewer(palette = "Dark2") +
-  theme_bw() +
-  theme(text = element_text(size = 14),
-        strip.background = element_rect(fill = "white")) +
-  labs(y = "Daily maximum temperature: \n7-day rolling average (C)", x = "Day of year",
-       color = "Year")
-
-ggsave("output/Task1/tmax_by_day_year_site_rolling.png", 
-       height = 7, width = 9, dpi = 400)
-```
-# create table of number of temp measurement days per year per site
-```{r}
-# create table with Kable
-tmax_table <- tmax %>%
-  droplevels() %>%
-  filter(is.na(max_temp) != T)
-day_table <- table(tmax_table$site, tmax_table$year) %>%
-  kbl(caption = "Number of days of temperature data by site and year.") %>%
-  kable_classic(full_width = F, html_font = "Cambria")
-
-# save the table to HTML file
-save_kable(day_table, "output/Task1/tmax_n_table.html")
-
-# remove tmax_table object
-rm(tmax_table)
-```
-
-# Calculate number of days exceeding temperature thresholds
-```{r}
-temp_count <- tmax %>%
-  filter(is.na(max_temp)==F) %>%
-  mutate(max_22 = ifelse(max_temp > 22, 1, 0),
-         max_25 = ifelse(max_temp > 25, 1, 0),
-         max_31 = ifelse(max_temp > 31, 1, 0),
-         roll_19 = ifelse(roll_temp > 19, 1, 0),
-         roll_23 = ifelse(roll_temp > 23, 1, 0),
-         roll_28 = ifelse(roll_temp > 28, 1, 0)) %>%
-  group_by(site, year) %>%
-  summarise(max_22 = sum(max_22),
-            max_25 = sum(max_25),
-            max_31 = sum(max_31),
-            roll_19 = sum(roll_19, na.rm = T),
-            roll_23 = sum(roll_23, na.rm = T),
-            roll_28 = sum(roll_28, na.rm = T)) %>%
-  tidyr::pivot_longer(cols = 3:8)
-
-ggplot(temp_count) +
-  geom_line(aes(x = year, y = value, color = name)) +
-  geom_point(aes(x = year, y = value, color = name), size = 2) +
-  facet_wrap(~site) +
-  scale_color_brewer(palette = "Dark2")
-
-
-```
-
-c. How often do sites exceed SWQS for dissolved oxygen (how many days per year)?
-```{r}
-
+# ggsave("output/Task1/tmax_by_day_year_site.png", 
+#        height = 7, width = 9, dpi = 400)
 ```
 
