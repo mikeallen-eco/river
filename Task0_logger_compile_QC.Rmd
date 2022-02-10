@@ -217,9 +217,9 @@ p <- hobo %>%
   bind_rows(mutate(hydro, logger_type = "hydro")) %>%
   select(site:logger_type)
 
-# saveRDS(p, "output/compiled_hydro_hobo.rds")
+# saveRDS(p, "output/compiled_logger_data.rds")
 ```
-# plot time series for each site/year vs. thresholds (showing loggers)
+# plot temperature time series for each site/year vs. thresholds (showing loggers)
 ```{r}
 
 unique(p$site)
@@ -250,6 +250,76 @@ p %>%
 
 ggsave(paste0("output/Initial_QC/temp_by_date_year_site_logger/", 
               station, "_temp.png"),
+       height = 6, width = 6, dpi = 400)
+}
+```
+
+# plot DO time series for each site/year vs. thresholds (showing loggers)
+```{r}
+
+unique(p$site)
+#  [1] "TNC_10" "TNC_18" "TNC_19" "TNC_2"  "TNC_28" "TNC_5"  "TNC_8" 
+#  [8] "TNC_9"  "TNC_16" "TNC_24" "TNC_4"  "TNC_13" "TNC_81" "TNC_80"
+# [15] "TNC_23" "TNC_25" "TNC_26" "TNC_27"
+
+for(station in unique(p$site)){
+  print(paste0("working on... ", station))
+# station = "TNC_2"
+p %>%
+  filter(FLAG_DO == 0,
+         site == station) %>%
+  ggplot() +
+  geom_hline(yintercept = 7, color = "gray", lty = 3, size = 1) +
+  geom_hline(yintercept = 5, color = "gray", lty = 2, size = 1) +
+  geom_hline(yintercept = 4, color = "gray", lty = 1, size = 1) +  geom_point(aes(x = yday(datetime), y = do, color = logger), 
+             shape = 1, alpha = 0.5, size = 0.1) +
+  facet_wrap(~year) +
+  scale_color_manual(values = wes_palette("Darjeeling1")) +
+  theme_bw() +
+  theme(text = element_text(size = 14),
+        legend.position = "none",
+        strip.background = element_rect(fill = "white")) +
+  labs(y = "Dissolved Oxygen", x = "Day of year",
+       title = station) +
+  scale_y_continuous(limits = c(0,17))
+
+ggsave(paste0("output/Initial_QC/DO_by_date_year_site_logger/", 
+              station, "_DO.png"),
+       height = 6, width = 6, dpi = 400)
+}
+```
+
+# plot DO (adjusted) time series for each site/year vs. thresholds (showing loggers)
+```{r}
+
+unique(p$site)
+#  [1] "TNC_10" "TNC_18" "TNC_19" "TNC_2"  "TNC_28" "TNC_5"  "TNC_8" 
+#  [8] "TNC_9"  "TNC_16" "TNC_24" "TNC_4"  "TNC_13" "TNC_81" "TNC_80"
+# [15] "TNC_23" "TNC_25" "TNC_26" "TNC_27"
+
+for(station in unique(p$site)){
+  print(paste0("working on... ", station))
+# station = "TNC_2"
+p %>%
+  filter(FLAG_DO == 0,
+         site == station) %>%
+  ggplot() +
+  geom_hline(yintercept = 7, color = "gray", lty = 3, size = 1) +
+  geom_hline(yintercept = 5, color = "gray", lty = 2, size = 1) +
+  geom_hline(yintercept = 4, color = "gray", lty = 1, size = 1) +  geom_point(aes(x = yday(datetime), y = do_adj, color = logger), 
+             shape = 1, alpha = 0.5, size = 0.1) +
+  facet_wrap(~year) +
+  scale_color_manual(values = wes_palette("Darjeeling1")) +
+  theme_bw() +
+  theme(text = element_text(size = 14),
+        legend.position = "none",
+        strip.background = element_rect(fill = "white")) +
+  labs(y = "Dissolved Oxygen (adjusted)", x = "Day of year",
+       title = station) +
+  scale_y_continuous(limits = c(0,17))
+
+ggsave(paste0("output/Initial_QC/DO_by_date_year_site_logger/", 
+              station, "_DOadj.png"),
        height = 6, width = 6, dpi = 400)
 }
 ```
