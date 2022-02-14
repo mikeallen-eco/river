@@ -21,8 +21,9 @@ c. How often do sites exceed SWQS for dissolved oxygen (how many days per year)?
 • Summary statistics and statistical analysis of same along with associated interpretative text.
 
 To do:
-1. graphs of individual sites w/ panels by year (maybe raw & rolling average on same graph)
-2. add TNC_80's graphs
+1. add TNC_80's graphs
+1a. add way to flag/remove years with low coverage in Jun-Sep
+2. graphs of individual sites w/ panels by year (maybe raw & rolling average on same graph)
 3. fix "adjusted DO" graphs & tables (include deleted data)
 4. fix DO boxplot figure (good -> bad = top -> bottom)
 5. research statistically controlling for air temp (water temp ~ air temp)
@@ -45,8 +46,7 @@ library(tidyr)
 # read in compiled logger data (including flagged data)
 p <- readRDS("output/compiled_logger_data.rds") %>%
   mutate(order = as.numeric(substr(site, 5, 6)),
-         site = fct_reorder(site, order)) %>%
-  filter(order < 80)
+         site = fct_reorder(site, order))
 
 # format final compiled temperature data
 tmax <- p %>%
@@ -204,8 +204,6 @@ From the QAPP:
 	3. FW2-NT - Shall not exceed a daily maximum of 31 degrees Celsius or rolling seven-day average of the daily maximum of 28 degrees Celsius, unless due to natural conditions	
 	
 ## Temperature SWQS: plot daily max temp for each site/year vs. thresholds
-To do: 
-1. label threshold lines
 ```{r}
 # plot daily max vs. thresholds
 tmax %>%
@@ -223,16 +221,15 @@ tmax %>%
                                 "Oct", "Dec")) +
   theme_bw() +
   theme(text = element_text(size = 14),
+        axis.text.x = element_text(size = 10),
         strip.background = element_rect(fill = "white")) +
   labs(y = "Daily maximum temperature (C)", x = "",
        color = "Year")
 
-# ggsave("output/Task1_SWQS_loggers/PlotA_tmax_by_day_year_site.png",
+# ggsave("output/Task1_SWQS_loggers/PlotA_tmax_by_day_year_site2.png",
 #        height = 7, width = 9, dpi = 400)
 ```
 ## Temperature SWQS: plot rolling-average daily max temp for each site/year vs. thresholds
-To do:
-1. label threshold lines
 ```{r}
 # plot rolling average daily max vs. thresholds
 tmax %>%
@@ -250,14 +247,14 @@ tmax %>%
                                 "Oct", "Dec")) +
   theme_bw() +
   theme(text = element_text(size = 14),
-        axis.text.x = element_text(size = 12),
+        axis.text.x = element_text(size = 10),
         strip.background = element_rect(fill = "white")) +
   labs(y = "Daily maximum temperature (C)\n7-day rolling average", 
        x = "",
        color = "Year")
 
-# ggsave("output/Task1_SWQS_loggers/PlotB_tmax_by_day_year_site_rolling.png",
-# height = 7, width = 9, dpi = 400)
+# ggsave("output/Task1_SWQS_loggers/PlotB_tmax_by_day_year_site_rolling2.png",
+#           height = 7, width = 9, dpi = 400)
 ```
 ## create table of number of temp measurement days per year per site
 ```{r}
@@ -272,7 +269,7 @@ day_table <- table(tmax_table$site, tmax_table$year) %>%
 tmax_table
 
 # save the table to HTML file
-# save_kable(day_table, "output/Task1_SWQS_loggers/TableA_tmax_n_table.html")
+# save_kable(day_table, "output/Task1_SWQS_loggers/TableA_tmax_n_table2.html")
 
 # remove tmax_table object
 rm(tmax_table)
@@ -289,7 +286,7 @@ ggplot() +
   scale_color_brewer(palette = "Dark2") +
   theme_bw() +
   theme(text = element_text(size = 14),
-        axis.text.x = element_text(size = 8),
+        axis.text.x = element_text(size = 7),
         strip.background = element_rect(fill = "white"),
         legend.position = "top",
         legend.justification="center",
@@ -297,7 +294,7 @@ ggplot() +
         legend.box.margin=margin(-8,-8,-8,-8)) +
   labs(x = "", y = "Days above temp. threshold")
 
-# ggsave("output/Task1_SWQS_loggers/PlotC_days_above_temp_threshold1.png",
+# ggsave("output/Task1_SWQS_loggers/PlotC_days_above_temp_threshold2.png",
 #        height = 7, width = 9, dpi = 400)
 ```
 ## Table of "Days above TM temp. threshold"
@@ -314,7 +311,8 @@ days_over_table <- temp_count %>%
 days_over_table
 
 # save the table to HTML file
-# save_kable(days_over_table, "output/Task1_SWQS_loggers/TableB_tmax_days_over_TM_table.html")
+# save_kable(days_over_table, 
+#            "output/Task1_SWQS_loggers/TableB_tmax_days_over_TM_table2.html")
 
 rm(days_over_table)
 ```
@@ -352,10 +350,9 @@ temp_count %>%
        color = "Year") +
     facet_wrap(~Threshold)
 
-
-# ggsave("output/Task1_SWQS_loggers/PlotD_days_above_temp_threshold.png", 
-#        width = 8,
-#        height = 6, dpi = 400)
+ggsave("output/Task1_SWQS_loggers/PlotD_days_above_temp_threshold2.png",
+       width = 8,
+       height = 6, dpi = 400)
 ```
 # Dissolved Oxygen SWQS
 c. How often do sites exceed SWQS for dissolved oxygen (how many days per year)?
