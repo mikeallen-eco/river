@@ -60,12 +60,20 @@ tmax <- p %>%
   droplevels() %>%
   ungroup() %>%
   # remove obvious outliers at start of time series
-  filter(as.logical(1-(site == "TNC_25" & year == 2018 & day == 122))) %>%
-  filter(as.logical(1-(site == "TNC_23" & year == 2018 & day == 122))) %>%
-  filter(as.logical(1-(site == "TNC_23" & year == 2021 & day == 118))) %>%
+  filter(as.logical(1-(site == "TNC_25" & 
+                         year == 2018 & 
+                         day == 122))) %>%
+  filter(as.logical(1-(site == "TNC_23" & 
+                         year == 2018 & 
+                         day == 122))) %>%
+  filter(as.logical(1-(site == "TNC_23" & 
+                         year == 2021 & 
+                         day == 118))) %>%
   right_join(expand.grid(site = unique(p$site), 
                          year = 2016:2021, day = 82:339)) %>%
-  arrange(site, year, day)
+  arrange(site, year, day) %>%
+  mutate(summer = case_when(day %in% 152:243 ~ 1,
+                            TRUE ~ 0))
 
 # summarize number of days above temperature thresholds
 temp_count <- tmax %>%
@@ -95,6 +103,7 @@ temp_count <- tmax %>%
             Trout_Production = sum(FW2_TP),
             Trout_Maintenance = sum(FW2_TM),
             Non.Trout = sum(FW2_NT),
+            summer_days = sum(summer)/92,
             .groups = "drop") %>%
   pivot_longer(cols = 9:11, names_to = "Threshold",
                       values_to = "days_over") %>%
@@ -103,20 +112,34 @@ temp_count <- tmax %>%
                           replacement = "-")) %>%
   ungroup()
 
+# Create data frame listing sites with low coverage
+temp_cov <- temp_count[temp_count$summer_days < 0.8,] %>%
+  select(site, year, summer_days) %>%
+  distinct() %>%
+  mutate(low = case_when((summer_days < 0.8 &
+                            summer_days >= 0.5) ~ "*",
+                         summer_days < 0.5 ~ "**"
+  ))
+
 # format final compiled DO data
 dmin <- p %>%
   filter(FLAG_DO == 0) %>%
-  mutate(day = yday(datetime)) %>%
+  mutate(day = yday(datetime),
+         do_adj2 = case_when((is.na(do)==F & is.na(do_adj)==T) ~
+                               do,
+                             TRUE ~ do_adj),
+         adj = case_when(is.na(do_adj)==F ~ 1,
+                         TRUE ~ 0)) %>%
   group_by(site, year, day) %>%
-  summarise(min_DO = min(do),
-            mean24_DO = mean(do),
-            min_DOadj = min(do_adj),
-            mean24_DOadj = mean(do_adj),
+  summarise(min_DO = min(do_adj2),
+            mean24_DO = mean(do_adj2),
             .groups = "drop") %>%
   droplevels() %>%
   right_join(expand.grid(site = unique(p$site), 
                          year = 2016:2021, day = 82:339)) %>%
-  arrange(site, year, day)
+  arrange(site, year, day) %>%
+  mutate(summer = case_when(day %in% 152:243 ~ 1,
+                            TRUE ~ 0))
 
 # summarize number of days below DO thresholds
 DO_count <- dmin %>%
@@ -143,49 +166,14 @@ DO_count <- dmin %>%
             Trout_Production = sum(FW2_TP),
             Trout_Maintenance = sum(FW2_TM),
             Non.Trout = sum(FW2_NT),
+            summer_days = sum(summer)/92,
             .groups = "drop") %>%
   pivot_longer(cols = 8:10, names_to = "Threshold",
                       values_to = "days_under") %>%
-  select(site, year, Threshold, days_under) %>%
+  select(site, year, Threshold, days_under, summer_days) %>%
   mutate(Threshold = gsub(gsub(Threshold, pattern = "_", 
                           replacement = " "), pattern = "\\.",
                           replacement = "-"))
-
-# summarize number of days below DO thresholds (adjusted DO)
-DO_count_adj <- dmin %>%
-  filter(is.na(min_DOadj)==F) %>%
-  mutate(min_7 = ifelse(min_DOadj < 7, 1, 0),
-         min_5 = ifelse(min_DOadj < 5, 1, 0),
-         min_4 = ifelse(min_DOadj < 4, 1, 0),
-         mean24_6 = ifelse(mean24_DOadj < 6, 1, 0),
-         mean24_5 = ifelse(mean24_DOadj < 5, 1, 0),
-         FW2_TP = case_when(min_7 > 0 ~ 1,
-                            TRUE ~ 0),
-         FW2_TM = case_when(min_5 > 0 ~ 1,
-                            mean24_6 > 0 ~ 1,
-                            TRUE ~ 0),
-         FW2_NT = case_when(min_4 > 0 ~ 1,
-                            mean24_5 > 0 ~ 1,
-                            TRUE ~ 0)) %>%
-  group_by(site, year) %>%
-  summarise(min_7 = sum(min_7),
-            min_5 = sum(min_5),
-            min_4 = sum(min_4),
-            mean24_6 = sum(mean24_6, na.rm = T),
-            mean24_5 = sum(mean24_5, na.rm = T),
-            Trout_Production = sum(FW2_TP),
-            Trout_Maintenance = sum(FW2_TM),
-            Non.Trout = sum(FW2_NT),
-            .groups = "drop") %>%
-  pivot_longer(cols = 8:10, names_to = "Threshold",
-                      values_to = "days_under") %>%
-  select(site, year, Threshold, days_under) %>%
-  mutate(Threshold = gsub(gsub(Threshold, pattern = "_", 
-                          replacement = " "), pattern = "\\.",
-                          replacement = "-"))
-
-
-
 
 ```
 
@@ -206,27 +194,53 @@ From the QAPP:
 ## Temperature SWQS: plot daily max temp for each site/year vs. thresholds
 ```{r}
 # plot daily max vs. thresholds
+#x11(height = 7, width = 9)
 tmax %>%
   ggplot() +
-  geom_hline(yintercept = 22, color = "gray", lty = 3, size = .75) +
-  geom_hline(yintercept = 25, color = "gray", lty = 2, size = .75) +
-  geom_hline(yintercept = 31, color = "gray", lty = 1, size = .75) + 
-  geom_line(aes(x = day, y = max_temp, 
-                 color = as.factor(year)),
-             alpha = 0.75) +
-  facet_wrap(~site) +
+  geom_hline(
+    yintercept = 22,
+    color = "gray",
+    lty = 3,
+    size = .75
+  ) +
+  geom_hline(
+    yintercept = 25,
+    color = "gray",
+    lty = 2,
+    size = .75
+  ) +
+  geom_hline(
+    yintercept = 31,
+    color = "gray",
+    lty = 1,
+    size = .75
+  ) +
+  geom_line(aes(x = day, y = max_temp,
+                color = as.factor(year)),
+            alpha = 0.75) +
+  facet_wrap( ~ site) +
   scale_color_brewer(palette = "Dark2") +
-  scale_x_continuous(breaks = c(91, 152, 213, 274, 335),
-                     labels = c("Apr", "Jun", "Aug", 
-                                "Oct", "Dec")) +
+  scale_x_continuous(
+    breaks = c(91, 152, 213, 274, 335),
+    labels = c("Apr", "Jun", "Aug",
+               "Oct", "Dec")
+  ) +
   theme_bw() +
-  theme(text = element_text(size = 14),
-        axis.text.x = element_text(size = 10),
-        strip.background = element_rect(fill = "white")) +
+  theme(
+    text = element_text(size = 14),
+    axis.text.x = element_text(size = 10),
+    strip.background = element_rect(fill = "white")
+  ) +
   labs(y = "Daily maximum temperature (C)", x = "",
-       color = "Year")
+       color = "Year") +
+  annotate("text", x = 335, y = 30, label = "NT", 
+           color = "darkgray", size = 2) +
+  annotate("text", x = 335, y = 24, label = "TM", 
+           color = "darkgray", size = 2) +
+  annotate("text", x = 335, y = 21, label = "TP", 
+           color = "darkgray", size = 2)
 
-# ggsave("output/Task1_SWQS_loggers/PlotA_tmax_by_day_year_site2.png",
+# ggsave("output/Task1_SWQS_loggers/PlotA_tmax_by_day_year_site3.png",
 #        height = 7, width = 9, dpi = 400)
 ```
 ## Temperature SWQS: plot rolling-average daily max temp for each site/year vs. thresholds
@@ -251,9 +265,15 @@ tmax %>%
         strip.background = element_rect(fill = "white")) +
   labs(y = "Daily maximum temperature (C)\n7-day rolling average", 
        x = "",
-       color = "Year")
+       color = "Year") +
+  annotate("text", x = 335, y = 27, label = "NT", 
+           color = "darkgray", size = 2) +
+  annotate("text", x = 335, y = 22, label = "TM", 
+           color = "darkgray", size = 2) +
+  annotate("text", x = 335, y = 18, label = "TP", 
+           color = "darkgray", size = 2)
 
-# ggsave("output/Task1_SWQS_loggers/PlotB_tmax_by_day_year_site_rolling2.png",
+# ggsave("output/Task1_SWQS_loggers/PlotB_tmax_by_day_year_site_rolling3.png",
 #           height = 7, width = 9, dpi = 400)
 ```
 ## create table of number of temp measurement days per year per site
@@ -261,23 +281,32 @@ tmax %>%
 # create table with Kable
 tmax_table <- tmax %>%
   droplevels() %>%
-  filter(is.na(max_temp) != T)
-day_table <- table(tmax_table$site, tmax_table$year) %>%
-  kbl(caption = "Number of days of temperature data by site and year.") %>%
+  filter(is.na(max_temp) != T) %>%
+  group_by(site, year) %>%
+  tally() %>%
+  left_join(temp_cov) %>%
+  mutate(n = case_when(is.na(low)==F ~ paste0(as.character(n), low),
+                          TRUE ~ as.character(n))) %>%
+  select(-low) %>%
+  pivot_wider(id_cols = site, names_from = year, values_from = n)
+
+day_table <- tmax_table %>%
+  kbl(caption = "Total number of days with temperature data by site and year. * = less than 80% coverage of warmest period (Jun-Aug); ** = less than 50% coverage of warmest period.") %>%
   kable_classic(full_width = F, html_font = "Cambria")
 
-tmax_table
+day_table
 
 # save the table to HTML file
-# save_kable(day_table, "output/Task1_SWQS_loggers/TableA_tmax_n_table2.html")
+# save_kable(day_table, 
+#            "output/Task1_SWQS_loggers/TableA_tmax_n_table3.html")
 
 # remove tmax_table object
-rm(tmax_table)
+rm(tmax_table, day_table)
 ```
 ## Plot number of days exceeding temperature thresholds
 ```{r}
 temp_count %>%
-  filter(!(site == "TNC_9" & year == 2016)) %>%
+  filter(summer_days >= 0.8) %>%
 ggplot() +
   geom_line(aes(x = year, y = days_over, color = Threshold)) +
   geom_point(aes(x = year, y = days_over, color = Threshold), 
