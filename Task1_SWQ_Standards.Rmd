@@ -22,13 +22,13 @@ c. How often do sites exceed SWQS for dissolved oxygen (how many days per year)?
 
 To do:
 1. add TNC_80's graphs
-1a. add way to flag/remove years with low coverage in Jun-Sep
+1a. add way to flag/remove years with low coverage in Jun-Aug
 2. graphs of individual sites w/ panels by year (maybe raw & rolling average on same graph)
 3. fix "adjusted DO" graphs & tables (include deleted data)
 4. fix DO boxplot figure (good -> bad = top -> bottom)
 5. research statistically controlling for air temp (water temp ~ air temp)
 6. research methods to statistically QC / censor DO data using water temp data
-7. try adding "/n" to tables
+7. try adding "/n" or low-sample-size flag to tables
 8. try bivariate figure that includes temp and DO days above
 
 
@@ -112,7 +112,7 @@ temp_count <- tmax %>%
                           replacement = "-")) %>%
   ungroup()
 
-# Create data frame listing sites with low coverage
+# Create data frame listing sites with low temperature data coverage
 temp_cov <- temp_count[temp_count$summer_days < 0.8,] %>%
   select(site, year, summer_days) %>%
   distinct() %>%
@@ -174,6 +174,15 @@ DO_count <- dmin %>%
   mutate(Threshold = gsub(gsub(Threshold, pattern = "_", 
                           replacement = " "), pattern = "\\.",
                           replacement = "-"))
+
+# Create data frame listing sites with low DO data coverage
+DO_cov <- DO_count[DO_count$summer_days < 0.8,] %>%
+  select(site, year, summer_days) %>%
+  distinct() %>%
+  mutate(low = case_when((summer_days < 0.8 &
+                            summer_days >= 0.5) ~ "*",
+                         summer_days < 0.5 ~ "**"
+  ))
 
 ```
 
@@ -276,10 +285,10 @@ tmax %>%
 # ggsave("output/Task1_SWQS_loggers/PlotB_tmax_by_day_year_site_rolling3.png",
 #           height = 7, width = 9, dpi = 400)
 ```
-## create table of number of temp measurement days per year per site
+## create tables: n days and days over T per year & site
 ```{r}
 # create table with Kable
-tmax_table <- tmax %>%
+day_table <- tmax %>%
   droplevels() %>%
   filter(is.na(max_temp) != T) %>%
   group_by(site, year) %>%
@@ -288,29 +297,56 @@ tmax_table <- tmax %>%
   mutate(n = case_when(is.na(low)==F ~ paste0(as.character(n), low),
                           TRUE ~ as.character(n))) %>%
   select(-low) %>%
-  pivot_wider(id_cols = site, names_from = year, values_from = n)
-
-day_table <- tmax_table %>%
-  kbl(caption = "Total number of days with temperature data by site and year. * = less than 80% coverage of warmest period (Jun-Aug); ** = less than 50% coverage of warmest period.") %>%
+  pivot_wider(id_cols = site, 
+              names_from = year, 
+              values_from = n) %>%
+  kbl(caption = "Total number of days with temperature data in each year. Asterisks indicate years with less complete data coverage during the warmest period (Jun-Aug). * = less than 80% coverage; ** = less than 50% coverage.") %>%
   kable_classic(full_width = F, html_font = "Cambria")
 
 day_table
 
 # save the table to HTML file
-# save_kable(day_table, 
+# save_kable(day_table,
 #            "output/Task1_SWQS_loggers/TableA_tmax_n_table3.html")
 
-# remove tmax_table object
-rm(tmax_table, day_table)
+## Table of "Days above TM temp. threshold"
+days_over_table <- temp_count %>%
+  filter(Threshold == "Trout Maintenance") %>%
+  select(site, year, days_over, summer_days) %>%
+  left_join(temp_cov) %>%
+  mutate(days_over = case_when(is.na(low)==F ~ 
+                         paste0(as.character(days_over), low),
+                          TRUE ~ as.character(days_over))) %>%
+  select(-low) %>%
+  pivot_wider(id_cols = site, names_from = year,
+              values_from = days_over) %>%
+  kbl(caption = "Total number of days with tempertature readings over the Trout Maintenance threshold. Asterisks indicate years with less complete data during the warmest period (Jun-Aug). * = less than 80% coverage; ** = less than 50% coverage.") %>%
+  kable_classic(full_width = F, html_font = "Cambria")
+
+days_over_table
+
+# save the table to HTML file
+# save_kable(
+#   days_over_table,
+#   "output/Task1_SWQS_loggers/TableB_tmax_days_over_TM_table3.html")
+
+rm(day_table, days_over_table)
 ```
 ## Plot number of days exceeding temperature thresholds
 ```{r}
+temp_count_bad <- temp_count %>%
+  left_join(temp_cov) %>%
+  filter(is.na(low) == F)
+
 temp_count %>%
   filter(summer_days >= 0.8) %>%
 ggplot() +
   geom_line(aes(x = year, y = days_over, color = Threshold)) +
   geom_point(aes(x = year, y = days_over, color = Threshold), 
              size = 3) +
+  geom_point(data = temp_count_bad, aes(x = year, y = days_over,
+                                        shape = "*",
+                                        color = Threshold)) +
   facet_wrap(~site) +
   scale_color_brewer(palette = "Dark2") +
   theme_bw() +
@@ -321,35 +357,20 @@ ggplot() +
         legend.justification="center",
         legend.margin=margin(0,0,0,0),
         legend.box.margin=margin(-8,-8,-8,-8)) +
-  labs(x = "", y = "Days above temp. threshold")
+  labs(x = "", y = "Days above temp. threshold") +
+  guides(shape = "none")
 
-# ggsave("output/Task1_SWQS_loggers/PlotC_days_above_temp_threshold2.png",
+# ggsave(
+#   "output/Task1_SWQS_loggers/PlotC_days_above_temp_threshold_timeseries.png",
 #        height = 7, width = 9, dpi = 400)
-```
-## Table of "Days above TM temp. threshold"
-```{r}
-days_over_table <- temp_count %>%
-  filter(Threshold == "Trout Maintenance") %>%
-  filter(!(site == "TNC_9" & year == 2016)) %>%
-  select(site, year, days_over) %>%
-  pivot_wider(id_cols = site, names_from = year,
-              values_from = days_over) %>%
-  kbl(caption = "Days with tempertature readings over the Trout Maintenance threshold by site and year.") %>%
-  kable_classic(full_width = F, html_font = "Cambria")
 
-days_over_table
-
-# save the table to HTML file
-# save_kable(days_over_table, 
-#            "output/Task1_SWQS_loggers/TableB_tmax_days_over_TM_table2.html")
-
-rm(days_over_table)
+rm(temp_count_bad)
 ```
 ## "days over temp threshold" boxplots by site
 ```{r}
+# x11(width = 8, height = 6)
 temp_count %>%
-  # filter(Threshold == "Trout Maintenance") %>%
-  filter(!(site == "TNC_9" & year == 2016)) %>%
+  filter(summer_days >= 0.8) %>%
   group_by(site) %>%
   mutate(mean_days = mean(days_over)) %>%
   ungroup() %>%
@@ -379,9 +400,10 @@ temp_count %>%
        color = "Year") +
     facet_wrap(~Threshold)
 
-ggsave("output/Task1_SWQS_loggers/PlotD_days_above_temp_threshold2.png",
-       width = 8,
-       height = 6, dpi = 400)
+# ggsave(
+#   "output/Task1_SWQS_loggers/PlotD_days_above_temp_threshold_boxplot2.png",
+#        width = 8,
+#        height = 6, dpi = 400)
 ```
 # Dissolved Oxygen SWQS
 c. How often do sites exceed SWQS for dissolved oxygen (how many days per year)?
@@ -397,18 +419,16 @@ FW2-NT
 FW2-TM, FW2-NT
 Supersaturated dissolved oxygen values shall be expressed as their corresponding 100 percent saturation values for purposes of calculating 24 hour averages
 
-
 ## DO SWQS: plot daily min for each site/year vs. thresholds
-To do: 
-Question: DO or DO adjusted?
 ```{r}
 # plot daily min DO vs. thresholds
+# x11(width = 9, heigh = 7)
 dmin %>%
   ggplot() +
   geom_hline(yintercept = 7, color = "gray", lty = 3, size = .75) +
   geom_hline(yintercept = 5, color = "gray", lty = 2, size = .75) +
   geom_hline(yintercept = 4, color = "gray", lty = 1, size = .75) + 
-  geom_line(aes(x = day, y = min_DOadj, 
+  geom_line(aes(x = day, y = min_DO, 
                  color = as.factor(year)),
              alpha = 0.75) +
   facet_wrap(~site) +
@@ -419,22 +439,28 @@ dmin %>%
   theme_bw() +
   theme(text = element_text(size = 14),
         strip.background = element_rect(fill = "white")) +
-  labs(y = "Daily minimum dissolved oxygen (adjusted)", x = "",
-       color = "Year")
+  labs(y = "Daily minimum dissolved oxygen", x = "",
+       color = "Year") +
+  annotate("text", x = 335, y = 3, label = "NT", 
+           color = "darkgray", size = 2) +
+  annotate("text", x = 335, y = 6, label = "TM", 
+           color = "darkgray", size = 2) +
+  annotate("text", x = 335, y = 8, label = "TP", 
+           color = "darkgray", size = 2)
 
-# ggsave("output/Task1_SWQS_loggers/PlotE2_dmin_adj_by_day_year_site.png",
+# ggsave(
+#   "output/Task1_SWQS_loggers/PlotE_dmin_adj_by_day_year_site2.png",
 #        height = 7, width = 9, dpi = 400)
 ```
 ## DO SWQS: plot 24-h average daily DO for each site/year vs. thresholds
-To do:
-1. label threshold lines
 ```{r}
 # plot rolling average daily max vs. thresholds
+# x11(width = 9, heigh = 7)
 dmin %>%
   ggplot() +
   geom_hline(yintercept = 6, color = "gray", lty = 2, size = .75) +
   geom_hline(yintercept = 5, color = "gray", lty = 1, size = .75) +
-  geom_line(aes(x = day, y = mean24_DOadj, 
+  geom_line(aes(x = day, y = mean24_DO, 
                  color = as.factor(year)),
              alpha = 0.75) +
   facet_wrap(~site) +
@@ -446,103 +472,78 @@ dmin %>%
   theme(text = element_text(size = 14),
         axis.text.x = element_text(size = 12),
         strip.background = element_rect(fill = "white")) +
-  labs(y = "Daily average dissolved oxygen (adjusted)", x = "",
-       color = "Year")
+  labs(y = "Daily average dissolved oxygen", x = "",
+       color = "Year") +
+  annotate("text", x = 335, y = 4, label = "NT", 
+           color = "darkgray", size = 2) +
+  annotate("text", x = 335, y = 7, label = "TM", 
+           color = "darkgray", size = 2) 
 
-# ggsave("output/Task1_SWQS_loggers/PlotF2_dmin_by_day_year_24h_avg_adj.png",
-# height = 7, width = 9, dpi = 400)
+# ggsave(
+#   "output/Task1_SWQS_loggers/PlotF_dmin_by_day_year_24h_avg2.png",
+#   height = 7, width = 9, dpi = 400)
 ```
 ## create table of number of DO measurement days per year per site
 ```{r}
-# create table with Kable
-dmin_table <- dmin %>%
+
+day_table <- tmax %>%
   droplevels() %>%
-  filter(is.na(min_DO) != T)
-day_table_DO <- table(dmin_table$site, dmin_table$year) %>%
-  kbl(caption = "Number of days of dissolved oxygen data by site and year.") %>%
+  filter(is.na(max_temp) != T) %>%
+  group_by(site, year) %>%
+  tally() %>%
+  left_join(temp_cov) %>%
+  mutate(n = case_when(is.na(low)==F ~ paste0(as.character(n), low),
+                          TRUE ~ as.character(n))) %>%
+  select(-low) %>%
+  pivot_wider(id_cols = site, 
+              names_from = year, 
+              values_from = n)
+
+# create table with Kable
+day_table_DO <- dmin %>%
+  droplevels() %>%
+  filter(is.na(min_DO) != T) %>%
+  group_by(site, year) %>%
+  tally() %>%
+  left_join(DO_cov) %>%
+  mutate(n = case_when(is.na(low)==F ~ paste0(as.character(n), low),
+                          TRUE ~ as.character(n))) %>%
+  select(-low) %>%
+  pivot_wider(id_cols = site, 
+              names_from = year, 
+              values_from = n) %>%
+  kbl(caption = "Total number of days with dissolved oxygen data in each year. Asterisks indicate years with less complete data coverage during the warmest period (Jun-Aug). * = less than 80% coverage; ** = less than 50% coverage.") %>%
   kable_classic(full_width = F, html_font = "Cambria")
 
 day_table_DO
 
 # save the table to HTML file
-# save_kable(day_table_DO, "output/Task1_SWQS_loggers/TableC1_dmin_n_table.html")
+# save_kable(day_table_DO,
+#            "output/Task1_SWQS_loggers/TableC_dmin_n_table2.html")
 
-# create DO adjusted table with Kable
-dmin_table_adj <- dmin %>%
-  droplevels() %>%
-  filter(is.na(min_DOadj) != T)
-day_table_DOadj <- table(dmin_table_adj$site, 
-                         dmin_table_adj$year) %>%
-  kbl(caption = "Number of days of adjusted dissolved oxygen data by site and year.") %>%
-  kable_classic(full_width = F, html_font = "Cambria")
+# Table of "Days below DO threshold"
 
-day_table_DOadj
-
-# save the table to HTML file
-# save_kable(day_table_DOadj, "output/Task1_SWQS_loggers/TableC2_dmin_adj_n_table.html")
-
-# remove dmin_table and dmin_table_adj objects
-rm(dmin_table, dmin_table_adj)
-```
-
-## Plot number of days below DO thresholds
-```{r}
-DO_count %>%
-  # filter out site/year with exceptionally low n (= 16d)
-  filter(!(site == "TNC_9" & year == 2016)) %>%
-ggplot() +
-  geom_line(aes(x = year, y = days_under, color = Threshold)) +
-  geom_point(aes(x = year, y = days_under, color = Threshold), 
-             size = 3) +
-  facet_wrap(~site) +
-  scale_color_brewer(palette = "Dark2") +
-  theme_bw() +
-  theme(text = element_text(size = 14),
-        axis.text.x = element_text(size = 8),
-        strip.background = element_rect(fill = "white"),
-        legend.position = "top",
-        legend.justification="center",
-        legend.margin=margin(0,0,0,0),
-        legend.box.margin=margin(-8,-8,-8,-8)) +
-  labs(x = "", y = "Days below dissolved oxygen threshold")
-
-# ggsave("output/Task1_SWQS_loggers/PlotG1_days_below_DO_threshold.png",
-#        height = 7, width = 9, dpi = 400)
-```
-## Plot number of days below DO thresholds (adjusted data)
-```{r}
-DO_count_adj %>%
-  # filter out 4 site/year with exceptionally low n (= 16d)
-  filter(!(site == "TNC_9" & year == 2016),
-         !(site == "TNC_18" & year == 2021),
-         !(site == "TNC_23" & year == 2020),
-         !(site == "TNC_25" & year == 2020)) %>%
-ggplot() +
-  geom_line(aes(x = year, y = days_under, color = Threshold)) +
-  geom_point(aes(x = year, y = days_under, color = Threshold), 
-             size = 3) +
-  facet_wrap(~site) +
-  scale_color_brewer(palette = "Dark2") +
-  theme_bw() +
-  theme(text = element_text(size = 14),
-        axis.text.x = element_text(size = 8),
-        strip.background = element_rect(fill = "white"),
-        legend.position = "top",
-        legend.justification="center",
-        legend.margin=margin(0,0,0,0),
-        legend.box.margin=margin(-8,-8,-8,-8)) +
-  labs(x = "", y = "Days below dissolved oxygen threshold (adjusted)")
-
-# ggsave("output/Task1_SWQS_loggers/PlotG2_days_below_DO_threshold_adj.png",
-#        height = 7, width = 9, dpi = 400)
-```
-## Table of "Days below DO threshold"
-```{r}
-# for straight DO data
+## Table of "Days above TM temp. threshold"
+days_over_table <- temp_count %>%
+  filter(Threshold == "Trout Maintenance") %>%
+  select(site, year, days_over, summer_days) %>%
+  left_join(temp_cov) %>%
+  mutate(days_over = case_when(is.na(low)==F ~ 
+                         paste0(as.character(days_over), low),
+                          TRUE ~ as.character(days_over))) %>%
+  select(-low) %>%
+  pivot_wider(id_cols = site, names_from = year,
+              values_from = days_over) %>%
+  
+  
 days_below_table <- DO_count %>%
   filter(Threshold == "Trout Maintenance") %>%
-  filter(!(site == "TNC_9" & year == 2016)) %>%
-  select(site, year, days_under) %>%
+  select(site, year, days_under, summer_days) %>%
+  left_join(temp_cov) %>%
+  mutate(days_under = case_when(is.na(low)==F ~ 
+                         paste0(as.character(days_under), low),
+                          TRUE ~ as.character(days_under))) %>%
+  select(-low) %>%
   pivot_wider(id_cols = site, names_from = year,
               values_from = days_under) %>%
   kbl(caption = "Days with dissolved oxygen readings under the Trout Maintenance threshold by site and year.") %>%
@@ -551,34 +552,51 @@ days_below_table <- DO_count %>%
 days_below_table
 
 # save the table to HTML file
-# save_kable(days_below_table, "output/Task1_SWQS_loggers/TableD1_dmin_days_under_TM_table.html")
+# save_kable(days_below_table,
+#   "output/Task1_SWQS_loggers/TableD_dmin_days_under_TM_table2.html")
 
-# for adjusted DO data
-days_below_table_adj <- DO_count_adj %>%
-  filter(Threshold == "Trout Maintenance") %>%
-  # remove records for 4 under-sampled years
-  filter(!(site == "TNC_9" & year == 2016),
-         !(site == "TNC_18" & year == 2021),
-         !(site == "TNC_23" & year == 2020),
-         !(site == "TNC_25" & year == 2020)) %>%
-  select(site, year, days_under) %>%
-  pivot_wider(id_cols = site, names_from = year,
-              values_from = days_under) %>%
-  kbl(caption = "Days with adjusted dissolved oxygen readings under the Trout Maintenance threshold by site and year.") %>%
-  kable_classic(full_width = F, html_font = "Cambria")
+rm(dmin_table, days_below_table)
+```
+## Plot number of days below DO thresholds (time series)
+```{r}
+# create a separate data frame of years with < 80% Jun-Aug coverage
+DO_count_bad <- DO_count %>%
+  left_join(DO_cov) %>%
+  filter(is.na(low) == F)
 
-days_below_table_adj
+DO_count %>%
+  # filter out site/year with < 80% coverage during Jun-Aug
+  mutate(days_under = case_when(summer_days>=0.8 ~ days_under,
+                                TRUE ~ NaN)) %>%
+ggplot() +
+  geom_line(aes(x = year, y = days_under, color = Threshold)) +
+  geom_point(aes(x = year, y = days_under, color = Threshold), 
+             size = 3) +
+  geom_point(data = DO_count_bad, aes(x = year, y = days_under,
+                                        shape = "*",
+                                        color = Threshold)) +
+  facet_wrap(~site) +
+  scale_color_brewer(palette = "Dark2") +
+  theme_bw() +
+  theme(text = element_text(size = 14),
+        axis.text.x = element_text(size = 8),
+        strip.background = element_rect(fill = "white"),
+        legend.position = "top",
+        legend.justification="center",
+        legend.margin=margin(0,0,0,0),
+        legend.box.margin=margin(-8,-8,-8,-8)) +
+  labs(x = "", y = "Days below dissolved oxygen threshold") +
+  guides(shape = "none")
 
-# save the table to HTML file
-# save_kable(days_below_table_adj, "output/Task1_SWQS_loggers/TableD2_dmin_days_under_TM_table_adj.html")
-
-rm(days_below_table, days_below_table_adj)
+# ggsave(
+#   "output/Task1_SWQS_loggers/PlotG_days_below_DO_threshold2.png",
+#        height = 7, width = 9, dpi = 400)
 ```
 ## "days below DO threshold" boxplots by site
 ```{r}
 # x11(width = 8, height = 6)
 DO_count %>%
-  filter(!(site == "TNC_9" & year == 2016)) %>%
+  filter(summer_days >= 0.8) %>%
   group_by(site) %>%
   mutate(mean_days = mean(days_under)) %>%
   ungroup() %>%
@@ -609,52 +627,9 @@ DO_count %>%
     facet_wrap(~Threshold)
 
 
-# ggsave("output/Task1_SWQS_loggers/PlotH1_days_below_DO_threshold.png", 
+# ggsave(
+#   "output/Task1_SWQS_loggers/PlotH_days_below_DO_threshold2.png",
 #        width = 8,
 #        height = 6, dpi = 400)
 ```
-
-## "days below DO threshold" boxplots by site (adjusted DO)
-```{r}
-# x11(width = 8, height = 6)
-DO_count_adj %>%
-  # remove records for 4 under-sampled years
-  filter(!(site == "TNC_9" & year == 2016),
-         !(site == "TNC_18" & year == 2021),
-         !(site == "TNC_23" & year == 2020),
-         !(site == "TNC_25" & year == 2020)) %>%  
-  group_by(site) %>%
-  mutate(mean_days = mean(days_under)) %>%
-  ungroup() %>%
-  mutate(site = fct_reorder(as.factor(site), 
-                            days_under, 
-                            .fun = "mean",
-                            .desc = F)) %>%
-  ggplot() +
-  geom_boxplot(aes(y = site, x = days_under), 
-               outlier.color = "transparent",
-               color = "darkgray") +
-  geom_point(aes(y = site, x = days_under, 
-                 color = as.factor(year)), size = 3, 
-             alpha =0.75, shape = 16) +
-  scale_color_manual(values = c(wes_palettes$Darjeeling1,
-                                wes_palettes$Darjeeling2)) +
-  theme_bw() +
-  theme(text = element_text(size = 14),
-        legend.position = c(0.89,0.14),
-        legend.justification="left",
-        legend.margin=margin(2,2,2,2),
-        legend.box.margin=margin(0,0,0,0),
-        legend.key.size = unit(0.25, "cm"),
-        legend.background = element_rect(color = "darkgray"),
-        strip.background = element_rect(fill = "white")) +
-  labs(y = "", 
-       x = "Days below dissolved oxygen threshold (adjusted DO)", 
-       color = "Year") +
-    facet_wrap(~Threshold)
-
-
-# ggsave("output/Task1_SWQS_loggers/PlotH2_days_below_DO_threshold_adj.png", 
-#        width = 8,
-#        height = 6, dpi = 400)
-```
+# Biplot of DO and
