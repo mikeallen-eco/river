@@ -21,14 +21,14 @@ c. How often do sites exceed SWQS for dissolved oxygen (how many days per year)?
 • Summary statistics and statistical analysis of same along with associated interpretative text.
 
 To do:
-1. add TNC_80's graphs
-1a. add way to flag/remove years with low coverage in Jun-Aug
-2. graphs of individual sites w/ panels by year (maybe raw & rolling average on same graph)
-3. fix "adjusted DO" graphs & tables (include deleted data)
-4. fix DO boxplot figure (good -> bad = top -> bottom)
+* add TNC_80's graphs
+* add way to flag/remove years with low coverage in Jun-Aug
+* graphs of individual sites w/ panels by year (maybe raw & rolling average on same graph)
+* fix "adjusted DO" graphs & tables (include deleted data)
+* fix DO boxplot figure (good -> bad = top -> bottom)
 5. research statistically controlling for air temp (water temp ~ air temp)
 6. research methods to statistically QC / censor DO data using water temp data
-7. try adding "/n" or low-sample-size flag to tables
+* try adding "/n" or low-sample-size flag to tables
 8. try bivariate figure that includes temp and DO days above
 
 
@@ -454,7 +454,7 @@ dmin %>%
 ```
 ## DO SWQS: plot 24-h average daily DO for each site/year vs. thresholds
 ```{r}
-# plot rolling average daily max vs. thresholds
+# plot 24-h average DO vs. thresholds
 # x11(width = 9, heigh = 7)
 dmin %>%
   ggplot() +
@@ -603,7 +603,7 @@ DO_count %>%
   mutate(site = fct_reorder(as.factor(site), 
                             days_under, 
                             .fun = "mean",
-                            .desc = F)) %>%
+                            .desc = T)) %>%
   ggplot() +
   geom_boxplot(aes(y = site, x = days_under), 
                outlier.color = "transparent",
@@ -615,7 +615,8 @@ DO_count %>%
                                 wes_palettes$Darjeeling2)) +
   theme_bw() +
   theme(text = element_text(size = 14),
-        legend.position = c(0.89,0.14),
+        # legend.position = c(0.89,0.14),
+        legend.position = c(0.687,0.14),
         legend.justification="left",
         legend.margin=margin(2,2,2,2),
         legend.box.margin=margin(0,0,0,0),
@@ -626,10 +627,238 @@ DO_count %>%
        color = "Year") +
     facet_wrap(~Threshold)
 
-
-# ggsave(
-#   "output/Task1_SWQS_loggers/PlotH_days_below_DO_threshold2.png",
-#        width = 8,
-#        height = 6, dpi = 400)
+ggsave(
+  "output/Task1_SWQS_loggers/PlotH_days_below_DO_threshold_boxplot2.png",
+       width = 8,
+       height = 6, dpi = 400)
 ```
-# Biplot of DO and
+# 
+```{r}
+
+```
+# Biplot of DO and temp thresholds
+```{r}
+
+```
+# Plots of temperature over time for each site (panels by year)
+```{r}
+site_name_vector = unique(tmax$site)
+# plot daily max vs. thresholds
+
+for(site_name in site_name_vector){
+
+print(paste0("Making site ", site_name))
+# for testing
+#x11(height = 7, width = 9)
+  
+max_col = "dodgerblue"
+roll_col = "red"
+
+tmax %>%
+  filter(site == site_name) %>%
+  # # this commented code removes empty plots
+  # group_by(year) %>%
+  # mutate(test = mean(max_temp, na.rm = T)) %>%
+  # filter(is.na(test) == F) %>%
+  ggplot() +
+  geom_hline(
+    yintercept = 22,
+    color = max_col,
+    lty = 3,
+    size = .5,
+    alpha = 0.5
+  ) +
+  geom_hline(
+    yintercept = 25,
+    color = max_col,
+    lty = 2,
+    size = .5,
+    alpha = 0.5
+  ) +
+  geom_hline(
+    yintercept = 31,
+    color = max_col,
+    lty = 1,
+    size = .5,
+    alpha = 0.5
+  ) +
+  geom_hline(
+    yintercept = 19,
+    color = roll_col,
+    lty = 3,
+    size = .5,
+    alpha = 0.5
+  ) +
+  geom_hline(
+    yintercept = 23,
+    color = roll_col,
+    lty = 2,
+    size = .5,
+    alpha = 0.5
+  ) +
+  geom_hline(
+    yintercept = 28,
+    color = roll_col,
+    lty = 1,
+    size = .5,
+    alpha = 0.5
+  ) +
+  geom_line(aes(x = day, y = max_temp),
+            size = 1, alpha = 0.75, color = max_col) +
+  geom_line(aes(x = day, y = roll_temp),
+            size = 0.5, alpha = 0.75, color = roll_col) +
+  facet_wrap( ~ year) +
+  scale_x_continuous(
+    breaks = c(91, 152, 213, 274, 335),
+    labels = c("Apr", "Jun", "Aug",
+               "Oct", "Dec")
+  ) +
+  scale_y_continuous(limits = c(0,32)) +
+  cowplot::theme_cowplot() +
+  theme(
+    strip.background = element_rect(fill = "white")
+  ) +
+  labs(y = "Daily maximum temperature (C)", x = "",
+       color = "Year", title = paste0("Site: ",site_name)) +
+  annotate("text", x = 335, y = 30, label = "NT", 
+           color = "darkgray", size = 2) +
+  annotate("text", x = 335, y = 24, label = "TM", 
+           color = "darkgray", size = 2) +
+  annotate("text", x = 335, y = 21, label = "TP", 
+           color = "darkgray", size = 2)
+
+num_panels <- length(unique((tmax %>% 
+                               filter(site == site_name))$year))
+if(num_panels %in% 4:6){
+ggsave(paste0("output/Task1_SWQS_loggers/individual_sites_temperature/", site_name, "_tmax_by_day_year.png"),
+       height = 6, width = 9, dpi = 400)
+  }
+
+# # use this if saving graphs with different numbers of year panels
+# if(num_panels %in% 3){
+# ggsave(paste0("output/Task1_SWQS_loggers/individual_sites_temperature/", site_name, "_tmax_by_day_year.png"),
+#        height = 3, width = 9, dpi = 400)
+# }
+# 
+# if(num_panels %in% 2){
+# ggsave(paste0("output/Task1_SWQS_loggers/individual_sites_temperature/", site_name, "_tmax_by_day_year.png"),
+#        height = 3, width = 6, dpi = 400)
+# }
+# 
+# if(num_panels %in% 1){
+# ggsave(paste0("output/Task1_SWQS_loggers/individual_sites_temperature/", site_name, "_tmax_by_day_year.png"),
+#        height = 3, width = 3, dpi = 400)
+#   }
+
+}
+
+```
+# Plots of DO over time for each site (panels by year)
+```{r}
+
+site_name_vector = unique(dmin$site)
+# plot daily max vs. thresholds
+
+for(site_name in site_name_vector){
+
+print(paste0("Making site ", site_name))
+# for testing
+#x11(height = 7, width = 9)
+  
+max_col = "dodgerblue"
+roll_col = "red"
+
+dmin %>%
+  filter(site == site_name) %>%
+  # # this commented code removes empty plots
+  # group_by(year) %>%
+  # mutate(test = mean(min_DO, na.rm = T)) %>%
+  # filter(is.na(test) == F) %>%
+  ggplot() +
+    geom_hline(
+    yintercept = 7,
+    color = max_col,
+    lty = 3,
+    size = .5,
+    alpha = 0.5
+  ) +
+  geom_hline(
+    yintercept = 5,
+    color = max_col,
+    lty = 2,
+    size = .5,
+    alpha = 0.5
+  ) +
+  geom_hline(
+    yintercept = 4,
+    color = max_col,
+    lty = 1,
+    size = .5,
+    alpha = 0.5
+  ) +
+  geom_hline(
+    yintercept = 6,
+    color = roll_col,
+    lty = 2,
+    size = .5,
+    alpha = 0.5
+  ) +
+  geom_hline(
+    yintercept = 5,
+    color = roll_col,
+    lty = 1,
+    size = .5,
+    alpha = 0.5
+  ) +
+  geom_line(aes(x = day, y = min_DO),
+            size = 1, alpha = 0.75, color = max_col) +
+  geom_line(aes(x = day, y = mean24_DO),
+            size = 0.5, alpha = 0.75, color = roll_col) +
+  facet_wrap( ~ year) +
+  scale_x_continuous(
+    breaks = c(91, 152, 213, 274, 335),
+    labels = c("Apr", "Jun", "Aug",
+               "Oct", "Dec")
+  ) +
+  scale_y_continuous(limits = c(0,14.5)) +
+  cowplot::theme_cowplot() +
+  theme(
+    strip.background = element_rect(fill = "white")
+  ) +
+  labs(y = "Dissolved oxygen", x = "",
+       color = "Year", title = paste0("Site: ",site_name)) +
+  annotate("text", x = 335, y = 4.5, label = "NT", 
+           color = "darkgray", size = 2) +
+  annotate("text", x = 335, y = 5.5, label = "TM", 
+           color = "darkgray", size = 2) +
+  annotate("text", x = 335, y = 7.5, label = "TP", 
+           color = "darkgray", size = 2)
+
+num_panels <- length(unique((tmax %>% 
+                               filter(site == site_name))$year))
+if(num_panels %in% 4:6){
+ggsave(paste0("output/Task1_SWQS_loggers/individual_sites_DO/", site_name, "_DO_by_day_year.png"),
+       height = 5, width = 8, dpi = 400)
+  }
+
+# # use this if saving graphs with different numbers of year panels
+# if(num_panels %in% 3){
+# ggsave(paste0("output/Task1_SWQS_loggers/individual_sites_DO/", site_name, "_DO_by_day_year.png"),
+#        height = 3, width = 9, dpi = 400)
+# }
+# 
+# if(num_panels %in% 2){
+# ggsave(paste0("output/Task1_SWQS_loggers/individual_sites_DO/", site_name, "_DO_by_day_year.png"),
+#        height = 3, width = 6, dpi = 400)
+# }
+# 
+# if(num_panels %in% 1){
+# ggsave(paste0("output/Task1_SWQS_loggers/individual_sites_DO/", site_name, "_DO_by_day_year.png"),
+#        height = 3, width = 3, dpi = 400)
+#   }
+
+}
+
+```
+
+
