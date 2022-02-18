@@ -28,8 +28,9 @@ To do:
 * fix DO boxplot figure (good -> bad = top -> bottom)
 5. research statistically controlling for air temp (water temp ~ air temp)
 6. research methods to statistically QC / censor DO data using water temp data
-* try adding "/n" or low-sample-size flag to tables
-8. try bivariate figure that includes temp and DO days above
+* add low-sample-size flag to tables
+* try bivariate figure that includes temp and DO days above
+* days above either threshold boxplot
 
 
 # Load libraries, format data, etc.
@@ -110,7 +111,8 @@ temp_count <- tmax %>%
   mutate(Threshold = gsub(gsub(Threshold, pattern = "_", 
                           replacement = " "), pattern = "\\.",
                           replacement = "-")) %>%
-  ungroup()
+  ungroup() %>%
+  select(-starts_with("max"), -starts_with("roll"))
 
 # Create data frame listing sites with low temperature data coverage
 temp_cov <- temp_count[temp_count$summer_days < 0.8,] %>%
@@ -184,6 +186,60 @@ DO_cov <- DO_count[DO_count$summer_days < 0.8,] %>%
                          summer_days < 0.5 ~ "**"
   ))
 
+
+# combine "days exceeding" counts for temperature and DO
+both_count <- temp_count %>%
+  left_join(DO_count, by = c("site", "year", "Threshold"))
+
+
+# compile "either threshold" data
+either <- tmax %>%
+  left_join(dmin, by = c("site", "year", "day", "summer"))
+
+# either count
+either_count <- either %>%
+  mutate(max_22 = ifelse(max_temp > 22, 1, 0),
+         max_25 = ifelse(max_temp > 25, 1, 0),
+         max_31 = ifelse(max_temp > 31, 1, 0),
+         roll_19 = ifelse(roll_temp > 19, 1, 0),
+         roll_23 = ifelse(roll_temp > 23, 1, 0),
+         roll_28 = ifelse(roll_temp > 28, 1, 0),
+         min_7 = ifelse(min_DO < 7, 1, 0),
+         min_5 = ifelse(min_DO < 5, 1, 0),
+         min_4 = ifelse(min_DO < 4, 1, 0),
+         mean24_6 = ifelse(mean24_DO < 6, 1, 0),
+         mean24_5 = ifelse(mean24_DO < 5, 1, 0),
+         FW2_TP = case_when(max_22 > 0 ~ 1,
+                            roll_19 > 0 ~ 1,
+                            min_7 > 0 ~ 1,
+                            TRUE ~ 0),
+         FW2_TM = case_when(max_25 > 0 ~ 1,
+                            roll_23 > 0 ~ 1,
+                            min_5 > 0 ~ 1,
+                            mean24_6 > 0 ~ 1,
+                            TRUE ~ 0),
+         FW2_NT = case_when(max_31 > 0 ~ 1,
+                            roll_28 > 0 ~ 1,
+                            min_4 > 0 ~ 1,
+                            mean24_5 > 0 ~ 1,
+                            TRUE ~ 0),
+         max_temp_NA = ifelse(is.na(max_temp), 1, 0),
+         min_DO_NA = ifelse(is.na(min_DO), 1, 0)) %>%
+    group_by(site, year) %>%
+    summarise(Trout_Production = sum(FW2_TP),
+            Trout_Maintenance = sum(FW2_TM),
+            Non.Trout = sum(FW2_NT),
+            summer_days_temp = sum(summer==1 & max_temp_NA == 0)/92,
+            summer_days_DO = sum(summer==1 & min_DO_NA == 0)/92,
+            .groups = "drop") %>%
+  pivot_longer(cols = 3:5, names_to = "Threshold",
+                      values_to = "days_exceeding") %>%
+  select(site, year, Threshold, days_exceeding, 
+         summer_days_temp, summer_days_DO) %>%
+  mutate(Threshold = gsub(gsub(Threshold, pattern = "_", 
+                          replacement = " "), pattern = "\\.",
+                          replacement = "-")) %>%
+  filter(!(summer_days_temp==0 & summer_days_DO==0))
 ```
 
 # Temperature SWQS
@@ -522,31 +578,17 @@ day_table_DO
 #            "output/Task1_SWQS_loggers/TableC_dmin_n_table2.html")
 
 # Table of "Days below DO threshold"
-
-## Table of "Days above TM temp. threshold"
-days_over_table <- temp_count %>%
-  filter(Threshold == "Trout Maintenance") %>%
-  select(site, year, days_over, summer_days) %>%
-  left_join(temp_cov) %>%
-  mutate(days_over = case_when(is.na(low)==F ~ 
-                         paste0(as.character(days_over), low),
-                          TRUE ~ as.character(days_over))) %>%
-  select(-low) %>%
-  pivot_wider(id_cols = site, names_from = year,
-              values_from = days_over) %>%
-  
-  
 days_below_table <- DO_count %>%
   filter(Threshold == "Trout Maintenance") %>%
   select(site, year, days_under, summer_days) %>%
-  left_join(temp_cov) %>%
+  left_join(DO_cov) %>%
   mutate(days_under = case_when(is.na(low)==F ~ 
                          paste0(as.character(days_under), low),
                           TRUE ~ as.character(days_under))) %>%
   select(-low) %>%
   pivot_wider(id_cols = site, names_from = year,
               values_from = days_under) %>%
-  kbl(caption = "Days with dissolved oxygen readings under the Trout Maintenance threshold by site and year.") %>%
+  kbl(caption = "Total number of days with dissolved oxygen readings below the minimum Trout Maintenance threshold. Asterisks indicate years with less complete data during the warmest period (Jun-Aug). * = less than 80% coverage; ** = less than 50% coverage.") %>%
   kable_classic(full_width = F, html_font = "Cambria")
 
 days_below_table
@@ -631,14 +673,6 @@ ggsave(
   "output/Task1_SWQS_loggers/PlotH_days_below_DO_threshold_boxplot2.png",
        width = 8,
        height = 6, dpi = 400)
-```
-# 
-```{r}
-
-```
-# Biplot of DO and temp thresholds
-```{r}
-
 ```
 # Plots of temperature over time for each site (panels by year)
 ```{r}
@@ -859,6 +893,186 @@ ggsave(paste0("output/Task1_SWQS_loggers/individual_sites_DO/", site_name, "_DO_
 
 }
 
+```
+# Biplot of DO and temp thresholds
+```{r}
+# X11(7,5)
+both_count %>%
+  filter(summer_days.x >= 0.8, summer_days.y >= 0.8) %>%
+  filter(Threshold == "Trout Maintenance") %>%
+  group_by(site) %>%
+  summarise(days_over = mean(days_over),
+            days_under = mean(days_under),
+            .groups = "drop") %>%
+  mutate(mean_days = (days_under+days_over)/2) %>%
+  ungroup() %>%
+  ggplot() +
+  geom_point(aes(y = days_under, x = days_over, 
+                color = mean_days), size = 2) +
+  geom_text(aes(y = days_under+4, x = days_over, 
+                color = mean_days, label = site)) +
+  labs(y = "Days exceeding dissolved oxygen",
+       x = "Days exceeding temperature",
+       title = "Mean days exceeding 'Trout Maintenance' threshold") +
+  scale_x_continuous(limits = c(0,110)) +
+  scale_y_continuous(limits = c(0,110)) +
+  scale_color_gradient(high = "firebrick",space = "Lab") +
+  theme_bw() +
+  theme(text = element_text(size = 14)) +
+  guides(color = "none")
+
+# ggsave(
+#   "output/Task1_SWQS_loggers/PlotI_days_exceeding_any_thresholds_scatterplot.png",
+#        width = 7,
+#        height = 5, dpi = 400)
+```
+## "days exceeding either threshold" boxplots by site
+```{r}
+# x11(width = 8, height = 6)
+either_count %>%
+  filter(summer_days_temp >= 0.8, summer_days_DO >= 0.8) %>%
+  mutate(site = fct_reorder(as.factor(site), 
+                            days_exceeding, 
+                            .fun = "mean",
+                            .desc = T)) %>%
+  ggplot() +
+  geom_boxplot(aes(y = site, x = days_exceeding), 
+               outlier.color = "transparent",
+               color = "darkgray") +
+  geom_point(aes(y = site, x = days_exceeding, 
+                 color = as.factor(year)), size = 3, 
+             alpha =0.75, shape = 16) +
+  scale_color_manual(values = c(wes_palettes$Darjeeling1,
+                                wes_palettes$Darjeeling2)) +
+  theme_bw() +
+  theme(text = element_text(size = 14),
+        # legend.position = c(0.89,0.14),
+        legend.position = c(0.687,0.14),
+        legend.justification="left",
+        legend.margin=margin(2,2,2,2),
+        legend.box.margin=margin(0,0,0,0),
+        legend.key.size = unit(0.25, "cm"),
+        legend.background = element_rect(color = "darkgray"),
+        strip.background = element_rect(fill = "white")) +
+  labs(y = "", x = "Days exceeding any threshold (temperature or DO)", 
+       color = "Year") +
+    facet_wrap(~Threshold)
+
+# ggsave(
+#   "output/Task1_SWQS_loggers/PlotJ_days_exceeding_any_threshold_boxplot.png",
+#        width = 8,
+#        height = 6, dpi = 400)
+```
+# Testing out GAMs
+```{r}
+
+temp <- tmax %>%
+  filter(site == "TNC_2",
+         year == 2017)
+
+temp <- tmax %>%
+  filter(site == "TNC_2") %>%
+  mutate(yearf = as.factor(year),
+         yearnum = year-2015)
+
+library(mgcv)
+ggplot(temp) +
+  geom_point(aes(x = day, y = max_temp))
+
+N_days <- length(82:339)
+
+test <- p %>% filter(FLAG_Temp == 0) %>%
+  mutate(day = yday(datetime), 
+         hour = hour(datetime),
+         yearf = as.factor(year))
+
+gam_all <- gam(temp ~ s(hour) + s(day) + site + yearf,
+             data = test,
+             family = gaussian)
+summary(gam_all)
+
+# the real version
+tmax_gam <- tmax %>%
+  mutate(yearf = as.factor(year)) %>%
+  filter(is.na(max_temp)==F) %>%
+  arrange(site, )
+
+gam_1 <- gam(max_temp ~ s(day, by = site:yearf),
+             data = tmax_gam,
+             family = gaussian)
+temp2 <- cbind(tmax_gam, fit = gam_1$fitted.values)
+
+ggplot(temp2) +
+  # geom_point(aes(x = day, y = max_temp), color = "darkgray") +
+  geom_line(aes(x = day, y = fit, color = yearf)) +
+  facet_wrap(~site)
+
+
+summary(gam_1)
+gam_1_plot <- plot(gam_1)[1]
+
+gam_1 <- gam(max_temp ~ s(day, by = yearf),
+             data = temp,
+             family = gaussian)
+
+
+plot(gam_1)
+
+gam_mm <- gamm(max_temp ~ s(day, bs = "cc", k = 12) + s(year, bs = "re"), data = temp)
+
+
+
+# layout(matrix(1, nrow = 1))
+plot(gam_1, shade = T)
+
+summary(gam_1$gam)
+
+tmax_hat = predict(gam_1, 
+                     newdata = 
+                       expand.grid(site = "TNC_2", 
+                                   yearf = 2016:2021, 
+                                   day = 82:300), se.fit = T)
+plot_data <- expand.grid(year = 2016:2021, 
+                                   day = 82:300) %>%
+  mutate(tmax_hat = tmax_hat[[1]],
+         tmax_UL = tmax_hat[[1]]+2*tmax_hat[[2]],
+         tmax_LL = tmax_hat[[1]]-2*tmax_hat[[2]],
+         yearf = as.factor(year)) 
+  
+ggplot() +
+    geom_point(data = tmax, aes(x = day, y = max_temp, color = as.factor(year))) +
+  geom_line(data = plot_data, aes(x = day, y = tmax_hat, color = yearf))
+ 
+
+```
+# Statistical analysis of days exceeding Trout Maintenance
+```{r}
+tstat <- tmax %>%
+  mutate(MAresid = max_temp - roll_temp,
+         TMex = case_when(max_temp > 25 ~ 1,
+                          roll_temp > 23 ~ 1,
+                          TRUE ~ 0),
+         day = day/100,
+         yearnum = year-2015,
+         yearf = as.factor(yearnum)) %>%
+  filter(summer == 1,
+         is.na(max_temp) == F) %>%
+  select(site, yearf, day, TMex)
+
+library(lme4)
+mod <- glmer(TMex ~ (1 | site) + (1 | yearf) , data = tstat, family = "binomial")
+plot(mod)
+
+
+
+tstat_plot = expand.grid(site = unique(tstat$site), 
+                         yearf = 3) %>%
+  mutate(fit = predict(mod, newdata = expand.grid(site = unique(tstat$site), yearf = 3), type = "response"))
+  
+
+tstat_plot %>%
+  ggplot() +
+  geom_point(aes(x = site, y = fit, color = yearf))
 ```
 
 
