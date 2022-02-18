@@ -1,0 +1,34 @@
+
+model {
+
+# Priors
+for(j in 1:n_years){
+  for(i in 1:n_sites){
+    # n_site lp's from normal by site with years as replication
+    lp[i,j] ~ dnorm(mu.sites[i], tau.sites) 
+}
+}
+
+for(j in 1:n_years){
+    # annual site means come from normal by year 
+    mu.sites ~ dnorm(mu.year[j], tau.year)
+}
+
+tau.sites ~ dgamma(0.001, 0.001)
+
+mu.year ~ dnorm(mu.river, tau.river)
+tau.year ~ dgamma(0.001, 0.001)
+
+mu.river ~ dnorm(0, 0.001)
+tau.river ~ dgamma(0.001, 0.001)
+
+# Binomial likelihood
+for(i in 1:n_sites){
+for (j in 1:n_years) {
+TMex[i,j] ~ dbin(p[i,j], TMex_n[i,j])
+logit(p[i,j]) <- lp[i,j]
+}
+}
+
+
+}

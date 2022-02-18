@@ -1,0 +1,21 @@
+
+model {
+# Priors
+for (i in 1:n_years){
+lp[i] ~ dnorm(mu.int, tau.int) # Intercepts
+}
+mu.int ~ dnorm(0, 0.001) # Hyperparameter for random intercepts
+tau.int <- 1 / (sigma.int * sigma.int)
+sigma.int ~ dunif(0, 10)
+
+# Binomial likelihood
+for (j in 1:n_total) {
+TMex[j] ~ dbern(p[j])
+logit(p[j]) <- lp[year[j]]
+}
+
+for(i in 1:6){
+logit(realp[i]) <- lp[i]
+}
+
+}
