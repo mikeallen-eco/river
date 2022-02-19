@@ -1248,8 +1248,20 @@ jags_mod2 <- jagsUI::jags(data = jags_data2,
 # another try with Kery AHM book
 
 ```{r}
-tstatJAGS <- tstat #%>%
-  #filter(site %in% c("TNC_2", "TNC_4"))
+
+tstat <- tmax %>%
+  mutate(MAresid = max_temp - roll_temp,
+         TMex = case_when(max_temp > 25 ~ 1,
+                          roll_temp > 23 ~ 1,
+                          TRUE ~ 0),
+         day = day/100,
+         yearnum = year-2015,
+         yearf = as.factor(yearnum)) %>%
+  filter(summer == 1,
+         is.na(max_temp) == F) %>%
+  select(site, yearf, day, max_temp, TMex)
+
+tstatJAGS <- tstat
 
 n_years <- length(unique(tstatJAGS$yearf))
 n_sites <- length(unique(tstatJAGS$site))
@@ -1353,23 +1365,239 @@ jags_mod3.1 <- jagsUI::jags(data = jags_data3,
 
 jags_mod3.1
 
+tstat_plot <- tstat %>%
+  group_by(site, yearf) %>%
+  summarise(TMex_sum = sum(TMex),
+            TMex_n = length(TMex),
+            TMex_p = TMex_sum/TMex_n) %>%
+  mutate(year = as.numeric(yearf)+2015) %>%
+  select(-yearf)
+
 mod3sum <- jags_mod3.1$summary %>%
   as.data.frame() %>%
   select(mean, q2.5 = 3, q97.5 = 7) %>%
   mutate(parameter = row.names(jags_mod3.1$summary)) %>%
   filter(grepl(parameter, pattern = "theta")) %>%
   mutate(site = rep(unique(tstat$site), 6),
-         year = sort(rep(2016:2021, 18)))
+         year = sort(rep(2016:2021, 18))) %>%
+  left_join(tstat_plot) %>%
+  filter(is.na(TMex_n)==F)
 
-mod3sum2 <- jags_mod3.1$summary 
+mod3_siteavg <- jags_mod3.1$summary %>%
+  as.data.frame() %>%
+  select(mean, q2.5 = 3, q97.5 = 7) %>%
+  mutate(parameter = row.names(jags_mod3.1$summary)) %>%
+  filter(grepl(parameter, pattern = "alpha")) %>%
+  slice(1:18) %>%
+  mutate(site = unique(tstat$site),
+         mean = plogis(mean),
+         q2.5 = plogis(q2.5),
+         q97.5 = plogis(q97.5))
 
 ggplot(mod3sum) +
   geom_errorbar(aes(x = year, ymin = q2.5, ymax = q97.5),
                 width = 0, color = "darkgray") +
+  geom_hline(data = mod3_siteavg, aes(yintercept = mean), 
+              color = "red") +
   geom_point(aes(x = year, y = mean), color = "steelblue") +
+  geom_point(aes(x = year, y = TMex_p, color = "red", 
+                 shape = "*")) +
   facet_wrap(~site)
 
+ggsave("test.png", width = 7, height = 5, dpi = 400)
 
+# to do
+# ADD IN THE RAW PROPORTIONS TO VIEW HOW IT WORKED
+# CENSOR YEARS WITH NO OBSERVATIONS
+# ADD IN MEAN SITE LINE
+# ADD IN MEAN YEAR SYMBOL?
+
+# make plot of just overall estimated site means +/- CI
+# estimate derived "slope" by year in JAGS where possible
+
+
+
+```
+
+# another try with Kery AHM book - SitexYear effects
+
+```{r}
+
+tstat <- tmax %>%
+  mutate(MAresid = max_temp - roll_temp,
+         TMex = case_when(max_temp > 25 ~ 1,
+                          roll_temp > 23 ~ 1,
+                          TRUE ~ 0),
+         day = day/100,
+         yearnum = year-2015,
+         yearf = as.factor(yearnum)) %>%
+  filter(summer == 1,
+         is.na(max_temp) == F) %>%
+  select(site, yearf, day, max_temp, TMex)
+
+tstatJAGS <- tstat
+
+n_years <- length(unique(tstatJAGS$yearf))
+n_sites <- length(unique(tstatJAGS$site))
+TMex_mat <- matrix(data = NA, nrow = n_sites, ncol = n_years)
+TMex_n_mat <- matrix(data = NA, nrow = n_sites, ncol = n_years)
+yearf_mat <- matrix(data = rep(1:6, n_sites), nrow = n_sites, ncol = n_years, byrow = T)
+
+year1_mat <- matrix(data = c(rep(1,n_sites), 
+                             rep(0,length(TMex_mat)-n_sites)),
+                    ncol = n_years)
+year2_mat <- matrix(data = c(rep(0,n_sites), 
+                             rep(1,n_sites),
+                             rep(0,length(TMex_mat)-2*n_sites)),
+                    ncol = n_years)
+year3_mat <- matrix(data = c(rep(0,2*n_sites), 
+                             rep(1,n_sites), 
+                             rep(0,length(TMex_mat)-3*n_sites)),
+                    ncol = n_years)
+year4_mat <- matrix(data = c(rep(0,3*n_sites), 
+                             rep(1,n_sites), 
+                             rep(0,length(TMex_mat)-4*n_sites)),
+                    ncol = n_years)
+year5_mat <- matrix(data = c(rep(0,4*n_sites), 
+                             rep(1,n_sites), 
+                             rep(0,length(TMex_mat)-5*n_sites)),
+                    ncol = n_years)
+year6_mat <- matrix(data = c(rep(0,5*n_sites), 
+                             rep(1,n_sites)),
+                    ncol = n_years)
+
+for(i in 1:n_sites){
+  for(j in 1:n_years){
+    
+    value <- tstatJAGS %>%
+      filter(as.numeric(as.factor(site)) == i,
+             yearf == j)
+    TMex_mat[i, j] <- sum(value$TMex)
+    TMex_n_mat[i, j] <- length(value$TMex)
+  }
+  }
+
+jags_data4 <- list(n_total = nrow(tstatJAGS),
+                  n_years = length(unique(tstatJAGS$yearf)),
+                  n_sites = length(unique(tstatJAGS$site)),
+                  TMex = TMex_mat,
+                  TMex_n = TMex_n_mat,
+                  y1 = year1_mat,
+                  y2 = year2_mat,
+                  y3 = year3_mat,
+                  y4 = year4_mat,
+                  y5 = year5_mat,
+                  y6 = year6_mat,
+                  yearf = yearf_mat,
+                  day = tstatJAGS$day,
+                  year = as.numeric(tstatJAGS$yearf),
+                  site = as.numeric(as.factor(tstatJAGS$site)))
+
+cat(file = "scripts/AHM_mod2.txt","
+model {
+# Priors
+mu.alpha0.site <- logit(mean.theta) # Random intercepts
+mean.theta ~ dunif(0,1)
+tau.alpha0.site <- pow(sd.alpha0.site, -2)
+sd.alpha0.site ~ dunif(0, 10)
+mu.year.effect ~ dnorm(0, 0.001)
+tau.year.effect ~ dgamma(0.001, 0.001)
+tau.beta <- pow(sd.beta, -2)
+sd.beta ~ dunif(0, 10)
+
+for(j in 1:n_years){
+mu.beta[j] ~ dnorm(mu.year.effect, tau.year.effect)
+}
+
+# Likelihood
+for (i in 1:n_sites){
+
+alpha0.site[i] ~ dnorm(mu.alpha0.site, tau.alpha0.site) 
+beta1[i] ~ dnorm(mu.beta[1], tau.beta)
+beta2[i] ~ dnorm(mu.beta[2], tau.beta)
+beta3[i] ~ dnorm(mu.beta[3], tau.beta)
+beta4[i] ~ dnorm(mu.beta[4], tau.beta)
+beta5[i] ~ dnorm(mu.beta[5], tau.beta)
+beta6[i] ~ dnorm(mu.beta[6], tau.beta)
+
+for(j in 1:n_years){
+
+TMex[i,j] ~ dbin(theta[i,j], TMex_n[i,j])
+logit(theta[i,j]) <- alpha0.site[i] + beta1[i]*y1[i,2] +
+                        beta2[i]*y2[i,j] + beta3[i]*y3[i,j] +
+                      beta4[i]*y4[i,j] + beta5[i]*y5[i,j] +
+                      beta6[i]*y6[i,j]
+
+}
+}
+
+# # derived 
+# 
+# for(j in 1:n_years){
+# 
+# logit(theta[2,year]) ~ dnorm(TNC_4slope*year[i])
+# 
+# }
+
+}")
+
+jags_mod4 <- jagsUI::jags(data = jags_data3,
+             model.file = "scripts/AHM_mod2.txt",
+             n.iter = 6000, n.burnin = 1000,
+             parameters.to.save = c("theta", "alpha0.site",
+                                    "mu.alpha0.site",
+                                    "sd.alpha0.site",
+                                    "beta1", "beta2",
+                                    "beta3", "beta4", 
+                                    "beta5", "beta6",
+                                    "mu.beta", "sd.beta",
+                                    "mu.year.effect",
+                                    "tau.year.effect"),
+             n.chains = 3, parallel = T, n.thin = 5
+             )
+
+jags_mod4
+mod4_sum <- jags_mod4$summary
+
+tstat_plot <- tstat %>%
+  group_by(site, yearf) %>%
+  summarise(TMex_sum = sum(TMex),
+            TMex_n = length(TMex),
+            TMex_p = TMex_sum/TMex_n) %>%
+  mutate(year = as.numeric(yearf)+2015) %>%
+  select(-yearf)
+
+mod4sum <- jags_mod4$summary %>%
+  as.data.frame() %>%
+  select(mean, q2.5 = 3, q97.5 = 7) %>%
+  mutate(parameter = row.names(jags_mod4$summary)) %>%
+  filter(grepl(parameter, pattern = "theta")) %>%
+  mutate(site = rep(unique(tstat$site), 6),
+         year = sort(rep(2016:2021, 18))) %>%
+  left_join(tstat_plot) %>%
+  filter(is.na(TMex_n)==F)
+
+ggplot(mod4sum) +
+  geom_smooth(aes(x = year, y = mean), method = "glm",
+              method.args=list(family="binomial"),
+              se = F, color = "darkgray", size = 0.4) +
+  geom_errorbar(aes(x = year, ymin = q2.5, ymax = q97.5),
+                width = 0, color = "steelblue") +
+  geom_point(aes(x = year, y = mean), color = "steelblue",
+             size = 1.5) +
+  # geom_point(aes(x = year, y = TMex_p), color = "red", 
+  #                shape = "*") +
+  facet_wrap(~site) +
+  theme_bw() +
+  theme(text = element_text(size = 14),
+        axis.text.x = element_text(size = 6),
+        axis.title.y = element_text(size = 10),
+        strip.background = element_rect(fill = "white")) +
+  scale_y_continuous(limits = c(0,1),
+                     breaks = seq(0,1,by = .5)) +
+  labs(y = "Proportion of days exceeding \nTrout Maintenance temperature SWQS (Jun-Aug)")
+
+ggsave("test3.png", width = 7, height = 5, dpi = 400)
 
 # to do
 # ADD IN THE RAW PROPORTIONS TO VIEW HOW IT WORKED

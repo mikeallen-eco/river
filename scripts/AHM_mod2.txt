@@ -1,0 +1,39 @@
+
+model {
+# Priors
+mu.alpha0.site <- logit(mean.theta) # Random intercepts
+mean.theta ~ dunif(0,1)
+tau.alpha0.site <- pow(sd.alpha0.site, -2)
+sd.alpha0.site ~ dunif(0, 10)
+mu.year.effect ~ dnorm(0, 0.001)
+tau.year.effect ~ dgamma(0.001, 0.001)
+tau.beta <- pow(sd.beta, -2)
+sd.beta ~ dunif(0, 10)
+
+for(j in 1:n_years){
+mu.beta[j] ~ dnorm(mu.year.effect, tau.year.effect)
+}
+
+# Likelihood
+for (i in 1:n_sites){
+
+alpha0.site[i] ~ dnorm(mu.alpha0.site, tau.alpha0.site) 
+beta1[i] ~ dnorm(mu.beta[1], tau.beta)
+beta2[i] ~ dnorm(mu.beta[2], tau.beta)
+beta3[i] ~ dnorm(mu.beta[3], tau.beta)
+beta4[i] ~ dnorm(mu.beta[4], tau.beta)
+beta5[i] ~ dnorm(mu.beta[5], tau.beta)
+beta6[i] ~ dnorm(mu.beta[6], tau.beta)
+
+for(j in 1:n_years){
+
+TMex[i,j] ~ dbin(theta[i,j], TMex_n[i,j])
+logit(theta[i,j]) <- alpha0.site[i] + beta1[i]*y1[i,2] +
+                        beta2[i]*y2[i,j] + beta3[i]*y3[i,j] +
+                      beta4[i]*y4[i,j] + beta5[i]*y5[i,j] +
+                      beta6[i]*y6[i,j]
+
+}
+}
+
+}

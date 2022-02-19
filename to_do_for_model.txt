@@ -1,0 +1,1 @@
+estimate separate beta coefficients by site. e.g., beta1[i]
