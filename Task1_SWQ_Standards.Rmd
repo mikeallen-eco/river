@@ -1531,19 +1531,19 @@ logit(theta[i,j]) <- alpha0.site[i] + beta1[i]*y1[i,2] +
 }
 }
 
-# # derived 
-# 
-# for(j in 1:n_years){
-# 
-# logit(theta[2,year]) ~ dnorm(TNC_4slope*year[i])
-# 
-# }
+### derived 
+
+# annual river means
+for(j in 1:n_years){
+logit(river.mean[j]) <- mu.alpha0.site + mu.beta[j]
+}
+
 
 }")
 
-jags_mod4 <- jagsUI::jags(data = jags_data3,
+jags_mod4 <- jagsUI::jags(data = jags_data4,
              model.file = "scripts/AHM_mod2.txt",
-             n.iter = 6000, n.burnin = 1000,
+             n.iter = 30000, n.burnin = 10000,
              parameters.to.save = c("theta", "alpha0.site",
                                     "mu.alpha0.site",
                                     "sd.alpha0.site",
@@ -1552,8 +1552,9 @@ jags_mod4 <- jagsUI::jags(data = jags_data3,
                                     "beta5", "beta6",
                                     "mu.beta", "sd.beta",
                                     "mu.year.effect",
-                                    "tau.year.effect"),
-             n.chains = 3, parallel = T, n.thin = 5
+                                    "tau.year.effect",
+                                    "river.mean"),
+             n.chains = 3, parallel = T, n.thin = 20
              )
 
 jags_mod4
@@ -1567,6 +1568,17 @@ tstat_plot <- tstat %>%
   mutate(year = as.numeric(yearf)+2015) %>%
   select(-yearf)
 
+river_mod4sum <- jags_mod4$summary %>%
+  as.data.frame() %>%
+  select(mean, q2.5 = 3, q97.5 = 7) %>%
+  mutate(parameter = row.names(jags_mod4$summary)) %>%
+  filter(grepl(parameter, pattern = "river")) %>%
+  mutate(site = "River mean",
+         year = 2016:2021,
+         TMex_sum = "",
+         TMex_n = "",
+         TMex_p = "")
+
 mod4sum <- jags_mod4$summary %>%
   as.data.frame() %>%
   select(mean, q2.5 = 3, q97.5 = 7) %>%
@@ -1575,7 +1587,20 @@ mod4sum <- jags_mod4$summary %>%
   mutate(site = rep(unique(tstat$site), 6),
          year = sort(rep(2016:2021, 18))) %>%
   left_join(tstat_plot) %>%
-  filter(is.na(TMex_n)==F)
+  filter(is.na(TMex_n)==F) %>%
+  bind_rows(river_mod4sum) %>%
+  mutate(site = as.character(site)) %>%
+  mutate(site = case_when(is.na(site) == T ~ "River mean",
+                          TRUE ~ site),
+         order = substr(site, 5, 6)) %>%
+  mutate(order = case_when(order == "r " ~ 85,
+                           TRUE ~ as.numeric(order)),
+         site = fct_reorder(site, .x = order),
+         samp_size = case_when(is.na(TMex_sum)==T ~ "",
+                               TRUE ~ 
+                                 paste0(as.character(TMex_sum), 
+                                        " / ", 
+                                        as.character(TMex_n)))
 
 ggplot(mod4sum) +
   geom_smooth(aes(x = year, y = mean), method = "glm",
@@ -1585,8 +1610,11 @@ ggplot(mod4sum) +
                 width = 0, color = "steelblue") +
   geom_point(aes(x = year, y = mean), color = "steelblue",
              size = 1.5) +
-  # geom_point(aes(x = year, y = TMex_p), color = "red", 
+  # geom_point(aes(x = year, y = TMex_p), color = "red",
   #                shape = "*") +
+  geom_text(aes(x = year, y = 0.05, 
+                label = samp_size),
+            size = 2, color = "darkgray") +
   facet_wrap(~site) +
   theme_bw() +
   theme(text = element_text(size = 14),
@@ -1597,7 +1625,7 @@ ggplot(mod4sum) +
                      breaks = seq(0,1,by = .5)) +
   labs(y = "Proportion of days exceeding \nTrout Maintenance temperature SWQS (Jun-Aug)")
 
-ggsave("test3.png", width = 7, height = 5, dpi = 400)
+ggsave("output/Task1_SWQS_loggers/statistical_analysis/trends.png", width = 7, height = 5, dpi = 400)
 
 # to do
 # ADD IN THE RAW PROPORTIONS TO VIEW HOW IT WORKED

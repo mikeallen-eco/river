@@ -36,4 +36,12 @@ logit(theta[i,j]) <- alpha0.site[i] + beta1[i]*y1[i,2] +
 }
 }
 
+### derived 
+
+# annual river means
+for(j in 1:n_years){
+logit(river.mean[j]) <- mu.alpha0.site + mu.beta[j]
+}
+
+
 }
