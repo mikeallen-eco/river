@@ -963,464 +963,8 @@ either_count %>%
 #        width = 8,
 #        height = 6, dpi = 400)
 ```
-# Testing out GAMs
-```{r}
-library(mgcv)
-
-
-
-temp <- tmax %>%
-  filter(site == "TNC_2",
-         year == 2017)
-
-temp <- tmax %>%
-  filter(site == "TNC_2") %>%
-  mutate(yearf = as.factor(year),
-         yearnum = year-2015)
-
-library(mgcv)
-ggplot(temp) +
-  geom_point(aes(x = day, y = max_temp))
-
-N_days <- length(82:339)
-
-test <- p %>% filter(FLAG_Temp == 0) %>%
-  mutate(day = yday(datetime), 
-         hour = hour(datetime),
-         yearf = as.factor(year))
-
-gam_all <- gam(temp ~ s(hour) + s(day) + site + yearf,
-             data = test,
-             family = gaussian)
-summary(gam_all)
-
-# the real version
-tmax_gam <- tmax %>%
-  mutate(yearf = as.factor(year)) %>%
-  filter(is.na(max_temp)==F) %>%
-  arrange(site, year, day)
-
-gam_1 <- gam(max_temp ~ s(day) + yearf,
-             data = tmax_gam,
-             family = gaussian)
-temp2 <- cbind(tmax_gam, fit = gam_1$fitted.values)
-
-ggplot(temp2) +
-  # geom_point(aes(x = day, y = max_temp), color = "darkgray") +
-  geom_line(aes(x = day, y = fit, color = yearf)) +
-  facet_wrap(~site)
-
-
-summary(gam_1)
-gam_1_plot <- plot(gam_1)[1]
-
-gam_1 <- gam(max_temp ~ s(day, by = yearf),
-             data = temp,
-             family = gaussian)
-
-
-plot(gam_1)
-
-gam_mm <- gamm(max_temp ~ s(day, bs = "cc", k = 12) + s(year, bs = "re"), data = temp)
-
-
-
-# layout(matrix(1, nrow = 1))
-plot(gam_1, shade = T)
-
-summary(gam_1$gam)
-
-tmax_hat = predict(gam_1, 
-                     newdata = 
-                       expand.grid(site = "TNC_2", 
-                                   yearf = 2016:2021, 
-                                   day = 82:300), se.fit = T)
-plot_data <- expand.grid(year = 2016:2021, 
-                                   day = 82:300) %>%
-  mutate(tmax_hat = tmax_hat[[1]],
-         tmax_UL = tmax_hat[[1]]+2*tmax_hat[[2]],
-         tmax_LL = tmax_hat[[1]]-2*tmax_hat[[2]],
-         yearf = as.factor(year)) 
-  
-ggplot() +
-    geom_point(data = tmax, aes(x = day, y = max_temp, color = as.factor(year))) +
-  geom_line(data = plot_data, aes(x = day, y = tmax_hat, color = yearf))
- 
-
-```
-# Statistical analysis of days exceeding Trout Maintenance
-```{r}
-tstat <- tmax %>%
-  mutate(MAresid = max_temp - roll_temp,
-         TMex = case_when(max_temp > 25 ~ 1,
-                          roll_temp > 23 ~ 1,
-                          TRUE ~ 0),
-         day = day/100,
-         yearnum = year-2015,
-         yearf = as.factor(yearnum)) %>%
-  filter(summer == 1,
-         is.na(max_temp) == F) %>%
-  select(site, yearf, day, max_temp, TMex)
-
-library(lme4)
-mod <- glmer(TMex ~ (1 | site) + (1 | yearf) , data = tstat, family = "binomial")
-plot(mod)
-
-
-
-tstat_plot = expand.grid(site = unique(tstat$site), 
-                         yearf = 3) %>%
-  mutate(fit = predict(mod, newdata = expand.grid(site = unique(tstat$site), yearf = 3), type = "response"))
-  
-
-tstat_plot %>%
-  ggplot() +
-  geom_point(aes(x = site, y = fit, color = yearf))
-```
-# JAGS test
-
-```{r}
-tstatJAGS <- tstat %>%
-  filter(site %in% c("TNC_2", "TNC_4"))
-n_years <- length(unique(tstatJAGS$yearf))
-n_sites <- length(unique(tstatJAGS$site))
-TMex_mat <- matrix(data = NA, nrow = n_sites, ncol = n_years)
-TMex_n_mat <- matrix(data = NA, nrow = n_sites, ncol = n_years)
-
-for(i in 1:n_sites){
-  for(j in 1:n_years){
-    
-    value <- tstatJAGS %>%
-      filter(as.numeric(as.factor(site)) == i,
-             yearf == j)
-    TMex_mat[i, j] <- sum(value$TMex)
-    TMex_n_mat[i, j] <- length(value$TMex)
-  }
-  }
-
-
-
-jags_data <- list(n_total = nrow(tstatJAGS),
-                  n_years = length(unique(tstatJAGS$yearf)),
-                  max_temp = tstatJAGS$max_temp,
-                  TMex = tstatJAGS$TMex,
-                  day = tstatJAGS$day,
-                  year = as.numeric(tstatJAGS$yearf),
-                  site = as.numeric(as.factor(tstatJAGS$site)))
-
-
-jags_data2 <- list(n_total = nrow(tstatJAGS),
-                  n_years = length(unique(tstatJAGS$yearf)),
-                  n_sites = length(unique(tstatJAGS$site)),
-                  TMex = TMex_mat,
-                  TMex_n = TMex_n_mat,
-                  day = tstatJAGS$day,
-                  year = as.numeric(tstatJAGS$yearf),
-                  site = as.numeric(as.factor(tstatJAGS$site)))
-
-cat(file = "scripts/test_mod.txt",
-"
-model{
-
-for(i in 1:n_total){
-  TMex[i] ~ dbern(lp[year[i])
-  lp[year[i]] ~ dnorm(site_mu, site_tau)
-}
-
-site_mu ~ dnorm(0, 0.001) # prior after Kery 2010 (p234)
-site_tau <– 1 / (site_sigma * site_sigma)
-site_sigma ~ dunif(0, 10)
-}
-")
-
-cat(file = "scripts/test_mod_kery.txt",
-"
-model {
-# Priors
-for (i in 1:n_years){
-lp[i] ~ dnorm(mu.int, tau.int) # Intercepts
-}
-mu.int ~ dnorm(0, 0.001) # Hyperparameter for random intercepts
-tau.int <- 1 / (sigma.int * sigma.int)
-sigma.int ~ dunif(0, 10)
-
-# Binomial likelihood
-for (j in 1:n_total) {
-TMex[j] ~ dbern(p[j])
-logit(p[j]) <- lp[year[j]]
-}
-
-for(i in 1:6){
-logit(realp[i]) <- lp[i]
-}
-
-}
-")
-
-# attempt adding another level (site) onto this
-cat(file = "scripts/test_mod_kery2.txt",
-"
-model {
-
-# Priors
-for(j in 1:n_years){
-  for(i in 1:n_sites){
-    # n_site lp's from normal by site with years as replication
-    lp[i,j] ~ dnorm(mu.sites[i], tau.sites) 
-}
-}
-
-for(j in 1:n_years){
-    # annual site means come from normal by year 
-    mu.sites ~ dnorm(mu.year[j], tau.year)
-}
-
-tau.sites ~ dgamma(0.001, 0.001)
-
-mu.year ~ dnorm(mu.river, tau.river)
-tau.year ~ dgamma(0.001, 0.001)
-
-mu.river ~ dnorm(0, 0.001)
-tau.river ~ dgamma(0.001, 0.001)
-
-# Binomial likelihood
-for(i in 1:n_sites){
-for (j in 1:n_years) {
-TMex[i,j] ~ dbin(p[i,j], TMex_n[i,j])
-logit(p[i,j]) <- lp[i,j]
-}
-}
-
-
-}
-")
-
-# another attempt at site & year levels (this time with the orig data)
-cat(file = "scripts/test_mod_kery3.txt",
-"
-model {
-# Priors
-for(i in 1:n_sites){
-  for (j in 1:n_years){
-lp[i,j] ~ dnorm(mu.alpha[i], tau.alpha) # Intercepts
-}
-}
-mu.int ~ dnorm(mu.int2, tau.int2)
-tau.int ~ dgamma(0.001, 0.001)
-
-mu.int2 ~ dnorm(0, 0.001) # Hyperparameter for random intercepts
-tau.int2 <- 1 / (sigma.int * sigma.int)
-sigma.int2 ~ dunif(0, 10)
-
-# Binomial likelihood
-for (j in 1:n_total) {
-TMex[j] ~ dbern(p[j])
-logit(p[j]) <- lp[year[j]]
-}
-
-for(i in 1:6){
-logit(realp[i]) <- lp[i]
-}
-
-}
-")
-jags_mod <- jagsUI::jags(data = jags_data,
-             model.file = "scripts/test_mod_kery.txt",
-             n.iter = 2000, n.burnin = 1000,
-             parameters.to.save = c("lp", "realp",
-                                    "mu.int", "sigma.int"),
-             n.chains = 3, parallel = T, n.thin = 1
-             )
-
-jags_mod2 <- jagsUI::jags(data = jags_data2,
-             model.file = "scripts/test_mod_kery2.txt",
-             n.iter = 2000, n.burnin = 1000,
-             parameters.to.save = c("lp", "mu.sites", "tau.sites",
-                                    "mu.year", "tau.year",
-                                    "mu.river", "tau.river"),
-             n.chains = 3, parallel = T, n.thin = 1
-             )
-
-
-
-```
-
-# another try with Kery AHM book
-
-```{r}
-
-tstat <- tmax %>%
-  mutate(MAresid = max_temp - roll_temp,
-         TMex = case_when(max_temp > 25 ~ 1,
-                          roll_temp > 23 ~ 1,
-                          TRUE ~ 0),
-         day = day/100,
-         yearnum = year-2015,
-         yearf = as.factor(yearnum)) %>%
-  filter(summer == 1,
-         is.na(max_temp) == F) %>%
-  select(site, yearf, day, max_temp, TMex)
-
-tstatJAGS <- tstat
-
-n_years <- length(unique(tstatJAGS$yearf))
-n_sites <- length(unique(tstatJAGS$site))
-TMex_mat <- matrix(data = NA, nrow = n_sites, ncol = n_years)
-TMex_n_mat <- matrix(data = NA, nrow = n_sites, ncol = n_years)
-yearf_mat <- matrix(data = rep(1:6, n_sites), nrow = n_sites, ncol = n_years, byrow = T)
-
-year1_mat <- matrix(data = c(rep(1,n_sites), 
-                             rep(0,length(TMex_mat)-n_sites)),
-                    ncol = n_years)
-year2_mat <- matrix(data = c(rep(0,n_sites), 
-                             rep(1,n_sites),
-                             rep(0,length(TMex_mat)-2*n_sites)),
-                    ncol = n_years)
-year3_mat <- matrix(data = c(rep(0,2*n_sites), 
-                             rep(1,n_sites), 
-                             rep(0,length(TMex_mat)-3*n_sites)),
-                    ncol = n_years)
-year4_mat <- matrix(data = c(rep(0,3*n_sites), 
-                             rep(1,n_sites), 
-                             rep(0,length(TMex_mat)-4*n_sites)),
-                    ncol = n_years)
-year5_mat <- matrix(data = c(rep(0,4*n_sites), 
-                             rep(1,n_sites), 
-                             rep(0,length(TMex_mat)-5*n_sites)),
-                    ncol = n_years)
-year6_mat <- matrix(data = c(rep(0,5*n_sites), 
-                             rep(1,n_sites)),
-                    ncol = n_years)
-
-for(i in 1:n_sites){
-  for(j in 1:n_years){
-    
-    value <- tstatJAGS %>%
-      filter(as.numeric(as.factor(site)) == i,
-             yearf == j)
-    TMex_mat[i, j] <- sum(value$TMex)
-    TMex_n_mat[i, j] <- length(value$TMex)
-  }
-  }
-
-jags_data3 <- list(n_total = nrow(tstatJAGS),
-                  n_years = length(unique(tstatJAGS$yearf)),
-                  n_sites = length(unique(tstatJAGS$site)),
-                  TMex = TMex_mat,
-                  TMex_n = TMex_n_mat,
-                  y1 = year1_mat,
-                  y2 = year2_mat,
-                  y3 = year3_mat,
-                  y4 = year4_mat,
-                  y5 = year5_mat,
-                  y6 = year6_mat,
-                  yearf = yearf_mat,
-                  day = tstatJAGS$day,
-                  year = as.numeric(tstatJAGS$yearf),
-                  site = as.numeric(as.factor(tstatJAGS$site)))
-
-cat(file = "scripts/AHM_mod.txt","
-model {
-# Priors
-mu.alpha0.site <- logit(mean.theta) # Random intercepts
-mean.theta ~ dunif(0,1)
-tau.alpha0.site <- pow(sd.alpha0.site, -2)
-sd.alpha0.site ~ dunif(0, 10)
-mu.beta ~ dnorm(0, 0.001)
-tau.beta <- pow(sd.beta, -2)
-sd.beta ~ dunif(0, 10)
-
-for(j in 1:n_years){
-beta[j] ~ dnorm(mu.beta, tau.beta)
-}
-
-# Likelihood
-for (i in 1:n_sites){
-
-alpha0.site[i] ~ dnorm(mu.alpha0.site, tau.alpha0.site) 
-
-for(j in 1:n_years){
-
-TMex[i,j] ~ dbin(theta[i,j], TMex_n[i,j])
-logit(theta[i,j]) <- alpha0.site[i] + beta[1]*y1[i,2] +
-                        beta[2]*y2[i,j] + beta[3]*y3[i,j] +
-                      beta[4]*y4[i,j] + beta[5]*y5[i,j] +
-                      beta[6]*y6[i,j]
-
-}
-}
-
-}")
-
-jags_mod3.1 <- jagsUI::jags(data = jags_data3,
-             model.file = "scripts/AHM_mod.txt",
-             n.iter = 2000, n.burnin = 1000,
-             parameters.to.save = c("theta", "alpha0.site",
-                                    "mu.alpha0.site",
-                                    "sd.alpha0.site",
-                                    "beta", "mu.beta",
-                                    "sd.beta"),
-             n.chains = 3, parallel = T, n.thin = 1
-             )
-
-jags_mod3.1
-
-tstat_plot <- tstat %>%
-  group_by(site, yearf) %>%
-  summarise(TMex_sum = sum(TMex),
-            TMex_n = length(TMex),
-            TMex_p = TMex_sum/TMex_n) %>%
-  mutate(year = as.numeric(yearf)+2015) %>%
-  select(-yearf)
-
-mod3sum <- jags_mod3.1$summary %>%
-  as.data.frame() %>%
-  select(mean, q2.5 = 3, q97.5 = 7) %>%
-  mutate(parameter = row.names(jags_mod3.1$summary)) %>%
-  filter(grepl(parameter, pattern = "theta")) %>%
-  mutate(site = rep(unique(tstat$site), 6),
-         year = sort(rep(2016:2021, 18))) %>%
-  left_join(tstat_plot) %>%
-  filter(is.na(TMex_n)==F)
-
-mod3_siteavg <- jags_mod3.1$summary %>%
-  as.data.frame() %>%
-  select(mean, q2.5 = 3, q97.5 = 7) %>%
-  mutate(parameter = row.names(jags_mod3.1$summary)) %>%
-  filter(grepl(parameter, pattern = "alpha")) %>%
-  slice(1:18) %>%
-  mutate(site = unique(tstat$site),
-         mean = plogis(mean),
-         q2.5 = plogis(q2.5),
-         q97.5 = plogis(q97.5))
-
-ggplot(mod3sum) +
-  geom_errorbar(aes(x = year, ymin = q2.5, ymax = q97.5),
-                width = 0, color = "darkgray") +
-  geom_hline(data = mod3_siteavg, aes(yintercept = mean), 
-              color = "red") +
-  geom_point(aes(x = year, y = mean), color = "steelblue") +
-  geom_point(aes(x = year, y = TMex_p, color = "red", 
-                 shape = "*")) +
-  facet_wrap(~site)
-
-ggsave("test.png", width = 7, height = 5, dpi = 400)
-
-# to do
-# ADD IN THE RAW PROPORTIONS TO VIEW HOW IT WORKED
-# CENSOR YEARS WITH NO OBSERVATIONS
-# ADD IN MEAN SITE LINE
-# ADD IN MEAN YEAR SYMBOL?
-
-# make plot of just overall estimated site means +/- CI
-# estimate derived "slope" by year in JAGS where possible
-
-
-
-```
-
-# another try with Kery AHM book - SitexYear effects
-
+# Model estimating proportion of summer days exceeding TM temperature standards
+Random effects binomial model from Kery & Royle AHM book. Site x Year random effects
 ```{r}
 
 tstat <- tmax %>%
@@ -1538,12 +1082,11 @@ for(j in 1:n_years){
 logit(river.mean[j]) <- mu.alpha0.site + mu.beta[j]
 }
 
-
 }")
 
 jags_mod4 <- jagsUI::jags(data = jags_data4,
              model.file = "scripts/AHM_mod2.txt",
-             n.iter = 30000, n.burnin = 10000,
+             n.iter = 80000, n.burnin = 20000,
              parameters.to.save = c("theta", "alpha0.site",
                                     "mu.alpha0.site",
                                     "sd.alpha0.site",
@@ -1554,10 +1097,20 @@ jags_mod4 <- jagsUI::jags(data = jags_data4,
                                     "mu.year.effect",
                                     "tau.year.effect",
                                     "river.mean"),
-             n.chains = 3, parallel = T, n.thin = 20
+             n.chains = 3, parallel = T, n.thin = 120
              )
 
+# jagsUI::traceplot(jags_mod4)
 jags_mod4
+# saveRDS(
+#   jags_mod4,
+#         "output/Task1_SWQS_loggers/statistical_analysis/JAGS_TMtemp_model.rds"
+#   )
+
+# to read in the model results instead of running it
+jags_mod4 <- 
+  readRDS("output/Task1_SWQS_loggers/statistical_analysis/JAGS_TMtemp_model.rds")
+
 mod4_sum <- jags_mod4$summary
 
 tstat_plot <- tstat %>%
@@ -1575,9 +1128,9 @@ river_mod4sum <- jags_mod4$summary %>%
   filter(grepl(parameter, pattern = "river")) %>%
   mutate(site = "River mean",
          year = 2016:2021,
-         TMex_sum = "",
-         TMex_n = "",
-         TMex_p = "")
+         TMex_sum = NaN,
+         TMex_n = NaN,
+         TMex_p = NaN)
 
 mod4sum <- jags_mod4$summary %>%
   as.data.frame() %>%
@@ -1596,12 +1149,23 @@ mod4sum <- jags_mod4$summary %>%
   mutate(order = case_when(order == "r " ~ 85,
                            TRUE ~ as.numeric(order)),
          site = fct_reorder(site, .x = order),
-         samp_size = case_when(is.na(TMex_sum)==T ~ "",
-                               TRUE ~ 
-                                 paste0(as.character(TMex_sum), 
-                                        " / ", 
-                                        as.character(TMex_n)))
+         # manually add in site sample sizes for river mean
+         TMex_n = case_when(site == "River mean" &
+                              year == 2016 ~ 10,
+                            site == "River mean" &
+                              year %in% 2017:2018 ~ 12,
+                            site == "River mean" &
+                              year %in% 2019:2021 ~ 11,
+                            TRUE ~ TMex_n))
 
+# used to count number of sites in each year
+# year_tally = mod4sum %>%
+#   filter(is.na(TMex_n)==F) %>%
+#   group_by(year) %>%
+#   tally()
+```
+# Plot estimated proportion of days exceeding TM temp standards by year and site
+```{r}
 ggplot(mod4sum) +
   geom_smooth(aes(x = year, y = mean), method = "glm",
               method.args=list(family="binomial"),
@@ -1610,11 +1174,11 @@ ggplot(mod4sum) +
                 width = 0, color = "steelblue") +
   geom_point(aes(x = year, y = mean), color = "steelblue",
              size = 1.5) +
+  geom_text(aes(x = year, y = 0.05, 
+                label = TMex_n),
+            color = "darkgray", size = 1.5) +
   # geom_point(aes(x = year, y = TMex_p), color = "red",
   #                shape = "*") +
-  geom_text(aes(x = year, y = 0.05, 
-                label = samp_size),
-            size = 2, color = "darkgray") +
   facet_wrap(~site) +
   theme_bw() +
   theme(text = element_text(size = 14),
@@ -1623,20 +1187,240 @@ ggplot(mod4sum) +
         strip.background = element_rect(fill = "white")) +
   scale_y_continuous(limits = c(0,1),
                      breaks = seq(0,1,by = .5)) +
-  labs(y = "Proportion of days exceeding \nTrout Maintenance temperature SWQS (Jun-Aug)")
+  labs(y = "Proportion of days exceeding \nTrout Maintenance temperature standards (Jun-Aug)",x = "")
 
-ggsave("output/Task1_SWQS_loggers/statistical_analysis/trends.png", width = 7, height = 5, dpi = 400)
+ggsave("output/Task1_SWQS_loggers/statistical_analysis/trends_tempTM.png", width = 7, height = 5, dpi = 400)
+```
+# Plot estimated proportion of days exceeding TM temp standards by site, standardizing to 2018 conditions
+```{r}
 
-# to do
-# ADD IN THE RAW PROPORTIONS TO VIEW HOW IT WORKED
-# CENSOR YEARS WITH NO OBSERVATIONS
-# ADD IN MEAN SITE LINE
-# ADD IN MEAN YEAR SYMBOL?
+y18 <- jags_mod4$summary %>%
+  as.data.frame() %>%
+  select(mean, q2.5 = 3, q97.5 = 7) %>%
+  mutate(parameter = row.names(jags_mod4$summary)) %>%
+  slice(37:54) %>%
+  mutate(site = unique(tstat$site)) %>%
+  mutate(site = fct_reorder(site, mean))
+  
+x11(6,7); y18 %>%
+  ggplot() +
+  geom_errorbar(aes(x = site, 
+                    ymin = q2.5, 
+                    ymax = q97.5), 
+                width = 0, size = .75,
+                color = "firebrick") +
+  geom_point(aes(x = site, y = mean), 
+             size = 4, color = "firebrick") +
+  coord_flip() +
+  labs(y = "Predicted proportion of days (Jun-Aug) exceeding \nTrout Maintenance temperature thresholds \n(standardized to 2018 conditions)", x = "") +
+  theme_bw() +
+  theme(text = element_text(size = 14))
 
-# make plot of just overall estimated site means +/- CI
-# estimate derived "slope" by year in JAGS where possible
-
-
-
+ggsave("output/Task1_SWQS_loggers/statistical_analysis/standardized_site_comparisons_tempTM.png", width = 6, height = 7, dpi = 400)
 ```
 
+# Model estimating proportion of summer days exceeding TM DO standards
+Random effects binomial model from Kery & Royle AHM book. Site x Year random effects
+```{r}
+dostat <- dmin %>%
+  mutate(TMexDO = case_when(min_DO < 5 ~ 1,
+                            mean24_DO < 6 ~ 1,
+                            TRUE ~ 0),
+         yearnum = year-2015,
+         yearf = as.factor(yearnum)) %>%
+  filter(summer == 1,
+         is.na(min_DO) == F) %>%
+  select(site, yearf, day, min_DO, TMexDO)
+
+dostatJAGS <- dostat
+
+n_years <- length(unique(dostatJAGS$yearf))
+n_sites <- length(unique(dostatJAGS$site))
+TMexDO_mat <- matrix(data = NA, nrow = n_sites, ncol = n_years)
+TMexDO_n_mat <- matrix(data = NA, nrow = n_sites, ncol = n_years)
+yearf_mat <- matrix(data = rep(1:6, n_sites), nrow = n_sites, ncol = n_years, byrow = T)
+
+year1_mat <- matrix(data = c(rep(1,n_sites), 
+                             rep(0,length(TMex_mat)-n_sites)),
+                    ncol = n_years)
+year2_mat <- matrix(data = c(rep(0,n_sites), 
+                             rep(1,n_sites),
+                             rep(0,length(TMex_mat)-2*n_sites)),
+                    ncol = n_years)
+year3_mat <- matrix(data = c(rep(0,2*n_sites), 
+                             rep(1,n_sites), 
+                             rep(0,length(TMex_mat)-3*n_sites)),
+                    ncol = n_years)
+year4_mat <- matrix(data = c(rep(0,3*n_sites), 
+                             rep(1,n_sites), 
+                             rep(0,length(TMex_mat)-4*n_sites)),
+                    ncol = n_years)
+year5_mat <- matrix(data = c(rep(0,4*n_sites), 
+                             rep(1,n_sites), 
+                             rep(0,length(TMex_mat)-5*n_sites)),
+                    ncol = n_years)
+year6_mat <- matrix(data = c(rep(0,5*n_sites), 
+                             rep(1,n_sites)),
+                    ncol = n_years)
+
+for(i in 1:n_sites){
+  for(j in 1:n_years){
+    
+    value <- dostatJAGS %>%
+      filter(as.numeric(as.factor(site)) == i,
+             yearf == j)
+    TMexDO_mat[i, j] <- sum(value$TMexDO)
+    TMexDO_n_mat[i, j] <- length(value$TMexDO)
+  }
+  }
+
+jags_data_DO <- list(n_total = nrow(dostatJAGS),
+                  n_years = length(unique(dostatJAGS$yearf)),
+                  n_sites = length(unique(dostatJAGS$site)),
+                  TMex = TMexDO_mat,
+                  TMex_n = TMexDO_n_mat,
+                  y1 = year1_mat,
+                  y2 = year2_mat,
+                  y3 = year3_mat,
+                  y4 = year4_mat,
+                  y5 = year5_mat,
+                  y6 = year6_mat,
+                  yearf = yearf_mat,
+                  day = dostatJAGS$day,
+                  year = as.numeric(dostatJAGS$yearf),
+                  site = as.numeric(as.factor(dostatJAGS$site)))
+
+jags_mod_DO <- jagsUI::jags(data = jags_data_DO,
+             model.file = "scripts/AHM_mod2.txt",
+             n.iter = 80000, n.burnin = 20000,
+             parameters.to.save = c("theta", "alpha0.site",
+                                    "mu.alpha0.site",
+                                    "sd.alpha0.site",
+                                    "beta1", "beta2",
+                                    "beta3", "beta4", 
+                                    "beta5", "beta6",
+                                    "mu.beta", "sd.beta",
+                                    "mu.year.effect",
+                                    "tau.year.effect",
+                                    "river.mean"),
+             n.chains = 3, parallel = T, n.thin = 120
+             )
+
+# jagsUI::traceplot(jags_mod_DO)
+jags_mod_DO
+# saveRDS(
+#   jags_mod_DO,
+#         "output/Task1_SWQS_loggers/statistical_analysis/JAGS_TM_DO_model.rds"
+#   )
+
+# to read in the model results instead of running it
+jags_mod_DO <- 
+  readRDS("output/Task1_SWQS_loggers/statistical_analysis/JAGS_TM_DO_model.rds")
+
+modDO_sum <- jags_mod_DO$summary
+
+dostat_plot <- dostat %>%
+  group_by(site, yearf) %>%
+  summarise(TMex_sum = sum(TMexDO),
+            TMex_n = length(TMexDO),
+            TMex_p = TMex_sum/TMex_n) %>%
+  mutate(year = as.numeric(yearf)+2015) %>%
+  select(-yearf)
+
+river_modDOsum <- jags_mod_DO$summary %>%
+  as.data.frame() %>%
+  select(mean, q2.5 = 3, q97.5 = 7) %>%
+  mutate(parameter = row.names(jags_mod_DO$summary)) %>%
+  filter(grepl(parameter, pattern = "river")) %>%
+  mutate(site = "River mean",
+         year = 2016:2021,
+         TMex_sum = NaN,
+         TMex_n = NaN,
+         TMex_p = NaN)
+
+modDOsum <- jags_mod_DO$summary %>%
+  as.data.frame() %>%
+  select(mean, q2.5 = 3, q97.5 = 7) %>%
+  mutate(parameter = row.names(jags_mod_DO$summary)) %>%
+  filter(grepl(parameter, pattern = "theta")) %>%
+  mutate(site = rep(unique(dostat$site), 6),
+         year = sort(rep(2016:2021, 18))) %>%
+  left_join(dostat_plot) %>%
+  filter(is.na(TMex_n)==F) %>%
+  bind_rows(river_modDOsum) %>%
+  mutate(site = as.character(site)) %>%
+  mutate(site = case_when(is.na(site) == T ~ "River mean",
+                          TRUE ~ site),
+         order = substr(site, 5, 6)) %>%
+  mutate(order = case_when(order == "r " ~ 85,
+                           TRUE ~ as.numeric(order)),
+         site = fct_reorder(site, .x = order),
+         # manually add in site sample sizes for river mean
+         TMex_n = case_when(site == "River mean" &
+                              year == 2016 ~ 10,
+                            site == "River mean" &
+                              year %in% 2017:2018 ~ 12,
+                            site == "River mean" &
+                              year %in% 2019:2021 ~ 11,
+                            TRUE ~ TMex_n))
+
+# used to count number of sites in each year
+# year_tally = mod4sum %>%
+#   filter(is.na(TMex_n)==F) %>%
+#   group_by(year) %>%
+#   tally()
+```
+# Plot estimated proportion of days exceeding TM temp standards by year and site
+```{r}
+ggplot(modDOsum) +
+  geom_smooth(aes(x = year, y = mean), method = "glm",
+              method.args=list(family="binomial"),
+              se = F, color = "darkgray", size = 0.4) +
+  geom_errorbar(aes(x = year, ymin = q2.5, ymax = q97.5),
+                width = 0, color = "steelblue") +
+  geom_point(aes(x = year, y = mean), color = "steelblue",
+             size = 1.5) +
+  geom_text(aes(x = year, y = 0.05, 
+                label = TMex_n),
+            color = "darkgray", size = 1.5) +
+  # geom_point(aes(x = year, y = TMex_p), color = "red",
+  #                shape = "*") +
+  facet_wrap(~site) +
+  theme_bw() +
+  theme(text = element_text(size = 14),
+        axis.text.x = element_text(size = 6),
+        axis.title.y = element_text(size = 10),
+        strip.background = element_rect(fill = "white")) +
+  scale_y_continuous(limits = c(0,1),
+                     breaks = seq(0,1,by = .5)) +
+  labs(y = "Proportion of days exceeding \nTrout Maintenance dissolved oxygen standards (Jun-Aug)",x = "")
+
+ggsave("output/Task1_SWQS_loggers/statistical_analysis/trends_DO_TM.png", width = 7, height = 5, dpi = 400)
+```
+# Plot estimated proportion of days exceeding TM temp standards by site, standardizing to 2018 conditions
+```{r}
+
+y18 <- jags_mod_DO$summary %>%
+  as.data.frame() %>%
+  select(mean, q2.5 = 3, q97.5 = 7) %>%
+  mutate(parameter = row.names(jags_mod_DO$summary)) %>%
+  slice(37:54) %>%
+  mutate(site = unique(dostat$site)) %>%
+  mutate(site = fct_reorder(site, mean))
+  
+x11(6,7); y18 %>%
+  ggplot() +
+  geom_errorbar(aes(x = site, 
+                    ymin = q2.5, 
+                    ymax = q97.5), 
+                width = 0, size = .75,
+                color = "firebrick") +
+  geom_point(aes(x = site, y = mean), 
+             size = 4, color = "firebrick") +
+  coord_flip() +
+  labs(y = "Predicted proportion of days (Jun-Aug) exceeding \nTrout Maintenance dissolved oxygen thresholds \n(standardized to 2018 conditions)", x = "") +
+  theme_bw() +
+  theme(text = element_text(size = 14))
+
+ggsave("output/Task1_SWQS_loggers/statistical_analysis/standardized_site_comparisons_DO_TM.png", width = 6, height = 7, dpi = 400)
+```

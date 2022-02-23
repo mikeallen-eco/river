@@ -43,5 +43,4 @@ for(j in 1:n_years){
 logit(river.mean[j]) <- mu.alpha0.site + mu.beta[j]
 }
 
-
 }
