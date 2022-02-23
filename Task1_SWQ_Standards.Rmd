@@ -1084,32 +1084,33 @@ logit(river.mean[j]) <- mu.alpha0.site + mu.beta[j]
 
 }")
 
-jags_mod4 <- jagsUI::jags(data = jags_data4,
-             model.file = "scripts/AHM_mod2.txt",
-             n.iter = 80000, n.burnin = 20000,
-             parameters.to.save = c("theta", "alpha0.site",
-                                    "mu.alpha0.site",
-                                    "sd.alpha0.site",
-                                    "beta1", "beta2",
-                                    "beta3", "beta4", 
-                                    "beta5", "beta6",
-                                    "mu.beta", "sd.beta",
-                                    "mu.year.effect",
-                                    "tau.year.effect",
-                                    "river.mean"),
-             n.chains = 3, parallel = T, n.thin = 120
-             )
+# jags_mod4 <- jagsUI::jags(data = jags_data4,
+#              model.file = "scripts/AHM_mod2.txt",
+#              n.iter = 80000, n.burnin = 20000,
+#              parameters.to.save = c("theta", "alpha0.site",
+#                                     "mu.alpha0.site",
+#                                     "sd.alpha0.site",
+#                                     "beta1", "beta2",
+#                                     "beta3", "beta4", 
+#                                     "beta5", "beta6",
+#                                     "mu.beta", "sd.beta",
+#                                     "mu.year.effect",
+#                                     "tau.year.effect",
+#                                     "river.mean"),
+#              n.chains = 3, parallel = T, n.thin = 120
+#              )
 
-# jagsUI::traceplot(jags_mod4)
-jags_mod4
 # saveRDS(
 #   jags_mod4,
-#         "output/Task1_SWQS_loggers/statistical_analysis/JAGS_TMtemp_model.rds"
+#         "output/Task1_SWQS_loggers/statistical_analysis/model_output/JAGS_TMtemp_model.rds"
 #   )
 
 # to read in the model results instead of running it
 jags_mod4 <- 
-  readRDS("output/Task1_SWQS_loggers/statistical_analysis/JAGS_TMtemp_model.rds")
+  readRDS("output/Task1_SWQS_loggers/statistical_analysis/model_output/JAGS_TMtemp_model.rds")
+
+# jagsUI::traceplot(jags_mod4)
+jags_mod4
 
 mod4_sum <- jags_mod4$summary
 
@@ -1159,22 +1160,22 @@ mod4sum <- jags_mod4$summary %>%
                             TRUE ~ TMex_n))
 
 # used to count number of sites in each year
-# year_tally = mod4sum %>%
-#   filter(is.na(TMex_n)==F) %>%
-#   group_by(year) %>%
-#   tally()
+mod4sum %>%
+  filter(is.na(TMex_p)==F) %>%
+  group_by(year) %>%
+  tally()
 ```
 # Plot estimated proportion of days exceeding TM temp standards by year and site
 ```{r}
 ggplot(mod4sum) +
-  geom_smooth(aes(x = year, y = mean), method = "glm",
-              method.args=list(family="binomial"),
-              se = F, color = "darkgray", size = 0.4) +
+  # geom_smooth(aes(x = year, y = mean), method = "glm",
+  #             method.args=list(family="binomial"),
+  #             se = F, color = "darkgray", size = 0.4) +
   geom_errorbar(aes(x = year, ymin = q2.5, ymax = q97.5),
                 width = 0, color = "steelblue") +
   geom_point(aes(x = year, y = mean), color = "steelblue",
              size = 1.5) +
-  geom_text(aes(x = year, y = 0.05, 
+  geom_text(aes(x = year, y = -0.1,
                 label = TMex_n),
             color = "darkgray", size = 1.5) +
   # geom_point(aes(x = year, y = TMex_p), color = "red",
@@ -1185,11 +1186,11 @@ ggplot(mod4sum) +
         axis.text.x = element_text(size = 6),
         axis.title.y = element_text(size = 10),
         strip.background = element_rect(fill = "white")) +
-  scale_y_continuous(limits = c(0,1),
+  scale_y_continuous(limits = c(-0.2,1),
                      breaks = seq(0,1,by = .5)) +
   labs(y = "Proportion of days exceeding \nTrout Maintenance temperature standards (Jun-Aug)",x = "")
 
-ggsave("output/Task1_SWQS_loggers/statistical_analysis/trends_tempTM.png", width = 7, height = 5, dpi = 400)
+# ggsave("output/Task1_SWQS_loggers/statistical_analysis/tempTM_trends.png", width = 7, height = 5, dpi = 400)
 ```
 # Plot estimated proportion of days exceeding TM temp standards by site, standardizing to 2018 conditions
 ```{r}
@@ -1208,17 +1209,16 @@ x11(6,7); y18 %>%
                     ymin = q2.5, 
                     ymax = q97.5), 
                 width = 0, size = .75,
-                color = "firebrick") +
+                color = "steelblue") +
   geom_point(aes(x = site, y = mean), 
-             size = 4, color = "firebrick") +
+             size = 4, color = "steelblue") +
   coord_flip() +
   labs(y = "Predicted proportion of days (Jun-Aug) exceeding \nTrout Maintenance temperature thresholds \n(standardized to 2018 conditions)", x = "") +
   theme_bw() +
   theme(text = element_text(size = 14))
 
-ggsave("output/Task1_SWQS_loggers/statistical_analysis/standardized_site_comparisons_tempTM.png", width = 6, height = 7, dpi = 400)
+# ggsave("output/Task1_SWQS_loggers/statistical_analysis/tempTM_standardized_site_comparisons.png", width = 6, height = 7, dpi = 400)
 ```
-
 # Model estimating proportion of summer days exceeding TM DO standards
 Random effects binomial model from Kery & Royle AHM book. Site x Year random effects
 ```{r}
@@ -1241,23 +1241,23 @@ TMexDO_n_mat <- matrix(data = NA, nrow = n_sites, ncol = n_years)
 yearf_mat <- matrix(data = rep(1:6, n_sites), nrow = n_sites, ncol = n_years, byrow = T)
 
 year1_mat <- matrix(data = c(rep(1,n_sites), 
-                             rep(0,length(TMex_mat)-n_sites)),
+                             rep(0,length(TMexDO_mat)-n_sites)),
                     ncol = n_years)
 year2_mat <- matrix(data = c(rep(0,n_sites), 
                              rep(1,n_sites),
-                             rep(0,length(TMex_mat)-2*n_sites)),
+                             rep(0,length(TMexDO_mat)-2*n_sites)),
                     ncol = n_years)
 year3_mat <- matrix(data = c(rep(0,2*n_sites), 
                              rep(1,n_sites), 
-                             rep(0,length(TMex_mat)-3*n_sites)),
+                             rep(0,length(TMexDO_mat)-3*n_sites)),
                     ncol = n_years)
 year4_mat <- matrix(data = c(rep(0,3*n_sites), 
                              rep(1,n_sites), 
-                             rep(0,length(TMex_mat)-4*n_sites)),
+                             rep(0,length(TMexDO_mat)-4*n_sites)),
                     ncol = n_years)
 year5_mat <- matrix(data = c(rep(0,4*n_sites), 
                              rep(1,n_sites), 
-                             rep(0,length(TMex_mat)-5*n_sites)),
+                             rep(0,length(TMexDO_mat)-5*n_sites)),
                     ncol = n_years)
 year6_mat <- matrix(data = c(rep(0,5*n_sites), 
                              rep(1,n_sites)),
@@ -1290,32 +1290,33 @@ jags_data_DO <- list(n_total = nrow(dostatJAGS),
                   year = as.numeric(dostatJAGS$yearf),
                   site = as.numeric(as.factor(dostatJAGS$site)))
 
-jags_mod_DO <- jagsUI::jags(data = jags_data_DO,
-             model.file = "scripts/AHM_mod2.txt",
-             n.iter = 80000, n.burnin = 20000,
-             parameters.to.save = c("theta", "alpha0.site",
-                                    "mu.alpha0.site",
-                                    "sd.alpha0.site",
-                                    "beta1", "beta2",
-                                    "beta3", "beta4", 
-                                    "beta5", "beta6",
-                                    "mu.beta", "sd.beta",
-                                    "mu.year.effect",
-                                    "tau.year.effect",
-                                    "river.mean"),
-             n.chains = 3, parallel = T, n.thin = 120
-             )
+# jags_mod_DO <- jagsUI::jags(data = jags_data_DO,
+#              model.file = "scripts/AHM_mod2.txt",
+#              n.iter = 80000, n.burnin = 20000,
+#              parameters.to.save = c("theta", "alpha0.site",
+#                                     "mu.alpha0.site",
+#                                     "sd.alpha0.site",
+#                                     "beta1", "beta2",
+#                                     "beta3", "beta4", 
+#                                     "beta5", "beta6",
+#                                     "mu.beta", "sd.beta",
+#                                     "mu.year.effect",
+#                                     "tau.year.effect",
+#                                     "river.mean"),
+#              n.chains = 3, parallel = T, n.thin = 120
+#              )
 
-# jagsUI::traceplot(jags_mod_DO)
-jags_mod_DO
 # saveRDS(
 #   jags_mod_DO,
-#         "output/Task1_SWQS_loggers/statistical_analysis/JAGS_TM_DO_model.rds"
+#         "output/Task1_SWQS_loggers/statistical_analysis/model_output/JAGS_TM_DO_model.rds"
 #   )
 
 # to read in the model results instead of running it
 jags_mod_DO <- 
-  readRDS("output/Task1_SWQS_loggers/statistical_analysis/JAGS_TM_DO_model.rds")
+  readRDS("output/Task1_SWQS_loggers/statistical_analysis/model_output/JAGS_TM_DO_model.rds")
+
+# jagsUI::traceplot(jags_mod_DO)
+jags_mod_DO
 
 modDO_sum <- jags_mod_DO$summary
 
@@ -1365,22 +1366,22 @@ modDOsum <- jags_mod_DO$summary %>%
                             TRUE ~ TMex_n))
 
 # used to count number of sites in each year
-# year_tally = mod4sum %>%
-#   filter(is.na(TMex_n)==F) %>%
-#   group_by(year) %>%
-#   tally()
+modDOsum %>%
+  filter(is.na(TMex_p)==F) %>%
+  group_by(year) %>%
+  tally()
 ```
 # Plot estimated proportion of days exceeding TM temp standards by year and site
 ```{r}
 ggplot(modDOsum) +
-  geom_smooth(aes(x = year, y = mean), method = "glm",
-              method.args=list(family="binomial"),
-              se = F, color = "darkgray", size = 0.4) +
+  # geom_smooth(aes(x = year, y = mean), method = "glm",
+  #             method.args=list(family="binomial"),
+  #             se = F, color = "darkgray", size = 0.4) +
   geom_errorbar(aes(x = year, ymin = q2.5, ymax = q97.5),
-                width = 0, color = "steelblue") +
-  geom_point(aes(x = year, y = mean), color = "steelblue",
+                width = 0, color = "firebrick") +
+  geom_point(aes(x = year, y = mean), color = "firebrick",
              size = 1.5) +
-  geom_text(aes(x = year, y = 0.05, 
+  geom_text(aes(x = year, y = -0.1, 
                 label = TMex_n),
             color = "darkgray", size = 1.5) +
   # geom_point(aes(x = year, y = TMex_p), color = "red",
@@ -1391,36 +1392,47 @@ ggplot(modDOsum) +
         axis.text.x = element_text(size = 6),
         axis.title.y = element_text(size = 10),
         strip.background = element_rect(fill = "white")) +
-  scale_y_continuous(limits = c(0,1),
+  scale_y_continuous(limits = c(-0.2,1),
                      breaks = seq(0,1,by = .5)) +
   labs(y = "Proportion of days exceeding \nTrout Maintenance dissolved oxygen standards (Jun-Aug)",x = "")
 
-ggsave("output/Task1_SWQS_loggers/statistical_analysis/trends_DO_TM.png", width = 7, height = 5, dpi = 400)
+ggsave("output/Task1_SWQS_loggers/statistical_analysis/DO_TM_trends.png", width = 7, height = 5, dpi = 400)
 ```
-# Plot estimated proportion of days exceeding TM temp standards by site, standardizing to 2018 conditions
+# Table of statistical model results - DO
 ```{r}
+model_table_temp <- mod4sum %>% 
+  arrange(site, year) %>%
+  select(site, year, TMex_sum, TMex_n, mean, q2.5, q97.5) %>%
+  filter(site != "River mean") %>%
+  rename(Site = site, Year = year, 'No. days' = TMex_sum, 
+         n = TMex_n, 'Est. prob.' = mean, LL = q2.5, UL = q97.5) %>%
+  kbl(digits = 2, caption = "Summer days exceeding Trout Maintenance temperature thresholds (Jun-Aug). Estimated probability of exceeding the threshold (with 95% credible intervals) was estimated using a Bayesian hierarchical model.", row.names = F) %>%
+  kable_classic(full_width = F, html_font = "Cambria")
 
-y18 <- jags_mod_DO$summary %>%
-  as.data.frame() %>%
-  select(mean, q2.5 = 3, q97.5 = 7) %>%
-  mutate(parameter = row.names(jags_mod_DO$summary)) %>%
-  slice(37:54) %>%
-  mutate(site = unique(dostat$site)) %>%
-  mutate(site = fct_reorder(site, mean))
-  
-x11(6,7); y18 %>%
-  ggplot() +
-  geom_errorbar(aes(x = site, 
-                    ymin = q2.5, 
-                    ymax = q97.5), 
-                width = 0, size = .75,
-                color = "firebrick") +
-  geom_point(aes(x = site, y = mean), 
-             size = 4, color = "firebrick") +
-  coord_flip() +
-  labs(y = "Predicted proportion of days (Jun-Aug) exceeding \nTrout Maintenance dissolved oxygen thresholds \n(standardized to 2018 conditions)", x = "") +
-  theme_bw() +
-  theme(text = element_text(size = 14))
+model_table_temp
 
-ggsave("output/Task1_SWQS_loggers/statistical_analysis/standardized_site_comparisons_DO_TM.png", width = 6, height = 7, dpi = 400)
+# save the table to HTML file
+save_kable(model_table,
+           "output/Task1_SWQS_loggers/statistical_analysis/TableE_modeled_p_TM_temp.html")
+
 ```
+# Table of statistical model results - DO
+```{r}
+model_table <- modDOsum %>% 
+  arrange(site, year) %>%
+  select(site, year, TMex_sum, TMex_n, mean, q2.5, q97.5) %>%
+  filter(site != "River mean") %>%
+  rename(Site = site, Year = year, 'No. days' = TMex_sum, 
+         n = TMex_n, 'Est. prob.' = mean, LL = q2.5, UL = q97.5) %>%
+  kbl(digits = 2, caption = "Summer days exceeding Trout Maintenance dissolved oxygen thresholds (Jun-Aug). Estimated probability of exceeding the threshold (with 95% credible intervals) was estimated using a Bayesian hierarchical model.", row.names = F) %>%
+  kable_classic(full_width = F, html_font = "Cambria")
+
+model_table
+
+# save the table to HTML file
+save_kable(model_table,
+           "output/Task1_SWQS_loggers/statistical_analysis/TableF_modeled_p_TM_DO.html")
+
+```
+
+
