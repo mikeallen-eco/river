@@ -21,16 +21,9 @@ c. How often do sites exceed SWQS for dissolved oxygen (how many days per year)?
 • Summary statistics and statistical analysis of same along with associated interpretative text.
 
 To do:
-* add TNC_80's graphs
-* add way to flag/remove years with low coverage in Jun-Aug
-* graphs of individual sites w/ panels by year (maybe raw & rolling average on same graph)
-* fix "adjusted DO" graphs & tables (include deleted data)
-* fix DO boxplot figure (good -> bad = top -> bottom)
 5. research statistically controlling for air temp (water temp ~ air temp)
 6. research methods to statistically QC / censor DO data using water temp data
-* add low-sample-size flag to tables
-* try bivariate figure that includes temp and DO days above
-* days above either threshold boxplot
+
 
 
 # Load libraries, format data, etc.
@@ -1448,7 +1441,7 @@ gam_1 <- gam(max_temp ~ s(day, by = yearf) + site,
              data = tmax_gam,
              family = gaussian)
 sink(paste0("output/Task1_SWQS_loggers/",
-              "statistical_analysis/GAM_results.txt"))
+              "statistical_analysis/GAM_results_temp.txt"))
 summary(gam_1)
 sink()
 
@@ -1517,40 +1510,135 @@ tmax_jul15 %>%
   facet_wrap(~as.factor(yearf)) +
   theme_bw() +
   theme(text = element_text(size = 14),
-        strip.background = element_rect(fill = "white")) +
-  labs(x = "Predicted maximum temperature on July 15th", 
+        strip.background = element_rect(fill = "white"),
+        axis.text.y = element_text(size = 10)) +
+  labs(x = "Predicted mean maximum temperature on July 15th", 
        y = "",
-       title = "Generalized Additive Model (GAM) results")
+       title = "Generalized Additive Model (GAM) results") +
+  scale_x_continuous(breaks = c(20, 22, 24, 26, 28))
 
 ggsave(
   "output/Task1_SWQS_loggers/PlotN_temp_GAM_standardized_site_comparisons.png",
-         width = 7, height = 5, dpi = 400)
+         width = 7, height = 7, dpi = 400)
+```
 
+# Fit Generalized Additive Model to DO data
+```{r}
+library(mgcv)
+# GAM by year with site as a covariate
+dmin_gam <- dmin %>%
+  mutate(yearf = as.factor(year)) %>%
+  filter(is.na(min_DO)==F,
+         day %in% 91:288) %>%
+  arrange(site, year, day)
 
-tmax_hat = predict(gam_1, 
-                     newdata = 
-                       expand.grid(site = "TNC_2", 
+gam_2 <- gam(min_DO ~ s(day, by = yearf) + site,
+             data = dmin_gam,
+             family = gaussian)
+
+sink(paste0("output/Task1_SWQS_loggers/",
+              "statistical_analysis/GAM_results_DO.txt"))
+summary(gam_2)
+sink()
+
+summary(gam_2)
+
+```
+# Plot each results from temperature GAM for each year
+```{r}
+temp3 <- cbind(dmin_gam, fit = gam_2$fitted.values)
+for(the_year in c(2016:2021)){
+  print(the_year)
+  temp3 %>% filter(yearf == the_year) %>%
+  ggplot() +
+  geom_vline(xintercept = 196, lty = 2, color = "darkgray") +  
+  geom_point(aes(x = day, y = min_DO), color = "darkgray") +
+  geom_line(aes(x = day, y = fit), color = "salmon") +
+  facet_wrap(~site) +
+  theme_bw() +
+  labs(x = "", y = "Daily minimum dissolved oxygen",
+       title = paste0("GAM results: ", the_year)) +
+  theme(text = element_text(size = 14),
+        axis.text.x = element_text(size = 9),
+        strip.background = element_rect(fill = "white")) + 
+  scale_x_continuous(
+    breaks = c(91, 152, 213, 274, 335),
+    labels = c("Apr", "Jun", "Aug",
+               "Oct", "Dec")
+  )
+
+ggsave(paste0("output/Task1_SWQS_loggers/",
+              "statistical_analysis/GAM_plots/GAM_plots_DO",
+              the_year, ".png"),
+       height = 5, width = 7, dpi = 400)
+}
+
+```
+# Plot GAM predicted dissolved oxygen values from July 15th
+```{r}
+dmin_jul15 <- data.frame(
+  expand.grid(site = unique(dmin$site), 
                                    yearf = 2016:2021, 
-                                   day = 91:288), se.fit = T)
-plot_data <- expand.grid(site = "TNC_2",
-                         year = 2016:2021, 
-                                   day = 91:288) %>%
-  mutate(tmax_hat = tmax_hat[[1]],
-         tmax_UL = tmax_hat[[1]]+2*tmax_hat[[2]],
-         tmax_LL = tmax_hat[[1]]-2*tmax_hat[[2]],
-         yearf = as.factor(year)) %>%
-  left_join(tmax) %>%
-  filter(site == "TNC_2",
-         is.na(max_temp)==F)
+                                   day = 196),
+  meandmin = predict(gam_2, 
+                     newdata = 
+                       expand.grid(site = unique(dmin$site), 
+                                   yearf = 2016:2021, 
+                                   day = 196), se.fit = T)[[1]],
+  sedmin = predict(gam_2, 
+                     newdata = 
+                       expand.grid(site = unique(dmin$site), 
+                                   yearf = 2016:2021, 
+                                   day = 196), se.fit = T)[[2]]) %>%
+  mutate(site = fct_reorder(site, meandmin))
 
-plot_data %>%
-  arrange(site, year, day) %>%
-ggplot() +
-  # geom_ribbon(aes(x = day, ymin = tmax_LL, ymax = tmax_UL, fill = yearf)) +    
-  geom_point(aes(x = day, y = max_temp), color = "darkgray",
-               alpha = 0.5) +
+dmin_jul15
 
-  geom_line(aes(x = day, y = tmax_hat, color = yearf)) +
-  facet_wrap(~yearf)
+dmin_jul15 %>%
+  ggplot() +
+  geom_errorbar(aes(y = site, xmax = meandmin+2*sedmin,
+                    xmin = meandmin-2*sedmin),
+                width = 0, color = "dodgerblue") + 
+  geom_point(aes(y = site, x = meandmin),
+             color = "dodgerblue") +  
+  facet_wrap(~as.factor(yearf)) +
+  theme_bw() +
+  theme(text = element_text(size = 14),
+        strip.background = element_rect(fill = "white"),
+        axis.text.y = element_text(size = 10)) +
+  labs(x = "Predicted mean minimum dissolved oxygen on July 15th", 
+       y = "",
+       title = "Generalized Additive Model (GAM) results") +
+  scale_x_continuous(breaks = 2:8)
+
+ggsave(
+  "output/Task1_SWQS_loggers/PlotO_DO_GAM_standardized_site_comparisons.png",
+         width = 7, height = 7, dpi = 400)
+```
+
+# Bivariate GAM temp vs. DO
+Predict DO and max temperature on July 15, 2018
+```{r}
+dmin_jul15 %>%
+  left_join(tmax_jul15) %>%
+  filter(yearf == 2018) %>%
+  ggplot() +
+  geom_errorbar(aes(xmin = meanTmax-2*seTmax, 
+                    xmax = meanTmax+2*seTmax, y = meandmin)) +
+  geom_errorbar(aes(ymin = meandmin-2*sedmin, 
+                    ymax = meandmin+2*sedmin, x = meanTmax)) +     
+  geom_point(aes(x = meanTmax, y = meandmin), size = 2) +
+  geom_text(aes(x = meanTmax-.1, y = meandmin-.1, label = site),
+            color = "gray", size = 2) +
+
+  theme_bw() +
+  theme(text = element_text(size = 14)) +
+  labs(x = "Predicted mean maximum temp. (C)",
+       y = "Predicted mean minimum DO")
+
+ggsave(
+  "output/Task1_SWQS_loggers/PlotP_DO_and_temp_GAM_standardized_site_comparisons.png",
+         width = 5, height = 5, dpi = 400)
+
 ```
 
