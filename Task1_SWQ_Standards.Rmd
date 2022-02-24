@@ -1190,34 +1190,7 @@ ggplot(mod4sum) +
                      breaks = seq(0,1,by = .5)) +
   labs(y = "Proportion of days exceeding \nTrout Maintenance temperature standards (Jun-Aug)",x = "")
 
-# ggsave("output/Task1_SWQS_loggers/statistical_analysis/tempTM_trends.png", width = 7, height = 5, dpi = 400)
-```
-# Plot estimated proportion of days exceeding TM temp standards by site, standardizing to 2018 conditions
-```{r}
-
-y18 <- jags_mod4$summary %>%
-  as.data.frame() %>%
-  select(mean, q2.5 = 3, q97.5 = 7) %>%
-  mutate(parameter = row.names(jags_mod4$summary)) %>%
-  slice(37:54) %>%
-  mutate(site = unique(tstat$site)) %>%
-  mutate(site = fct_reorder(site, mean))
-  
-x11(6,7); y18 %>%
-  ggplot() +
-  geom_errorbar(aes(x = site, 
-                    ymin = q2.5, 
-                    ymax = q97.5), 
-                width = 0, size = .75,
-                color = "steelblue") +
-  geom_point(aes(x = site, y = mean), 
-             size = 4, color = "steelblue") +
-  coord_flip() +
-  labs(y = "Predicted proportion of days (Jun-Aug) exceeding \nTrout Maintenance temperature thresholds \n(standardized to 2018 conditions)", x = "") +
-  theme_bw() +
-  theme(text = element_text(size = 14))
-
-# ggsave("output/Task1_SWQS_loggers/statistical_analysis/tempTM_standardized_site_comparisons.png", width = 6, height = 7, dpi = 400)
+# ggsave("output/Task1_SWQS_loggers/PlotK_temp_TM_exceed_hierarchical_model_trends.png", width = 7, height = 5, dpi = 400)
 ```
 # Model estimating proportion of summer days exceeding TM DO standards
 Random effects binomial model from Kery & Royle AHM book. Site x Year random effects
@@ -1396,9 +1369,36 @@ ggplot(modDOsum) +
                      breaks = seq(0,1,by = .5)) +
   labs(y = "Proportion of days exceeding \nTrout Maintenance dissolved oxygen standards (Jun-Aug)",x = "")
 
-ggsave("output/Task1_SWQS_loggers/statistical_analysis/DO_TM_trends.png", width = 7, height = 5, dpi = 400)
+ggsave("output/Task1_SWQS_loggers/PlotL_DO_TM_exceed_hierarchical_model_trends.png", width = 7, height = 5, dpi = 400)
 ```
-# Table of statistical model results - DO
+# Plot estimated proportion of days exceeding TM temp standards by site, standardizing to 2018 conditions
+```{r}
+
+y18 <- jags_mod4$summary %>%
+  as.data.frame() %>%
+  select(mean, q2.5 = 3, q97.5 = 7) %>%
+  mutate(parameter = row.names(jags_mod4$summary)) %>%
+  slice(37:54) %>%
+  mutate(site = unique(tstat$site)) %>%
+  mutate(site = fct_reorder(site, mean))
+  
+x11(6,7); y18 %>%
+  ggplot() +
+  geom_errorbar(aes(x = site, 
+                    ymin = q2.5, 
+                    ymax = q97.5), 
+                width = 0, size = .75,
+                color = "steelblue") +
+  geom_point(aes(x = site, y = mean), 
+             size = 4, color = "steelblue") +
+  coord_flip() +
+  labs(y = "Predicted proportion of days (Jun-Aug) exceeding \nTrout Maintenance temperature thresholds \n(standardized to 2018 conditions)", x = "") +
+  theme_bw() +
+  theme(text = element_text(size = 14))
+
+# ggsave("output/Task1_SWQS_loggers/PlotM_temp_TM_exceed_hierarchical_model_standardized_site_comparisons.png", width = 6, height = 7, dpi = 400)
+```
+# Table of hierarchical model results - temperature
 ```{r}
 model_table_temp <- mod4sum %>% 
   arrange(site, year) %>%
@@ -1413,10 +1413,10 @@ model_table_temp
 
 # save the table to HTML file
 save_kable(model_table,
-           "output/Task1_SWQS_loggers/statistical_analysis/TableE_modeled_p_TM_temp.html")
+           "output/Task1_SWQS_loggers/TableE_modeled_p_TM_temp.html")
 
 ```
-# Table of statistical model results - DO
+# Table of hierarchical model results - DO
 ```{r}
 model_table <- modDOsum %>% 
   arrange(site, year) %>%
@@ -1431,8 +1431,126 @@ model_table
 
 # save the table to HTML file
 save_kable(model_table,
-           "output/Task1_SWQS_loggers/statistical_analysis/TableF_modeled_p_TM_DO.html")
+           "output/Task1_SWQS_loggers/TableF_modeled_p_TM_DO.html")
 
 ```
+# Fit Generalized Additive Model to temperature data
+```{r}
+library(mgcv)
+# GAM by year with site as a covariate
+tmax_gam <- tmax %>%
+  mutate(yearf = as.factor(year)) %>%
+  filter(is.na(max_temp)==F,
+         day %in% 91:288) %>%
+  arrange(site, year, day)
 
+gam_1 <- gam(max_temp ~ s(day, by = yearf) + site,
+             data = tmax_gam,
+             family = gaussian)
+sink(paste0("output/Task1_SWQS_loggers/",
+              "statistical_analysis/GAM_results.txt"))
+summary(gam_1)
+sink()
+
+summary(gam_1)
+
+```
+# Plot each results from temperature GAM for each year
+```{r}
+temp2 <- cbind(tmax_gam, fit = gam_1$fitted.values)
+for(the_year in c(2016:2021)){
+  print(the_year)
+  temp2 %>% filter(yearf == the_year) %>%
+  ggplot() +
+  geom_vline(xintercept = 196, lty = 2, color = "darkgray") +  
+  geom_point(aes(x = day, y = max_temp), color = "darkgray") +
+  geom_line(aes(x = day, y = fit), color = "salmon") +
+
+  facet_wrap(~site) +
+  theme_bw() +
+  labs(x = "", y = "Daily maximum temperature (C)",
+       title = paste0("GAM results: ", the_year)) +
+  theme(text = element_text(size = 14),
+        axis.text.x = element_text(size = 9),
+        strip.background = element_rect(fill = "white")) + 
+  scale_x_continuous(
+    breaks = c(91, 152, 213, 274, 335),
+    labels = c("Apr", "Jun", "Aug",
+               "Oct", "Dec")
+  )
+
+ggsave(paste0("output/Task1_SWQS_loggers/",
+              "statistical_analysis/GAM_plots/GAM_plots_",
+              the_year, ".png"),
+       height = 5, width = 7, dpi = 400)
+}
+
+```
+# Plot GAM predicted temperature values from July 15th
+```{r}
+tmax_jul15 <- data.frame(
+  expand.grid(site = unique(tmax$site), 
+                                   yearf = 2016:2021, 
+                                   day = 196),
+  meanTmax = predict(gam_1, 
+                     newdata = 
+                       expand.grid(site = unique(tmax$site), 
+                                   yearf = 2016:2021, 
+                                   day = 196), se.fit = T)[[1]],
+  seTmax = predict(gam_1, 
+                     newdata = 
+                       expand.grid(site = unique(tmax$site), 
+                                   yearf = 2016:2021, 
+                                   day = 196), se.fit = T)[[2]]) %>%
+  mutate(site = fct_reorder(site, meanTmax))
+
+tmax_jul15
+
+tmax_jul15 %>%
+  ggplot() +
+  geom_errorbar(aes(y = site, xmax = meanTmax+2*seTmax,
+                    xmin = meanTmax-2*seTmax),
+                width = 0, color = "dodgerblue") + 
+  geom_point(aes(y = site, x = meanTmax),
+             color = "dodgerblue") +  
+  # geom_hline(aes(yintercept = ))
+  facet_wrap(~as.factor(yearf)) +
+  theme_bw() +
+  theme(text = element_text(size = 14),
+        strip.background = element_rect(fill = "white")) +
+  labs(x = "Predicted maximum temperature on July 15th", 
+       y = "",
+       title = "Generalized Additive Model (GAM) results")
+
+ggsave(
+  "output/Task1_SWQS_loggers/PlotN_temp_GAM_standardized_site_comparisons.png",
+         width = 7, height = 5, dpi = 400)
+
+
+tmax_hat = predict(gam_1, 
+                     newdata = 
+                       expand.grid(site = "TNC_2", 
+                                   yearf = 2016:2021, 
+                                   day = 91:288), se.fit = T)
+plot_data <- expand.grid(site = "TNC_2",
+                         year = 2016:2021, 
+                                   day = 91:288) %>%
+  mutate(tmax_hat = tmax_hat[[1]],
+         tmax_UL = tmax_hat[[1]]+2*tmax_hat[[2]],
+         tmax_LL = tmax_hat[[1]]-2*tmax_hat[[2]],
+         yearf = as.factor(year)) %>%
+  left_join(tmax) %>%
+  filter(site == "TNC_2",
+         is.na(max_temp)==F)
+
+plot_data %>%
+  arrange(site, year, day) %>%
+ggplot() +
+  # geom_ribbon(aes(x = day, ymin = tmax_LL, ymax = tmax_UL, fill = yearf)) +    
+  geom_point(aes(x = day, y = max_temp), color = "darkgray",
+               alpha = 0.5) +
+
+  geom_line(aes(x = day, y = tmax_hat, color = yearf)) +
+  facet_wrap(~yearf)
+```
 
