@@ -1537,7 +1537,7 @@ gam_2 <- gam(min_DO ~ s(day, by = yearf) + site,
              family = gaussian)
 
 sink(paste0("output/Task1_SWQS_loggers/",
-              "statistical_analysis/GAM_results_DO.txt"))
+              "statistical_analysis/GAM_results/GAM_results_DO.txt"))
 summary(gam_2)
 sink()
 
