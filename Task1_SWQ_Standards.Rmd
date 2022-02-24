@@ -1100,7 +1100,7 @@ logit(river.mean[j]) <- mu.alpha0.site + mu.beta[j]
 
 # to read in the model results instead of running it
 jags_mod4 <- 
-  readRDS("output/Task1_SWQS_loggers/statistical_analysis/model_output/JAGS_TMtemp_model.rds")
+  readRDS("output/Task1_SWQS_loggers/statistical_analysis/hierarchical_model_output_files/JAGS_TMtemp_model.rds")
 
 # jagsUI::traceplot(jags_mod4)
 jags_mod4
@@ -1279,7 +1279,7 @@ jags_data_DO <- list(n_total = nrow(dostatJAGS),
 
 # to read in the model results instead of running it
 jags_mod_DO <- 
-  readRDS("output/Task1_SWQS_loggers/statistical_analysis/model_output/JAGS_TM_DO_model.rds")
+  readRDS("output/Task1_SWQS_loggers/statistical_analysis/hierarchical_model_output_files/JAGS_TM_DO_model.rds")
 
 # jagsUI::traceplot(jags_mod_DO)
 jags_mod_DO
@@ -1362,7 +1362,7 @@ ggplot(modDOsum) +
                      breaks = seq(0,1,by = .5)) +
   labs(y = "Proportion of days exceeding \nTrout Maintenance dissolved oxygen standards (Jun-Aug)",x = "")
 
-ggsave("output/Task1_SWQS_loggers/PlotL_DO_TM_exceed_hierarchical_model_trends.png", width = 7, height = 5, dpi = 400)
+# ggsave("output/Task1_SWQS_loggers/PlotL_DO_TM_exceed_hierarchical_model_trends.png", width = 7, height = 5, dpi = 400)
 ```
 # Plot estimated proportion of days exceeding TM temp standards by site, standardizing to 2018 conditions
 ```{r}
@@ -1405,13 +1405,13 @@ model_table_temp <- mod4sum %>%
 model_table_temp
 
 # save the table to HTML file
-save_kable(model_table,
+save_kable(model_table_temp,
            "output/Task1_SWQS_loggers/TableE_modeled_p_TM_temp.html")
 
 ```
 # Table of hierarchical model results - DO
 ```{r}
-model_table <- modDOsum %>% 
+model_table_DO <- modDOsum %>% 
   arrange(site, year) %>%
   select(site, year, TMex_sum, TMex_n, mean, q2.5, q97.5) %>%
   filter(site != "River mean") %>%
@@ -1420,10 +1420,10 @@ model_table <- modDOsum %>%
   kbl(digits = 2, caption = "Summer days exceeding Trout Maintenance dissolved oxygen thresholds (Jun-Aug). Estimated probability of exceeding the threshold (with 95% credible intervals) was estimated using a Bayesian hierarchical model.", row.names = F) %>%
   kable_classic(full_width = F, html_font = "Cambria")
 
-model_table
+model_table_DO
 
 # save the table to HTML file
-save_kable(model_table,
+save_kable(model_table_DO,
            "output/Task1_SWQS_loggers/TableF_modeled_p_TM_DO.html")
 
 ```
