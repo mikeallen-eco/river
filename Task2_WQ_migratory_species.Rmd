@@ -137,40 +137,79 @@ tdata2 <- tdata %>%
   filter(migrate == 1,
          is.na(temp) == F,
          day %in% 121:135) %>%
-  mutate(dayf = as.factor(day))
+  mutate(dayf = as.factor(day),
+         hourf = as.factor(hour))
 
-# from GLMER FAQ:
-# (x|group) = (1+x|group) 	
-# random slope of x within group with correlated intercept
-temp_mod1 <- lmer(temp ~ site + (1 + yearf|dayf), 
-             data = tdata2)
-summary(temp_mod1)
+library(lmerTest)
 
 # intercept varying among years and among days within sites (nested random effects)
-temp_mod2 <- lmer(temp ~ site + (1 | yearf/dayf), 
+temp_mod <- lmer(temp ~ site + (1 | yearf/dayf), 
              data = tdata2)
-summary(temp_mod2)
+summary(temp_mod)
 
+temp_mod_hr <- lmer(temp ~ site + (1 | yearf/dayf/hour), 
+             data = tdata2)
+summary(temp_mod_hr)
 
-fitdata1 <- cbind(tdata2, predict(temp_mod1)) %>%
-  rename(fit = 'predict(temp_mod1)')
+# plot results
+temp_fitdata <- cbind(tdata2, predict(temp_mod_hr)) %>%
+  rename(fit = 'predict(temp_mod_hr)')
 
-fitdata2 <- cbind(tdata2, predict(temp_mod2)) %>%
-  rename(fit = 'predict(temp_mod2)')
-
-fitdata2 %>%
-  # filter(site %in% c("TNC_2", "TNC_4", "TNC_5",
-  #                    "TNC_8", "TNC_9", "TNC_10",
-  #                    "TNC_13", "TNC_16", "TNC_18",
-  #                    "TNC_19", "TNC_23", "TNC_24",
-  #                    "TNC_25", "TNC_26")) %>%
-  filter(yearf == 2021) %>%
+temp_fitdata %>%
+  filter(yearf == 2016) %>%
   ggplot() +
   geom_point(aes(x = day, y = temp, color = site),
                  alpha = 0.05) +
   geom_point(aes(x = day, y = fit), shape = 16) +
   facet_wrap(~site) +
   theme_minimal()
+
+# compare model with and without hour random effect
+anova(temp_mod, temp_mod_hr)
+# refitting model(s) with ML (instead of REML)
+# Data: tdata2
+# Models:
+# temp_mod: temp ~ site + (1 | yearf/dayf)
+# temp_mod_hr: temp ~ site + (1 | yearf/dayf/hour)
+#             npar    AIC    BIC  logLik deviance Chisq Df Pr(>Chisq)    
+# temp_mod      18 201360 201521 -100662   201324                        
+# temp_mod_hr   19 116775 116945  -58368   116737 84587  1  < 2.2e-16 ***
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+# trying out fitting Bayesian with brms...
+# library(brms)
+# stan_model <- brm(temp ~ site + (1 | yearf/dayf/hour),
+#              data = tdata2, chains = 3, iter = 2000)
+
+newdat <- data.frame(site = unique(tdata2$site))
+# fit <- predict(temp_mod_hr, newdat, re.form = NA)
+
+newdat$temp <- 3
+  
+mySumm2 <- function(.) {
+    c(beta=fixef(.),sigma=sigma(.), sig01=sqrt(unlist(VarCorr(.))))
+}
+  
+bootCI = bootMer(temp_mod_hr, mySumm2, re.form=NA, nsim = 1000,
+                 verbose = T)
+
+
+
+mm <- model.matrix(terms(temp_mod_hr),newdat)
+## or newdat$distance <- mm %*% fixef(fm1)
+pvar1 <- diag(mm %*% tcrossprod(vcov(temp_mod_hr),mm))
+tvar1 <- pvar1+VarCorr(temp_mod_hr)$Subject[1]  ## must be adapted for more complex models
+cmult <- 2 ## could use 1.96
+newdat2 <- data.frame(
+    newdat
+    , plo = newdat$distance-cmult*sqrt(pvar1)
+    , phi = newdat$distance+cmult*sqrt(pvar1)
+)
+
+
+
+
 
 
 # try Bayesian later...
