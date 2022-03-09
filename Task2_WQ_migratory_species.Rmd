@@ -7,7 +7,11 @@ output:
   pdf_document: default
 ---
 #Task 2: Site specific water quality conditions important to us other than SWQS
-a. Determine which sites are more supportive of migrating species during key lifecycle periods over time (spring adult migration, spring spawning, summer fry stage, fall fry migration)?
+a. Determine which sites are more supportive of migrating species during key lifecycle periods over time
+spring adult migration (~ 15 Apr - 15 May) 
+spring spawning (~ 16-31 May)
+summer fry stage (~ 1 Jun - 30 Sep; ~ 1 mo. larval, ~ 3 mo. juv.)
+fall fry migration (~ 1 Oct - 30 Nov)
 
 i. What is the daily min, max, mean temperature and dissolved oxygen?
 
@@ -22,6 +26,7 @@ d. What is the monthly mean temperature?
 e. What is the annual mean temperature?
 
 f. Are there significant changes to daily, monthly and annual mean temperature and dissolved oxygen over time (year to year, across all years sampled)?
+
 g. How can we characterize seasonal variation over time and what differences, or patterns do we see in seasonal variation across the years?
 
 
@@ -36,10 +41,9 @@ library(dplyr)
 # library(knitr)
 # library(kableExtra)
 library(lubridate)
-# library(wesanderson)
 library(ggplot2)
 library(forcats)
-# library(tidyr)
+library(lme4)
 
 # read in compiled logger data (including flagged data)
 p <- readRDS("output/compiled_logger_data.rds") %>%
@@ -67,14 +71,24 @@ tdata <- p %>%
   right_join(expand.grid(site = unique(p$site), 
                          year = 2016:2021, day = 82:339)) %>%
   arrange(site, year, day) %>%
-    ungroup() %>%
-    # migrate April 20 - May 15?
-  mutate(migrate = case_when(day %in% 110:135 ~ 1,
+  # peak movement ~ 15 April - 15 May in Raritan per Anthony V.
+  mutate(migrate = case_when(day %in% 105:135 ~ 1,
                             TRUE ~ 0),
          # spawn May 16 - 31?
          spawn = case_when(day %in% 136:151 ~ 1,
                             TRUE ~ 0),
-         yearf = as.factor(year))
+         juvenile = case_when(day %in% 152:273 ~ 1,
+                            TRUE ~ 0),         
+         fall_mig = case_when(day %in% 274:334 ~ 1,
+                            TRUE ~ 0),
+         season = case_when(day %in% 105:135 ~ "migrate",
+                            day %in% 136:151 ~ "spawn",
+                            day %in% 152:273 ~ "juvenile",
+                            day %in% 274:334 ~ "fall_mig"),
+         yearf = as.factor(year),
+         dayf = as.factor(day),
+         hourf = as.factor(hour),
+         season = as.factor(season))
 
 tmax <- tdata %>%
     group_by(site, year, day, migrate, spawn) %>%
@@ -82,357 +96,253 @@ tmax <- tdata %>%
             max_temp = max(temp, na.rm = T),
             mean_temp = mean(temp, na.rm = T),
             .groups = "drop") %>%
-  ungroup() %>%
   mutate(yearf = as.factor(year))
 
-# to do...
 # format final compiled DO data
-dmin <- p %>%
+dodata <- p %>%
   filter(FLAG_DO == 0) %>%
   mutate(day = yday(datetime),
+         month = month(datetime),
+         hour = hour(datetime),
+         minute = minute(datetime),
+         dtime = hour + minute/60,
          do_adj2 = case_when((is.na(do)==F & is.na(do_adj)==T) ~
                                do,
                              TRUE ~ do_adj),
          adj = case_when(is.na(do_adj)==F ~ 1,
                          TRUE ~ 0)) %>%
-  group_by(site, year, day) %>%
-  summarise(min_DO = min(do_adj2),
-            mean24_DO = mean(do_adj2),
-            .groups = "drop") %>%
-  droplevels() %>%
+  select(-do, -do_adj) %>%
+  rename(do = do_adj2) %>%
   right_join(expand.grid(site = unique(p$site), 
                          year = 2016:2021, day = 82:339)) %>%
   arrange(site, year, day) %>%
-  mutate(summer = case_when(day %in% 152:243 ~ 1,
-                            TRUE ~ 0))
-
-
-
+    # peak movement ~ 15 April - 15 May in Raritan per Anthony V.
+  mutate(migrate = case_when(day %in% 105:135 ~ 1,
+                            TRUE ~ 0),
+         # spawn May 16 - 31?
+         spawn = case_when(day %in% 136:151 ~ 1,
+                            TRUE ~ 0),
+         juvenile = case_when(day %in% 152:273 ~ 1,
+                            TRUE ~ 0),         
+         fall_mig = case_when(day %in% 274:334 ~ 1,
+                            TRUE ~ 0),
+         yearf = as.factor(year),
+         dayf = as.factor(day),
+         hourf = as.factor(hour))
+  
+  
+dmin <- dodata %>%
+  group_by(site, year, day) %>%
+  summarise(min_DO = min(do, na.rm = T),
+            mean_DO = mean(do, na.rm = T),
+            mean24_DO = mean(do, na.rm = T),
+            .groups = "drop") %>%
+  arrange(site, year, day) %>%
+  mutate(yearf = as.factor(year))
 ```
-
-# Analyze temp and DO with respect to migratory fish stages
+# Mean temperature by site: migratory period, 15 Apr - 15 May
 ```{r}
-tmax %>%
-  filter(migrate == 1) %>%
-  droplevels() %>%
-  ggplot(aes(x = site, y = max_temp, color = as.factor(year))) +
-  geom_boxplot() +
-  facet_wrap(~as.factor(year)) +
-  coord_flip()
+# intercept varying among years and among days within years (nested random effects)
 
-tdata %>%
-  filter(migrate == 1,
-         year == 2021) %>%
-  ggplot(aes(x = dtime, y = temp, color = day)) +
-  scale_color_viridis_b() +
-  geom_point(alpha = 0.5) +
-  facet_wrap(~site)
+# fit model during migration period
+temp_mod_migrate <- lmer(temp ~ site + (1 | yearf/dayf), 
+             data = filter(tdata, is.na(temp)==F,
+                           season == "migrate"))
+summary(temp_mod_migrate)
 
-library(lme4)
+temp_mod_hr_migrate <- 
+  lmer(temp ~ site + (1 | yearf/dayf/hour), 
+             data = filter(tdata, is.na(temp)==F,
+                           season == "migrate"))
+summary(temp_mod_hr_migrate)
+
+# compare model with and without hour random effect
+# with hour effect is much better
+anova(temp_mod_migrate, temp_mod_hr_migrate)
+
+# fit model during spawning period
+temp_mod_hr_spawn <- 
+  lmer(temp ~ site + (1 | yearf/dayf/hour), 
+             data = filter(tdata, is.na(temp)==F,
+                           season == "spawn"))
+summary(temp_mod_hr_spawn)
+
+temp_mod_hr_juv <- 
+  lmer(temp ~ site + (1 | yearf/dayf/hour), 
+             data = filter(tdata, is.na(temp)==F,
+                           season == "juvenile"))
+summary(temp_mod_hr_juv)
+
+temp_mod_hr_fall <- 
+  lmer(temp ~ site + (1 | yearf/dayf/hour), 
+             data = filter(tdata, is.na(temp)==F,
+                           season == "fall_mig"))
+summary(temp_mod_hr_fall)
+```
+# Generate bootstrapped CI's for predictions
+```{r}
+# make prediction covariate data for migration
+newdat_migrate <- expand.grid(site = unique(tdata$site)) %>%
+  filter(site %in% filter(tdata, is.na(temp)==F,
+                          season == "migrate")$site) %>%
+  droplevels()
+
+# make prediction covariate data for spawning
+newdat_spawn <- expand.grid(site = unique(tdata$site)) %>%
+  filter(site %in% filter(tdata, is.na(temp)==F,
+                          season == "spawn")$site) %>%
+  droplevels()
+
+# make prediction covariate data for juvenile
+newdat_juv <- expand.grid(site = unique(tdata$site)) %>%
+  filter(site %in% filter(tdata, is.na(temp)==F,
+                          season == "juvenile")$site) %>%
+  droplevels()
+
+# make prediction covariate data for fall migration
+newdat_fall <- expand.grid(site = unique(tdata$site)) %>%
+  filter(site %in% filter(tdata, is.na(temp)==F,
+                          season == "fall_mig")$site) %>%
+  droplevels()
+
+
+# Bootstrapped CIs for predicted mean temperature - Spawning
+pred_fun_spawn <- function(.) {
+  c(predict(., data.frame(site = unique(newdat_spawn$site)), 
+            re.form = NA))
+}
+
+bootCI_spawn = bootMer(temp_mod_hr_spawn, pred_fun_spawn, 
+                 re.form=NA, nsim = 1000,
+                 verbose = T)
+
+saveRDS(bootCI_spawn, "output/Task2_WQ_migratory_species/statistical_analysis/temp_mod_hr_spawn_bootstraps.rds")
+
+# Bootstrapped CIs for predicted mean temperature - Juvenile
+pred_fun_juv <- function(.) {
+  c(predict(., data.frame(site = unique(newdat_juv$site)), 
+            re.form = NA))
+}
+
+bootCI_juv = bootMer(temp_mod_hr_juv, pred_fun_juv, 
+                 re.form=NA, nsim = 1000,
+                 verbose = T)
+
+saveRDS(bootCI_juv, "output/Task2_WQ_migratory_species/statistical_analysis/temp_mod_hr_juv_bootstraps.rds")
+
+# Bootstrapped CIs for predicted mean temperature - Fall migration
+pred_fun_fall <- function(.) {
+  c(predict(., data.frame(site = unique(newdat_fall$site)), 
+            re.form = NA))
+}
+
+bootCI_fall = bootMer(temp_mod_hr_fall, pred_fun_fall, 
+                 re.form=NA, nsim = 1000,
+                 verbose = T)
+
+saveRDS(bootCI_fall, "output/Task2_WQ_migratory_species/statistical_analysis/temp_mod_hr_fall_bootstraps.rds")
+
+
+# Bootstrapped CIs for predicted mean temperature - Migration
+pred_fun_migrate <- function(.) {
+  c(predict(., data.frame(site = unique(newdat_migrate$site)), 
+            re.form = NA))
+}
+
+bootCI_migrate = bootMer(temp_mod_hr_migrate, pred_fun_migrate, 
+                 re.form=NA, nsim = 1000,
+                 verbose = T)
+
+saveRDS(bootCI_migrate, "output/Task2_WQ_migratory_species/statistical_analysis/temp_mod_hr_migrate_bootstraps.rds")
+
+
+
+bootCI = readRDS("output/Task2_WQ_migratory_species/statistical_analysis/temp_mod_hr_bootstraps.rds")
+tplot <- apply(bootCI$t, 2, 
+               function(x) quantile(x, c(0.025,0.975))) %>% 
+  t() %>%
+  as.data.frame() %>%
+  bind_cols(predict(temp_mod_hr_spawn, 
+                    data.frame(site = unique(newdat_spawn$site)), 
+                    re.form = NA)) %>%
+  rename(q2.5 = 1, q97.5 = 2, fit = 3) %>%
+  mutate(site = unique(tdata2$site)) %>%
+  select(site, fit, q2.5, q97.5) %>%
+  mutate(site = fct_reorder(site, fit))
+
+tplot %>%
+  ggplot() +
+  geom_point(aes(y = site, x = fit)) +
+  geom_errorbar(aes(y = site, xmin = q2.5, xmax = q97.5))
+                      
+
+# try Bayesian later...
+# y ~ dnorm(mu, tau)
+# mu ~ site[s] + day[y] + year[y]
+# or in BRMS
+library(brms)
+temp_mod_hr_seas <- brm(temp ~ site + migrate + 
+                       spawn + juvenile + fall_mig +
+                       (1 | yearf/dayf/hour), 
+             data = filter(tdata, is.na(temp)==F))
+saveRDS(temp_mod_hr_seas, "output/Task2_WQ_migratory_species/statistical_analysis/temp_mod_hr_seas_stanmod.rds")
+```
+# Mean temperature by site: migratory period, 15 Apr - 15 May
+```{r}
+
 tmax2 <- tmax %>%
   filter(migrate == 1,
          is.infinite(max_temp) == F)
 
-tdata2 <- tdata %>%
+tdata_mig <- tdata %>%
   filter(migrate == 1,
-         is.na(temp) == F,
-         day %in% 121:135) %>%
-  mutate(dayf = as.factor(day),
-         hourf = as.factor(hour))
+         is.na(temp) == F)
 
-library(lmerTest)
-
-# intercept varying among years and among days within sites (nested random effects)
+# intercept varying among years and among days within years (nested random effects)
 temp_mod <- lmer(temp ~ site + (1 | yearf/dayf), 
-             data = tdata2)
+             data = tdata_mig)
 summary(temp_mod)
 
 temp_mod_hr <- lmer(temp ~ site + (1 | yearf/dayf/hour), 
-             data = tdata2)
+             data = tdata_mig)
 summary(temp_mod_hr)
 
-# plot results
-temp_fitdata <- cbind(tdata2, predict(temp_mod_hr)) %>%
-  rename(fit = 'predict(temp_mod_hr)')
-
-temp_fitdata %>%
-  filter(yearf == 2016) %>%
-  ggplot() +
-  geom_point(aes(x = day, y = temp, color = site),
-                 alpha = 0.05) +
-  geom_point(aes(x = day, y = fit), shape = 16) +
-  facet_wrap(~site) +
-  theme_minimal()
-
 # compare model with and without hour random effect
+# with hour effect is much better
 anova(temp_mod, temp_mod_hr)
-# refitting model(s) with ML (instead of REML)
-# Data: tdata2
-# Models:
-# temp_mod: temp ~ site + (1 | yearf/dayf)
-# temp_mod_hr: temp ~ site + (1 | yearf/dayf/hour)
-#             npar    AIC    BIC  logLik deviance Chisq Df Pr(>Chisq)    
-# temp_mod      18 201360 201521 -100662   201324                        
-# temp_mod_hr   19 116775 116945  -58368   116737 84587  1  < 2.2e-16 ***
-# ---
-# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
-# trying out fitting Bayesian with brms...
-# library(brms)
-# stan_model <- brm(temp ~ site + (1 | yearf/dayf/hour),
-#              data = tdata2, chains = 3, iter = 2000)
+# plot results - fit looks good
+# temp_fitdata <- cbind(tdata2, predict(temp_mod_hr)) %>%
+#   rename(fit = 'predict(temp_mod_hr)')
+# 
+# temp_fitdata %>%
+#   filter(yearf == 2016) %>%
+#   ggplot() +
+#   geom_point(aes(x = day, y = temp, color = site),
+#                  alpha = 0.05) +
+#   geom_point(aes(x = day, y = fit), shape = 16) +
+#   facet_wrap(~site) +
+#   theme_minimal()
 
 newdat <- data.frame(site = unique(tdata2$site))
 # fit <- predict(temp_mod_hr, newdat, re.form = NA)
-
+predict(temp_mod_hr, newdat, re.form = NA)
 newdat$temp <- 3
   
-mySumm2 <- function(.) {
-    c(beta=fixef(.),sigma=sigma(.), sig01=sqrt(unlist(VarCorr(.))))
+mySumm3 <- function(.) {
+  c(predict(., data.frame(site = unique(tdata2$site)), 
+            re.form = NA))
 }
-  
-bootCI = bootMer(temp_mod_hr, mySumm2, re.form=NA, nsim = 1000,
+
+bootCI = bootMer(temp_mod_hr, mySumm3, re.form=NA, nsim = 1000,
                  verbose = T)
 
-
-
-mm <- model.matrix(terms(temp_mod_hr),newdat)
-## or newdat$distance <- mm %*% fixef(fm1)
-pvar1 <- diag(mm %*% tcrossprod(vcov(temp_mod_hr),mm))
-tvar1 <- pvar1+VarCorr(temp_mod_hr)$Subject[1]  ## must be adapted for more complex models
-cmult <- 2 ## could use 1.96
-newdat2 <- data.frame(
-    newdat
-    , plo = newdat$distance-cmult*sqrt(pvar1)
-    , phi = newdat$distance+cmult*sqrt(pvar1)
-)
-
-
-
-
+saveRDS(bootCI, "output/Task2_WQ_migratory_species/statistical_analysis/temp_mod_hr_bootstraps.rds")
 
 
 # try Bayesian later...
 # y ~ dnorm(mu, tau)
 # mu ~ site[s] + day[y] + year[y]
-
-coef(temp_mod)
-```
-
-
-
-# Fit Generalized Additive Model to temperature data
-```{r}
-library(mgcv)
-# GAM by year with site as a covariate
-tmax_gam <- tmax %>%
-  mutate(yearf = as.factor(year)) %>%
-  filter(is.na(max_temp)==F,
-         day %in% 91:288) %>%
-  arrange(site, year, day)
-
-gam_1 <- gam(max_temp ~ s(day, by = yearf) + site,
-             data = tmax_gam,
-             family = gaussian)
-sink(paste0("output/Task1_SWQS_loggers/",
-              "statistical_analysis/GAM_results_temp.txt"))
-summary(gam_1)
-sink()
-
-summary(gam_1)
-
-```
-# Plot each results from temperature GAM for each year
-```{r}
-temp2 <- cbind(tmax_gam, fit = gam_1$fitted.values)
-for(the_year in c(2016:2021)){
-  print(the_year)
-  temp2 %>% filter(yearf == the_year) %>%
-  ggplot() +
-  geom_vline(xintercept = 196, lty = 2, color = "darkgray") +  
-  geom_point(aes(x = day, y = max_temp), color = "darkgray") +
-  geom_line(aes(x = day, y = fit), color = "salmon") +
-
-  facet_wrap(~site) +
-  theme_bw() +
-  labs(x = "", y = "Daily maximum temperature (C)",
-       title = paste0("GAM results: ", the_year)) +
-  theme(text = element_text(size = 14),
-        axis.text.x = element_text(size = 9),
-        strip.background = element_rect(fill = "white")) + 
-  scale_x_continuous(
-    breaks = c(91, 152, 213, 274, 335),
-    labels = c("Apr", "Jun", "Aug",
-               "Oct", "Dec")
-  )
-
-ggsave(paste0("output/Task1_SWQS_loggers/",
-              "statistical_analysis/GAM_plots/GAM_plots_",
-              the_year, ".png"),
-       height = 5, width = 7, dpi = 400)
-}
-
-```
-# Plot GAM predicted temperature values from July 15th
-```{r}
-tmax_jul15 <- data.frame(
-  expand.grid(site = unique(tmax$site), 
-                                   yearf = 2016:2021, 
-                                   day = 196),
-  meanTmax = predict(gam_1, 
-                     newdata = 
-                       expand.grid(site = unique(tmax$site), 
-                                   yearf = 2016:2021, 
-                                   day = 196), se.fit = T)[[1]],
-  seTmax = predict(gam_1, 
-                     newdata = 
-                       expand.grid(site = unique(tmax$site), 
-                                   yearf = 2016:2021, 
-                                   day = 196), se.fit = T)[[2]]) %>%
-  mutate(site = fct_reorder(site, meanTmax))
-
-tmax_jul15
-
-tmax_jul15 %>%
-  ggplot() +
-  geom_errorbar(aes(y = site, xmax = meanTmax+2*seTmax,
-                    xmin = meanTmax-2*seTmax),
-                width = 0, color = "dodgerblue") + 
-  geom_point(aes(y = site, x = meanTmax),
-             color = "dodgerblue") +  
-  # geom_hline(aes(yintercept = ))
-  facet_wrap(~as.factor(yearf)) +
-  theme_bw() +
-  theme(text = element_text(size = 14),
-        strip.background = element_rect(fill = "white"),
-        axis.text.y = element_text(size = 10)) +
-  labs(x = "Predicted mean maximum temperature on July 15th", 
-       y = "",
-       title = "Generalized Additive Model (GAM) results") +
-  scale_x_continuous(breaks = c(20, 22, 24, 26, 28))
-
-ggsave(
-  "output/Task1_SWQS_loggers/PlotN_temp_GAM_standardized_site_comparisons.png",
-         width = 7, height = 7, dpi = 400)
-```
-
-# Fit Generalized Additive Model to DO data
-```{r}
-library(mgcv)
-# GAM by year with site as a covariate
-dmin_gam <- dmin %>%
-  mutate(yearf = as.factor(year)) %>%
-  filter(is.na(min_DO)==F,
-         day %in% 91:288) %>%
-  arrange(site, year, day)
-
-gam_2 <- gam(min_DO ~ s(day, by = yearf) + site,
-             data = dmin_gam,
-             family = gaussian)
-
-sink(paste0("output/Task1_SWQS_loggers/",
-              "statistical_analysis/GAM_results/GAM_results_DO.txt"))
-summary(gam_2)
-sink()
-
-summary(gam_2)
-
-```
-# Plot each results from temperature GAM for each year
-```{r}
-temp3 <- cbind(dmin_gam, fit = gam_2$fitted.values)
-for(the_year in c(2016:2021)){
-  print(the_year)
-  temp3 %>% filter(yearf == the_year) %>%
-  ggplot() +
-  geom_vline(xintercept = 196, lty = 2, color = "darkgray") +  
-  geom_point(aes(x = day, y = min_DO), color = "darkgray") +
-  geom_line(aes(x = day, y = fit), color = "salmon") +
-  facet_wrap(~site) +
-  theme_bw() +
-  labs(x = "", y = "Daily minimum dissolved oxygen",
-       title = paste0("GAM results: ", the_year)) +
-  theme(text = element_text(size = 14),
-        axis.text.x = element_text(size = 9),
-        strip.background = element_rect(fill = "white")) + 
-  scale_x_continuous(
-    breaks = c(91, 152, 213, 274, 335),
-    labels = c("Apr", "Jun", "Aug",
-               "Oct", "Dec")
-  )
-
-ggsave(paste0("output/Task1_SWQS_loggers/",
-              "statistical_analysis/GAM_plots/GAM_plots_DO",
-              the_year, ".png"),
-       height = 5, width = 7, dpi = 400)
-}
-
-```
-# Plot GAM predicted dissolved oxygen values from July 15th
-```{r}
-dmin_jul15 <- data.frame(
-  expand.grid(site = unique(dmin$site), 
-                                   yearf = 2016:2021, 
-                                   day = 196),
-  meandmin = predict(gam_2, 
-                     newdata = 
-                       expand.grid(site = unique(dmin$site), 
-                                   yearf = 2016:2021, 
-                                   day = 196), se.fit = T)[[1]],
-  sedmin = predict(gam_2, 
-                     newdata = 
-                       expand.grid(site = unique(dmin$site), 
-                                   yearf = 2016:2021, 
-                                   day = 196), se.fit = T)[[2]]) %>%
-  mutate(site = fct_reorder(site, meandmin))
-
-dmin_jul15
-
-dmin_jul15 %>%
-  ggplot() +
-  geom_errorbar(aes(y = site, xmax = meandmin+2*sedmin,
-                    xmin = meandmin-2*sedmin),
-                width = 0, color = "dodgerblue") + 
-  geom_point(aes(y = site, x = meandmin),
-             color = "dodgerblue") +  
-  facet_wrap(~as.factor(yearf)) +
-  theme_bw() +
-  theme(text = element_text(size = 14),
-        strip.background = element_rect(fill = "white"),
-        axis.text.y = element_text(size = 10)) +
-  labs(x = "Predicted mean minimum dissolved oxygen on July 15th", 
-       y = "",
-       title = "Generalized Additive Model (GAM) results") +
-  scale_x_continuous(breaks = 2:8)
-
-ggsave(
-  "output/Task1_SWQS_loggers/PlotO_DO_GAM_standardized_site_comparisons.png",
-         width = 7, height = 7, dpi = 400)
-```
-
-# Bivariate GAM temp vs. DO
-Predict DO and max temperature on July 15, 2018
-```{r}
-dmin_jul15 %>%
-  left_join(tmax_jul15) %>%
-  filter(yearf == 2018) %>%
-  ggplot() +
-  geom_errorbar(aes(xmin = meanTmax-2*seTmax, 
-                    xmax = meanTmax+2*seTmax, y = meandmin)) +
-  geom_errorbar(aes(ymin = meandmin-2*sedmin, 
-                    ymax = meandmin+2*sedmin, x = meanTmax)) +     
-  geom_point(aes(x = meanTmax, y = meandmin), size = 2) +
-  geom_text(aes(x = meanTmax-.1, y = meandmin-.1, label = site),
-            color = "gray", size = 2) +
-
-  theme_bw() +
-  theme(text = element_text(size = 14)) +
-  labs(x = "Predicted mean maximum temp. (C)",
-       y = "Predicted mean minimum DO")
-
-ggsave(
-  "output/Task1_SWQS_loggers/PlotP_DO_and_temp_GAM_standardized_site_comparisons.png",
-         width = 5, height = 5, dpi = 400)
-
+# or in BRMS
 ```
 
