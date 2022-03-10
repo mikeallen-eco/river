@@ -40,6 +40,7 @@ g. How can we characterize seasonal variation over time and what differences, or
 library(dplyr)
 # library(knitr)
 # library(kableExtra)
+library(wesanderson)
 library(lubridate)
 library(ggplot2)
 library(forcats)
@@ -68,20 +69,11 @@ tdata <- p %>%
   filter(as.logical(1-(site == "TNC_23" & 
                          year == 2021 & 
                          day == 118))) %>%
-  right_join(expand.grid(site = unique(p$site), 
-                         year = 2016:2021, day = 82:339)) %>%
+  # right_join(expand.grid(site = unique(p$site), 
+  #                        year = 2016:2021, day = 82:339)) %>%
   arrange(site, year, day) %>%
   # peak movement ~ 15 April - 15 May in Raritan per Anthony V.
-  mutate(migrate = case_when(day %in% 105:135 ~ 1,
-                            TRUE ~ 0),
-         # spawn May 16 - 31?
-         spawn = case_when(day %in% 136:151 ~ 1,
-                            TRUE ~ 0),
-         juvenile = case_when(day %in% 152:273 ~ 1,
-                            TRUE ~ 0),         
-         fall_mig = case_when(day %in% 274:334 ~ 1,
-                            TRUE ~ 0),
-         season = case_when(day %in% 105:135 ~ "migrate",
+  mutate(season = case_when(day %in% 105:135 ~ "migrate",
                             day %in% 136:151 ~ "spawn",
                             day %in% 152:273 ~ "juvenile",
                             day %in% 274:334 ~ "fall_mig"),
@@ -90,13 +82,12 @@ tdata <- p %>%
          hourf = as.factor(hour),
          season = as.factor(season))
 
-tmax <- tdata %>%
-    group_by(site, year, day, migrate, spawn) %>%
+tsum <- tdata %>%
+    group_by(site, yearf, month, day, dayf) %>%
   summarise(min_temp = min(temp, na.rm = T),
             max_temp = max(temp, na.rm = T),
             mean_temp = mean(temp, na.rm = T),
-            .groups = "drop") %>%
-  mutate(yearf = as.factor(year))
+            .groups = "drop") 
 
 # format final compiled DO data
 dodata <- p %>%
@@ -113,32 +104,28 @@ dodata <- p %>%
                          TRUE ~ 0)) %>%
   select(-do, -do_adj) %>%
   rename(do = do_adj2) %>%
-  right_join(expand.grid(site = unique(p$site), 
-                         year = 2016:2021, day = 82:339)) %>%
+  # right_join(expand.grid(site = unique(p$site), 
+  #                        year = 2016:2021, day = 82:339)) %>%
   arrange(site, year, day) %>%
-    # peak movement ~ 15 April - 15 May in Raritan per Anthony V.
-  mutate(migrate = case_when(day %in% 105:135 ~ 1,
-                            TRUE ~ 0),
-         # spawn May 16 - 31?
-         spawn = case_when(day %in% 136:151 ~ 1,
-                            TRUE ~ 0),
-         juvenile = case_when(day %in% 152:273 ~ 1,
-                            TRUE ~ 0),         
-         fall_mig = case_when(day %in% 274:334 ~ 1,
-                            TRUE ~ 0),
+    # Dates based on Anthony V. and shad reference he provided
+  mutate(season = case_when(day %in% 105:135 ~ "migrate",
+                            day %in% 136:151 ~ "spawn",
+                            day %in% 152:273 ~ "juvenile",
+                            day %in% 274:334 ~ "fall_mig"),
          yearf = as.factor(year),
          dayf = as.factor(day),
          hourf = as.factor(hour))
   
   
-dmin <- dodata %>%
-  group_by(site, year, day) %>%
-  summarise(min_DO = min(do, na.rm = T),
-            mean_DO = mean(do, na.rm = T),
-            mean24_DO = mean(do, na.rm = T),
+dosum <- dodata %>%
+    group_by(site, yearf, month, day, dayf) %>%
+  summarise(min_do = min(do, na.rm = T),
+            mean_do = mean(do, na.rm = T),
+            max_do = max(do, na.rm = T),
             .groups = "drop") %>%
-  arrange(site, year, day) %>%
-  mutate(yearf = as.factor(year))
+  arrange(site, yearf, day)
+
+rm(p)
 ```
 # Mean temperature by site: migratory period, 15 Apr - 15 May
 ```{r}
@@ -280,69 +267,232 @@ tplot %>%
 # y ~ dnorm(mu, tau)
 # mu ~ site[s] + day[y] + year[y]
 # or in BRMS
-library(brms)
-temp_mod_hr_seas <- brm(temp ~ site + migrate + 
-                       spawn + juvenile + fall_mig +
-                       (1 | yearf/dayf/hour), 
-             data = filter(tdata, is.na(temp)==F))
-saveRDS(temp_mod_hr_seas, "output/Task2_WQ_migratory_species/statistical_analysis/temp_mod_hr_seas_stanmod.rds")
+# library(brms)
+# temp_mod_hr_seas <- brm(temp ~ site + migrate + 
+#                        spawn + juvenile + fall_mig +
+#                        (1 | yearf/dayf/hour), 
+#              data = filter(tdata, is.na(temp)==F))
+# saveRDS(temp_mod_hr_seas, "output/Task2_WQ_migratory_species/statistical_analysis/temp_mod_hr_seas_stanmod.rds")
 ```
-# Mean temperature by site: migratory period, 15 Apr - 15 May
+
+i. What is the daily min, max, mean temperature and dissolved oxygen?
 ```{r}
+sites <- unique(tdata$site)
 
-tmax2 <- tmax %>%
-  filter(migrate == 1,
-         is.infinite(max_temp) == F)
+tsum_month <- tsum %>%
+  group_by(site, yearf, month) %>%
+  summarize(mean_mean = mean(mean_temp),
+            mean_max = mean(max_temp),
+            mean_min = mean(min_temp),
+            .groups = "drop") %>%
+  mutate(mid = case_when(month == 3 ~ yday("2021-03-15"),
+                         month == 4 ~ yday("2021-04-15"),
+                         month == 5 ~ yday("2021-05-15"),
+                         month == 6 ~ yday("2021-06-15"),
+                         month == 7 ~ yday("2021-07-15"),
+                         month == 8 ~ yday("2021-08-15"),
+                         month == 9 ~ yday("2021-09-15"),
+                         month == 10 ~ yday("2021-10-15"),
+                         month == 11 ~ yday("2021-11-15")
+                         ))
 
-tdata_mig <- tdata %>%
-  filter(migrate == 1,
-         is.na(temp) == F)
+# i = sites[2]
+for(i in sites){
+# x11(8,5); 
+print(i)
+tsum %>%
+  filter(site == i) %>%
+  ggplot() +
+  geom_errorbar(aes(x = day, ymin = min_temp, ymax = max_temp),
+                width = 0, size = .3, color = "firebrick",
+                alpha = 0.4) +  
+  geom_point(aes(x = day, y = mean_temp), size = .5,
+             color = "firebrick", shape = 18, alpha = 1) +
+  geom_errorbar(aes(x = mid, ymin = mean_min, ymax = mean_max),
+                width = 0, size = .5, color = "black",
+                data = filter(tsum_month, site == i)) +  
+  geom_point(aes(x = mid, y = mean_mean), size = 2,
+             color = "black", shape = 16,
+             data = filter(tsum_month, site == i)) +
+  facet_wrap(~yearf) +
+  theme_minimal() +
+  labs(x = "", y = "Daily & monthly temperatures",
+       title = i) +
+  theme(text = element_text(size = 14),
+        axis.title.y = element_text(size = 12)) +
+    scale_x_continuous(
+    breaks = c(91, 152, 213, 274, 335),
+    labels = c("Apr", "Jun", "Aug",
+               "Oct", "Dec")
+  )
 
-# intercept varying among years and among days within years (nested random effects)
-temp_mod <- lmer(temp ~ site + (1 | yearf/dayf), 
-             data = tdata_mig)
-summary(temp_mod)
-
-temp_mod_hr <- lmer(temp ~ site + (1 | yearf/dayf/hour), 
-             data = tdata_mig)
-summary(temp_mod_hr)
-
-# compare model with and without hour random effect
-# with hour effect is much better
-anova(temp_mod, temp_mod_hr)
-
-# plot results - fit looks good
-# temp_fitdata <- cbind(tdata2, predict(temp_mod_hr)) %>%
-#   rename(fit = 'predict(temp_mod_hr)')
-# 
-# temp_fitdata %>%
-#   filter(yearf == 2016) %>%
-#   ggplot() +
-#   geom_point(aes(x = day, y = temp, color = site),
-#                  alpha = 0.05) +
-#   geom_point(aes(x = day, y = fit), shape = 16) +
-#   facet_wrap(~site) +
-#   theme_minimal()
-
-newdat <- data.frame(site = unique(tdata2$site))
-# fit <- predict(temp_mod_hr, newdat, re.form = NA)
-predict(temp_mod_hr, newdat, re.form = NA)
-newdat$temp <- 3
-  
-mySumm3 <- function(.) {
-  c(predict(., data.frame(site = unique(tdata2$site)), 
-            re.form = NA))
+ggsave(paste0("output/Task2_WQ_migratory_species/PlotA/PlotA_",i,"_daily_monthly_temps.png"), height = 5, width = 8, dpi = 400)
 }
 
-bootCI = bootMer(temp_mod_hr, mySumm3, re.form=NA, nsim = 1000,
-                 verbose = T)
+```
+# Plot monthy mean temperatures for each site
+```{r}
+sites <- unique(tdata$site)
 
-saveRDS(bootCI, "output/Task2_WQ_migratory_species/statistical_analysis/temp_mod_hr_bootstraps.rds")
+tsum_envelope <- tdata %>%
+  group_by(site, day) %>%
+  summarize(multi_min = min(temp),
+            multi_max = max(temp),
+            .groups = "drop")
+
+i = sites[1]
+
+for( i in sites) {
+print(i)
+tsum_month %>%
+  filter(site == i) %>%
+  ggplot() +
+  geom_ribbon(aes(x = day, ymax = multi_max,
+                  ymin = multi_min), 
+              data = filter(tsum_envelope, site == i),
+              fill = "gray", alpha = 0.5) +
+  geom_line(aes(x = mid, y = mean_mean, color = yearf), size = .5,
+             shape = 16,
+             position = position_dodge(width = 10)) +      
+  geom_point(aes(x = mid, y = mean_mean, color = yearf), size = 2,
+             shape = 16,
+             position = position_dodge(width = 10)) +
+  theme_minimal() +
+  labs(x = "", y = "Mean monthly temperature",
+       title = i, color = "") +
+  theme(text = element_text(size = 14),
+        axis.title.y = element_text(size = 12)) +
+    scale_x_continuous(
+    breaks = c(91, 152, 213, 274, 335),
+    labels = c("Apr", "Jun", "Aug",
+               "Oct", "Dec")
+  ) +
+  scale_color_manual(values = c(wes_palettes$Royal1,
+                                wes_palettes$Royal2))
+
+ggsave(paste0("output/Task2_WQ_migratory_species/PlotB/PlotB_",i,"_monthly_temps.png"), height = 5, width = 7, dpi = 400)
+}
 
 
-# try Bayesian later...
-# y ~ dnorm(mu, tau)
-# mu ~ site[s] + day[y] + year[y]
-# or in BRMS
 ```
 
+# do monthly and daily
+```{r}
+dosum_month <- dosum %>%
+  group_by(site, yearf, month) %>%
+  summarize(mean_mean = mean(mean_do),
+            mean_max = mean(max_do),
+            mean_min = mean(min_do),
+            n = length(mean_do),
+            .groups = "drop") %>%
+  mutate(mid = case_when(month == 3 ~ yday("2021-03-15"),
+                         month == 4 ~ yday("2021-04-15"),
+                         month == 5 ~ yday("2021-05-15"),
+                         month == 6 ~ yday("2021-06-15"),
+                         month == 7 ~ yday("2021-07-15"),
+                         month == 8 ~ yday("2021-08-15"),
+                         month == 9 ~ yday("2021-09-15"),
+                         month == 10 ~ yday("2021-10-15"),
+                         month == 11 ~ yday("2021-11-15")
+                         ))
+
+sites <- unique(dodata$site)
+
+i = sites[2]
+
+for(i in sites){
+# x11(8,5); 
+print(i)
+dosum %>%
+  filter(site == i) %>%
+  ggplot() +
+  geom_errorbar(aes(x = day, ymin = min_do, ymax = max_do),
+                width = 0, size = .3, color = "dodgerblue",
+                alpha = 0.4) +  
+  geom_point(aes(x = day, y = mean_do), size = .5,
+             color = "dodgerblue", shape = 18, alpha = 1) +
+  geom_errorbar(aes(x = mid, ymin = mean_min, ymax = mean_max),
+                width = 0, size = .5, color = "black",
+                data = filter(dosum_month, site == i)) +  
+  geom_point(aes(x = mid, y = mean_mean), size = 2,
+             color = "black", shape = 16,
+             data = filter(dosum_month, site == i)) +
+  facet_wrap(~yearf) +
+  theme_minimal() +
+  labs(x = "", y = "Daily & monthly dissolved oxygen",
+       title = i) +
+  theme(text = element_text(size = 14),
+        axis.title.y = element_text(size = 12)) +
+    scale_x_continuous(
+    breaks = c(91, 152, 213, 274, 335),
+    labels = c("Apr", "Jun", "Aug",
+               "Oct", "Dec")
+  )
+
+ggsave(paste0("output/Task2_WQ_migratory_species/PlotC/PlotC_",i,"_daily_monthly_DO.png"), height = 5, width = 8, dpi = 400)
+}
+```
+
+# Plot monthy mean DO for each site
+```{r}
+dosum_month <- dosum %>%
+  group_by(site, yearf, month) %>%
+  summarize(mean_mean = mean(mean_do),
+            mean_max = mean(max_do),
+            mean_min = mean(min_do),
+            n = length(mean_do),
+            .groups = "drop") %>%
+  mutate(mid = case_when(month == 3 ~ yday("2021-03-15"),
+                         month == 4 ~ yday("2021-04-15"),
+                         month == 5 ~ yday("2021-05-15"),
+                         month == 6 ~ yday("2021-06-15"),
+                         month == 7 ~ yday("2021-07-15"),
+                         month == 8 ~ yday("2021-08-15"),
+                         month == 9 ~ yday("2021-09-15"),
+                         month == 10 ~ yday("2021-10-15"),
+                         month == 11 ~ yday("2021-11-15")
+                         ))
+
+sites <- unique(tdata$site)
+
+dosum_envelope <- dodata %>%
+  group_by(site, day) %>%
+  summarize(multi_min = min(do),
+            multi_max = max(do),
+            .groups = "drop")
+
+i = "TNC_16"
+
+for( i in sites) {
+print(i)
+dosum_month %>%
+  filter(site == i,
+         n >= 10) %>%
+  ggplot() +
+  geom_ribbon(aes(x = day, ymax = multi_max,
+                  ymin = multi_min), 
+              data = filter(dosum_envelope, site == i),
+              fill = "gray", alpha = 0.5) +
+  geom_line(aes(x = mid, y = mean_mean, color = yearf), size = .5,
+             position = position_dodge(width = 10)) +      
+  geom_point(aes(x = mid, y = mean_mean, color = yearf), size = 2,
+             shape = 16,
+             position = position_dodge(width = 10)) +
+  theme_minimal() +
+  labs(x = "", y = "Mean monthly dissolved oxygen",
+       title = i, color = "") +
+  theme(text = element_text(size = 14),
+        axis.title.y = element_text(size = 12)) +
+    scale_x_continuous(
+    breaks = c(91, 152, 213, 274, 335),
+    labels = c("Apr", "Jun", "Aug",
+               "Oct", "Dec")
+  ) +
+  scale_color_manual(values = c(wes_palettes$Royal1,
+                                wes_palettes$Royal2))
+
+ggsave(paste0("output/Task2_WQ_migratory_species/PlotD/PlotD_",i,"_monthly_DO.png"), height = 5, width = 7, dpi = 400)
+}
+
+
+```
