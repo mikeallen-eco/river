@@ -10,8 +10,8 @@ output:
 a. Determine which sites are more supportive of migrating species during key lifecycle periods over time
 spring adult migration (~ 15 Apr - 15 May) 
 spring spawning (~ 16-31 May)
-summer fry stage (~ 1 Jun - 30 Sep; ~ 1 mo. larval, ~ 3 mo. juv.)
-fall fry migration (~ 1 Oct - 30 Nov)
+summer fry stage (~ 1 Jun - 15 Sep; ~ 1 mo. larval, ~ 3 mo. juv.)
+fall fry migration (~ 16 Sep - 30 Nov)
 
 i. What is the daily min, max, mean temperature and dissolved oxygen?
 
@@ -38,8 +38,8 @@ g. How can we characterize seasonal variation over time and what differences, or
 # Load libraries, format data, etc.
 ```{r}
 library(dplyr)
-# library(knitr)
-# library(kableExtra)
+library(knitr)
+library(kableExtra)
 library(wesanderson)
 library(lubridate)
 library(ggplot2)
@@ -73,21 +73,78 @@ tdata <- p %>%
   #                        year = 2016:2021, day = 82:339)) %>%
   arrange(site, year, day) %>%
   # peak movement ~ 15 April - 15 May in Raritan per Anthony V.
-  mutate(season = case_when(day %in% 105:135 ~ "migrate",
-                            day %in% 136:151 ~ "spawn",
-                            day %in% 152:273 ~ "juvenile",
-                            day %in% 274:334 ~ "fall_mig"),
+  mutate(season = case_when(day %in% 105:135 ~ "migrate", #4/15-5/15
+                            day %in% 136:151 ~ "spawn", #5/16-5/31
+                            day %in% 152:181 ~ "larvae", #6/1-6/30
+                            day %in% 182:258 ~ "juvenile", #7/1-9/15
+                            day %in% 259:334 ~ "fall_mig"), #9/15-11
          yearf = as.factor(year),
          dayf = as.factor(day),
          hourf = as.factor(hour),
          season = as.factor(season))
 
+# summarize data by day
 tsum <- tdata %>%
     group_by(site, yearf, month, day, dayf) %>%
   summarise(min_temp = min(temp, na.rm = T),
             max_temp = max(temp, na.rm = T),
             mean_temp = mean(temp, na.rm = T),
             .groups = "drop") 
+
+# summarize daily temp data by month
+tsum_month <- tsum %>%
+  group_by(site, yearf, month) %>%
+  summarize(mean_mean = mean(mean_temp),
+            mean_max = mean(max_temp),
+            mean_min = mean(min_temp),
+            n = length(mean_temp),
+            .groups = "drop") %>%
+  mutate(mid = case_when(month == 3 ~ yday("2021-03-15"),
+                         month == 4 ~ yday("2021-04-15"),
+                         month == 5 ~ yday("2021-05-15"),
+                         month == 6 ~ yday("2021-06-15"),
+                         month == 7 ~ yday("2021-07-15"),
+                         month == 8 ~ yday("2021-08-15"),
+                         month == 9 ~ yday("2021-09-15"),
+                         month == 10 ~ yday("2021-10-15"),
+                         month == 11 ~ yday("2021-11-15")
+                         )) %>%
+  mutate(Month = case_when(month == 4 ~ "April",
+                           month == 5 ~ "May",
+                           month == 6 ~ "June",
+                           month == 7 ~ "July",
+                           month == 8 ~ "August",
+                           month == 9 ~ "September",
+                           month == 10 ~ "October",
+                           month == 11 ~ "November",
+                           month == 12 ~ "December"))
+
+# summarize daily temp data by fish life history season
+tsum_season <- tdata %>%
+    group_by(site, yearf, season, day, dayf) %>%
+  summarise(min_temp = min(temp, na.rm = T),
+            max_temp = max(temp, na.rm = T),
+            mean_temp = mean(temp, na.rm = T),
+            .groups = "drop")  %>%
+  group_by(site, yearf, season) %>%
+  summarize(mean_mean = mean(mean_temp),
+            mean_max = mean(max_temp),
+            mean_min = mean(min_temp),
+            max_max = max(max_temp),
+            min_min = min(min_temp),
+            n = length(mean_temp),
+            .groups = "drop") %>%
+  mutate(order = case_when(season == "migrate" ~ 1,
+                           season == "spawn" ~ 2,
+                           season == "larvae" ~ 3,
+                           season == "juvenile" ~ 4,
+                           season == "fall_mig" ~ 5),
+         season2 = case_when(season == "migrate" ~ "Migrate (S)",
+                           season == "spawn" ~ "Spawn",
+                           season == "larvae" ~ "Larvae",
+                           season == "juvenile" ~ "Juvenile",
+                           season == "fall_mig" ~ "Migrate (F)"),
+         season2 = fct_reorder(season2, order))
 
 # format final compiled DO data
 dodata <- p %>%
@@ -116,7 +173,7 @@ dodata <- p %>%
          dayf = as.factor(day),
          hourf = as.factor(hour))
   
-  
+# summarize DO data by day
 dosum <- dodata %>%
     group_by(site, yearf, month, day, dayf) %>%
   summarise(min_do = min(do, na.rm = T),
@@ -124,6 +181,50 @@ dosum <- dodata %>%
             max_do = max(do, na.rm = T),
             .groups = "drop") %>%
   arrange(site, yearf, day)
+
+# summarize daily DO data by month
+dosum_month <- dosum %>%
+  group_by(site, yearf, month) %>%
+  summarize(mean_mean = mean(mean_do),
+            mean_max = mean(max_do),
+            mean_min = mean(min_do),
+            n = length(mean_do),
+            .groups = "drop") %>%
+  mutate(mid = case_when(month == 3 ~ yday("2021-03-15"),
+                         month == 4 ~ yday("2021-04-15"),
+                         month == 5 ~ yday("2021-05-15"),
+                         month == 6 ~ yday("2021-06-15"),
+                         month == 7 ~ yday("2021-07-15"),
+                         month == 8 ~ yday("2021-08-15"),
+                         month == 9 ~ yday("2021-09-15"),
+                         month == 10 ~ yday("2021-10-15"),
+                         month == 11 ~ yday("2021-11-15")
+                         ))
+
+# summarize daily DO data by fish life history season
+dosum_season <- dodata %>%
+    group_by(site, yearf, season, day, dayf) %>%
+  summarise(min_do = min(do, na.rm = T),
+            max_do = max(do, na.rm = T),
+            mean_do = mean(do, na.rm = T),
+            .groups = "drop")  %>%
+  group_by(site, yearf, season) %>%
+  summarize(mean_mean = mean(mean_do),
+            mean_max = mean(max_do),
+            mean_min = mean(min_do),
+            n = length(mean_do),
+            .groups = "drop") %>%
+  mutate(order = case_when(season == "migrate" ~ 1,
+                           season == "spawn" ~ 2,
+                           season == "larvae" ~ 3,
+                           season == "juvenile" ~ 4,
+                           season == "fall_mig" ~ 5),
+         season2 = case_when(season == "migrate" ~ "Migrate (S)",
+                           season == "spawn" ~ "Spawn",
+                           season == "larvae" ~ "Larvae",
+                           season == "juvenile" ~ "Juvenile",
+                           season == "fall_mig" ~ "Migrate (F)"),
+         season2 = fct_reorder(season2, order))
 
 rm(p)
 ```
@@ -279,22 +380,7 @@ i. What is the daily min, max, mean temperature and dissolved oxygen?
 ```{r}
 sites <- unique(tdata$site)
 
-tsum_month <- tsum %>%
-  group_by(site, yearf, month) %>%
-  summarize(mean_mean = mean(mean_temp),
-            mean_max = mean(max_temp),
-            mean_min = mean(min_temp),
-            .groups = "drop") %>%
-  mutate(mid = case_when(month == 3 ~ yday("2021-03-15"),
-                         month == 4 ~ yday("2021-04-15"),
-                         month == 5 ~ yday("2021-05-15"),
-                         month == 6 ~ yday("2021-06-15"),
-                         month == 7 ~ yday("2021-07-15"),
-                         month == 8 ~ yday("2021-08-15"),
-                         month == 9 ~ yday("2021-09-15"),
-                         month == 10 ~ yday("2021-10-15"),
-                         month == 11 ~ yday("2021-11-15")
-                         ))
+
 
 # i = sites[2]
 for(i in sites){
@@ -378,23 +464,7 @@ ggsave(paste0("output/Task2_WQ_migratory_species/PlotB/PlotB_",i,"_monthly_temps
 
 # do monthly and daily
 ```{r}
-dosum_month <- dosum %>%
-  group_by(site, yearf, month) %>%
-  summarize(mean_mean = mean(mean_do),
-            mean_max = mean(max_do),
-            mean_min = mean(min_do),
-            n = length(mean_do),
-            .groups = "drop") %>%
-  mutate(mid = case_when(month == 3 ~ yday("2021-03-15"),
-                         month == 4 ~ yday("2021-04-15"),
-                         month == 5 ~ yday("2021-05-15"),
-                         month == 6 ~ yday("2021-06-15"),
-                         month == 7 ~ yday("2021-07-15"),
-                         month == 8 ~ yday("2021-08-15"),
-                         month == 9 ~ yday("2021-09-15"),
-                         month == 10 ~ yday("2021-10-15"),
-                         month == 11 ~ yday("2021-11-15")
-                         ))
+
 
 sites <- unique(dodata$site)
 
@@ -435,24 +505,6 @@ ggsave(paste0("output/Task2_WQ_migratory_species/PlotC/PlotC_",i,"_daily_monthly
 
 # Plot monthy mean DO for each site
 ```{r}
-dosum_month <- dosum %>%
-  group_by(site, yearf, month) %>%
-  summarize(mean_mean = mean(mean_do),
-            mean_max = mean(max_do),
-            mean_min = mean(min_do),
-            n = length(mean_do),
-            .groups = "drop") %>%
-  mutate(mid = case_when(month == 3 ~ yday("2021-03-15"),
-                         month == 4 ~ yday("2021-04-15"),
-                         month == 5 ~ yday("2021-05-15"),
-                         month == 6 ~ yday("2021-06-15"),
-                         month == 7 ~ yday("2021-07-15"),
-                         month == 8 ~ yday("2021-08-15"),
-                         month == 9 ~ yday("2021-09-15"),
-                         month == 10 ~ yday("2021-10-15"),
-                         month == 11 ~ yday("2021-11-15")
-                         ))
-
 sites <- unique(tdata$site)
 
 dosum_envelope <- dodata %>%
@@ -496,3 +548,185 @@ ggsave(paste0("output/Task2_WQ_migratory_species/PlotD/PlotD_",i,"_monthly_DO.pn
 
 
 ```
+# mean/min/max temperature during migratory fish periods
+```{r}
+sites <- unique(tdata$site)
+
+i = sites[2]
+
+for(i in sites){
+  print(i)
+tsum_season %>%
+  filter(site == i,
+         is.na(season)==F,
+         n > 10) %>%
+  ggplot() +
+  geom_errorbar(aes(y = yearf, 
+                    xmin = mean_min, xmax = mean_max),
+                width = 0) +
+  geom_point(aes(y = yearf, x = mean_mean, color = season2),
+             size = 2) +
+  facet_grid(season2~.) +
+    theme_bw() +
+  labs(x = "Mean daily temperature", y = "",
+       title = i, color = "") +
+  theme(text = element_text(size = 14),
+        axis.title.y = element_text(size = 12),
+        strip.text = element_blank(),
+        strip.background = element_blank(),
+        legend.position = "right") +
+  scale_color_manual(values = c(wes_palettes$Zissou1,
+                                wes_palettes$Royal2))
+
+ggsave(paste0("output/Task2_WQ_migratory_species/PlotE/PlotE_",i,"_fish_seasons_temp.png"), height = 5, width = 7, dpi = 400)
+}
+```
+# mean/min/max DO during migratory fish periods
+```{r}
+sites <- unique(dodata$site)
+
+i = sites[1]
+
+for(i in sites){
+  print(i)
+dosum_season %>%
+  filter(site == i,
+         is.na(season)==F,
+         n > 10) %>%
+  ggplot() +
+  geom_errorbar(aes(y = yearf, 
+                    xmin = mean_min, xmax = mean_max),
+                width = 0) +
+  geom_point(aes(y = yearf, x = mean_mean, color = season2),
+             size = 2) +
+  facet_grid(season2~.) +
+    theme_bw() +
+  labs(x = "Mean daily dissolved oxygen", y = "",
+       title = i, color = "") +
+  theme(text = element_text(size = 14),
+        axis.title.y = element_text(size = 12),
+        strip.text = element_blank(),
+        strip.background = element_blank(),
+        legend.position = "right") +
+  scale_color_manual(values = c(wes_palettes$Zissou1,
+                                wes_palettes$Royal2))
+
+ggsave(paste0("output/Task2_WQ_migratory_species/PlotF/PlotF_",i,"_fish_seasons_DO.png"), height = 5, width = 7, dpi = 400)
+}
+```
+# Tables of average daily temperatures by month
+- What is the monthly mean mean/min/max temperature?
+```{r}
+
+sites <- unique(tdata$site)
+
+i = sites[1]
+
+for(i in sites){
+  print(i)
+(tmonth_table <- tsum_month %>%
+  filter(n >= 10,
+         site == i) %>%
+  rename(Year = yearf,
+         Site = site,
+         Mean = mean_mean,
+         Max = mean_max,
+         Min = mean_min) %>%
+  arrange(Site, month, Year) %>%
+  select(Site, Month, Year, Min, Mean, Max, n)  %>%
+  kbl(caption = 
+        paste0("Average daily temperatures (min, mean, and max) by month for site ", i,"."), 
+      digits = 1) %>%
+  kable_classic(full_width = F, html_font = "Cambria")
+)
+
+# save the table to HTML file
+save_kable(tmonth_table,
+           paste0("output/",
+                  "Task2_WQ_migratory_species/TableA/",
+                  "TableA_", i, 
+                  "_monthly_average_temperatures.html"))
+}
+
+```
+# Tables of average daily temperatures for 1 Jul - 15 Sept
+- For July 1- Sept 15, What’s the mean daily max?
+```{r}
+
+sites <- unique(tdata$site)
+
+i = sites[1]
+
+for(i in sites){
+  print(i)
+(t_hotseason_table <- tsum_season %>%
+  filter(n >= 10,
+         season == "juvenile",
+         site == i) %>%
+  rename(Year = yearf,
+         Site = site,
+         Mean = mean_mean,
+         'Avg. Max' = mean_max,
+         'Avg. Min' = mean_min,
+         'Abs. Min' = min_min,
+         'Abs. Max' = max_max) %>%
+    mutate(Period = "1 Jul - 15 Sep") %>%
+  arrange(Site, Year) %>%
+  select(Site, Year, Period, 'Abs. Min', 'Avg. Min', 
+         Mean, 'Avg. Max', 'Abs. Max',  n)  %>%
+  kbl(caption = 
+        paste0("Average daily temperatures (min, mean, and max) during the period 1 July to 15 September for site ", i,"."), 
+      digits = 1) %>%
+  kable_classic(full_width = F, html_font = "Cambria")
+)
+
+# save the table to HTML file
+save_kable(t_hotseason_table,
+           paste0("output/",
+                  "Task2_WQ_migratory_species/TableB/",
+                  "TableB_", i, 
+                  "_average_temps_1Jul_15Sep.html"))
+}
+
+```
+# Tables of average daily temperatures for migratory fish seasons
+- What is mean mean/min/max by fish season?
+```{r}
+
+sites <- unique(tdata$site)
+
+i = sites[1]
+
+for(i in sites){
+  print(i)
+(t_fishseason_table <- tsum_season %>%
+  filter(n >= 10,
+         site == i,
+         is.na(season) == F) %>%
+  rename(Year = yearf,
+         Season = season2,
+         Site = site,
+         Mean = mean_mean,
+         'Avg. Max' = mean_max,
+         'Avg. Min' = mean_min,
+         'Abs. Min' = min_min,
+         'Abs. Max' = max_max) %>%
+  arrange(Site, Season, Year) %>%
+  select(Site, Season, Year, 'Abs. Min', 'Avg. Min', 
+         Mean, 'Avg. Max', 'Abs. Max',  n)  %>%
+  kbl(caption = 
+        paste0("Average daily temperatures (min, mean, and max) during the primary migratory fish periods for site ", i,". Spring migration: 15 April - 15 May; Spawning: 16-31 May; Larvae: 1-30 June; Juvenile: 1 July - 15 Sept.; Fall migration: 16 Sept. - 30 Nov."), 
+      digits = 1) %>%
+  kable_classic(full_width = F, html_font = "Cambria")
+)
+
+# save the table to HTML file
+save_kable(t_fishseason_table,
+           paste0("output/",
+                  "Task2_WQ_migratory_species/TableC/",
+                  "TableC_", i, 
+                  "_average_temps_mig_fish_seasons.html"))
+}
+
+```
+
