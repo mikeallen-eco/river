@@ -23,9 +23,6 @@ c. How often do sites exceed SWQS for dissolved oxygen (how many days per year)?
 To do:
 5. research statistically controlling for air temp (water temp ~ air temp)
 6. research methods to statistically QC / censor DO data using water temp data
-
-
-
 # Load libraries, format data, etc.
 ```{r}
 library(dplyr)
@@ -415,6 +412,67 @@ ggplot() +
 
 rm(temp_count_bad)
 ```
+## Plot no. days exceeding temp. thresholds - individually by site
+I.e., Plot C but as one plot per site
+```{r}
+sites <- unique(temp_count$site)
+i <- sites[1]
+
+# loop to make a plot for each site
+for( i in sites ){
+  print(i)
+temp_count_bad <- temp_count %>%
+  left_join(temp_cov, by = c("site", "year", "summer_days")) %>%
+  filter(is.na(low) == F, 
+         site == i)
+
+if(nrow(temp_count_bad)==0){
+  temp_count_bad <- data.frame(
+    site = i,
+    year = 2016,
+    days_over = -50,
+    Threshold = "Trout Maintenance",
+    low = "**"
+  )
+}
+
+# x11(height = 4, width = 6); 
+temp_count %>%
+  filter(summer_days >= 0.8,
+         site == i) %>%
+ggplot() +
+  geom_line(aes(x = year, y = days_over, color = Threshold)) +
+  geom_point(aes(x = year, y = days_over, color = Threshold), 
+             size = 3.5) +
+  geom_point(data = filter(temp_count_bad, site == i), 
+             aes(x = year, y = days_over,
+                 color = Threshold), shape = "*",
+             size = 4) +
+  scale_color_brewer(palette = "Dark2") +
+  scale_y_continuous(limits = c(0,150)) +
+  scale_x_continuous(breaks = 2016:2021,
+                     labels = as.character(2016:2021),
+                     limits = c(2016, 2021)) +
+  theme_bw() +
+  theme(text = element_text(size = 14),
+        axis.text.x = element_text(size = 10),
+        strip.background = element_rect(fill = "white"),
+        legend.position = "right",
+        legend.justification="center",
+        # legend.margin=margin(0,0,0,0),
+        legend.box.margin=margin(-8,-8,-8,-8)) +
+  labs(x = "", y = "Days above temp. threshold",
+       title = i) +
+  guides(shape = "none")
+
+ggsave(
+  paste0("output/Task1_SWQS_loggers/PlotC_individual/",
+  "PlotC_", i, "_days_above_temp_threshold_timeseries.png"),
+       height = 4, width = 6, dpi = 400)
+
+rm(temp_count_bad)
+}
+```
 ## "days over temp threshold" boxplots by site
 ```{r}
 # x11(width = 8, height = 6)
@@ -626,6 +684,67 @@ ggplot() +
 # ggsave(
 #   "output/Task1_SWQS_loggers/PlotG_days_below_DO_threshold2.png",
 #        height = 7, width = 9, dpi = 400)
+```
+## Plot no. days below DO thresholds - individually by site
+I.e., Plot G but as one plot per site
+```{r}
+sites <- unique(DO_count$site)
+i <- sites[1]
+
+# loop to make a plot for each site
+for( i in sites ){
+  print(i)
+DO_count_bad <- DO_count %>%
+  left_join(DO_cov, by = c("site", "year", "summer_days")) %>%
+  filter(is.na(low) == F, 
+         site == i)
+
+if(nrow(DO_count_bad)==0){
+  temp_count_bad <- data.frame(
+    site = i,
+    year = 2016,
+    days_under = -50,
+    Threshold = "Trout Maintenance",
+    low = "**"
+  )
+}
+
+# x11(height = 4, width = 6); 
+DO_count %>%
+  filter(summer_days >= 0.8,
+         site == i) %>%
+ggplot() +
+  geom_line(aes(x = year, y = days_under, color = Threshold)) +
+  geom_point(aes(x = year, y = days_under, color = Threshold), 
+             size = 3.5) +
+  geom_point(data = filter(DO_count_bad, site == i), 
+             aes(x = year, y = days_under,
+                 color = Threshold), shape = "*",
+             size = 4) +
+  scale_color_brewer(palette = "Dark2") +
+  scale_y_continuous(limits = c(0,150)) +
+  scale_x_continuous(breaks = 2016:2021,
+                     labels = as.character(2016:2021),
+                     limits = c(2016, 2021)) +
+  theme_bw() +
+  theme(text = element_text(size = 14),
+        axis.text.x = element_text(size = 10),
+        strip.background = element_rect(fill = "white"),
+        legend.position = "right",
+        legend.justification="center",
+        # legend.margin=margin(0,0,0,0),
+        legend.box.margin=margin(-8,-8,-8,-8)) +
+  labs(x = "", y = "Days below dissolved oxygen threshold",
+       title = i) +
+  guides(shape = "none")
+
+ggsave(
+  paste0("output/Task1_SWQS_loggers/PlotG_individual/",
+  "PlotG_", i, "_days_below_DO_threshold_timeseries.png"),
+       height = 4, width = 6, dpi = 400)
+
+rm(DO_count_bad)
+}
 ```
 ## "days below DO threshold" boxplots by site
 ```{r}

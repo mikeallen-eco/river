@@ -228,7 +228,7 @@ dosum_season <- dodata %>%
 
 rm(p)
 ```
-# Mean temperature by site: migratory period, 15 Apr - 15 May
+# Modeling mean temperature by site in each season
 ```{r}
 # intercept varying among years and among days within years (nested random effects)
 
@@ -238,34 +238,33 @@ temp_mod_migrate <- lmer(temp ~ site + (1 | yearf/dayf),
                            season == "migrate"))
 summary(temp_mod_migrate)
 
-temp_mod_hr_migrate <- 
-  lmer(temp ~ site + (1 | yearf/dayf/hour), 
-             data = filter(tdata, is.na(temp)==F,
-                           season == "migrate"))
-summary(temp_mod_hr_migrate)
-
-# compare model with and without hour random effect
-# with hour effect is much better
-anova(temp_mod_migrate, temp_mod_hr_migrate)
-
 # fit model during spawning period
-temp_mod_hr_spawn <- 
-  lmer(temp ~ site + (1 | yearf/dayf/hour), 
+temp_mod_spawn <- 
+  lmer(temp ~ site + (1 | yearf/dayf), 
              data = filter(tdata, is.na(temp)==F,
                            season == "spawn"))
-summary(temp_mod_hr_spawn)
+summary(temp_mod_spawn)
 
-temp_mod_hr_juv <- 
-  lmer(temp ~ site + (1 | yearf/dayf/hour), 
+# fit model during larval period
+temp_mod_lar <- 
+  lmer(temp ~ site + (1 | yearf/dayf), 
+             data = filter(tdata, is.na(temp)==F,
+                           season == "larvae"))
+summary(temp_mod_lar)
+
+# fit model during juvenile period
+temp_mod_juv <- 
+  lmer(temp ~ site + (1 | yearf/dayf), 
              data = filter(tdata, is.na(temp)==F,
                            season == "juvenile"))
-summary(temp_mod_hr_juv)
+summary(temp_mod_juv)
 
-temp_mod_hr_fall <- 
-  lmer(temp ~ site + (1 | yearf/dayf/hour), 
+# fit model during fall migration period
+temp_mod_fall <- 
+  lmer(temp ~ site + (1 | yearf/dayf), 
              data = filter(tdata, is.na(temp)==F,
                            season == "fall_mig"))
-summary(temp_mod_hr_fall)
+summary(temp_mod_fall)
 ```
 # Generate bootstrapped CI's for predictions
 ```{r}
@@ -279,6 +278,12 @@ newdat_migrate <- expand.grid(site = unique(tdata$site)) %>%
 newdat_spawn <- expand.grid(site = unique(tdata$site)) %>%
   filter(site %in% filter(tdata, is.na(temp)==F,
                           season == "spawn")$site) %>%
+  droplevels()
+
+# make prediction covariate data for larvae
+newdat_lar <- expand.grid(site = unique(tdata$site)) %>%
+  filter(site %in% filter(tdata, is.na(temp)==F,
+                          season == "larvae")$site) %>%
   droplevels()
 
 # make prediction covariate data for juvenile
@@ -300,11 +305,23 @@ pred_fun_spawn <- function(.) {
             re.form = NA))
 }
 
-bootCI_spawn = bootMer(temp_mod_hr_spawn, pred_fun_spawn, 
+bootCI_spawn = bootMer(temp_mod_spawn, pred_fun_spawn, 
                  re.form=NA, nsim = 1000,
                  verbose = T)
 
-saveRDS(bootCI_spawn, "output/Task2_WQ_migratory_species/statistical_analysis/temp_mod_hr_spawn_bootstraps.rds")
+saveRDS(bootCI_spawn, "output/Task2_WQ_migratory_species/statistical_analysis/temp_mod_spawn_bootstraps.rds")
+
+# Bootstrapped CIs for predicted mean temperature - Larvae
+pred_fun_lar <- function(.) {
+  c(predict(., data.frame(site = unique(newdat_lar$site)), 
+            re.form = NA))
+}
+
+bootCI_lar = bootMer(temp_mod_lar, pred_fun_lar, 
+                 re.form=NA, nsim = 1000,
+                 verbose = T)
+
+saveRDS(bootCI_lar, "output/Task2_WQ_migratory_species/statistical_analysis/temp_mod_lar_bootstraps.rds")
 
 # Bootstrapped CIs for predicted mean temperature - Juvenile
 pred_fun_juv <- function(.) {
@@ -312,11 +329,11 @@ pred_fun_juv <- function(.) {
             re.form = NA))
 }
 
-bootCI_juv = bootMer(temp_mod_hr_juv, pred_fun_juv, 
+bootCI_juv = bootMer(temp_mod_juv, pred_fun_juv, 
                  re.form=NA, nsim = 1000,
                  verbose = T)
 
-saveRDS(bootCI_juv, "output/Task2_WQ_migratory_species/statistical_analysis/temp_mod_hr_juv_bootstraps.rds")
+saveRDS(bootCI_juv, "output/Task2_WQ_migratory_species/statistical_analysis/temp_mod_juv_bootstraps.rds")
 
 # Bootstrapped CIs for predicted mean temperature - Fall migration
 pred_fun_fall <- function(.) {
@@ -324,11 +341,11 @@ pred_fun_fall <- function(.) {
             re.form = NA))
 }
 
-bootCI_fall = bootMer(temp_mod_hr_fall, pred_fun_fall, 
+bootCI_fall = bootMer(temp_mod_fall, pred_fun_fall, 
                  re.form=NA, nsim = 1000,
                  verbose = T)
 
-saveRDS(bootCI_fall, "output/Task2_WQ_migratory_species/statistical_analysis/temp_mod_hr_fall_bootstraps.rds")
+saveRDS(bootCI_fall, "output/Task2_WQ_migratory_species/statistical_analysis/temp_mod_fall_bootstraps.rds")
 
 
 # Bootstrapped CIs for predicted mean temperature - Migration
@@ -337,11 +354,11 @@ pred_fun_migrate <- function(.) {
             re.form = NA))
 }
 
-bootCI_migrate = bootMer(temp_mod_hr_migrate, pred_fun_migrate, 
+bootCI_migrate = bootMer(temp_mod_migrate, pred_fun_migrate, 
                  re.form=NA, nsim = 1000,
                  verbose = T)
 
-saveRDS(bootCI_migrate, "output/Task2_WQ_migratory_species/statistical_analysis/temp_mod_hr_migrate_bootstraps.rds")
+saveRDS(bootCI_migrate, "output/Task2_WQ_migratory_species/statistical_analysis/temp_mod_migrate_bootstraps.rds")
 
 
 
