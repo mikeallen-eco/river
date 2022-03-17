@@ -1,0 +1,105 @@
+Task 1: Surface Water Quality Standards (SWQS)
+a. Analyze logger data to determine if select monitoring reaches are impaired for sensitive aquatic
+life (e.g., macroinvertebrates, trout) in freshwater streams. Analyze daily/monthly data at each
+monitoring location against state SWQS criteria. Which sites are meeting/not meeting SWQS (do
+temperatures and dissolved oxygen meet criteria required to support aquatic life and trout?)?
+b. How often do sites exceed SWQS for temperature (how many days per year)?
+c. How often do sites exceed SWQS for dissolved oxygen (how many days per year)?
+
+
+Task 2: Site specific water quality conditions important to us other than SWQS
+a. Determine which sites are more supportive of migrating species during key lifecycle periods over
+time (spring adult migration, spring spawning, summer fry stage, fall fry migration)?
+i. What is the daily min, max, mean temperature and dissolved oxygen?
+b. Determine which sites are more likely not to thermally stress sensitive species during peak
+summer temperatures?
+i. For the period of July 1- Sept 15
+1. What’s the daily max?
+c. What is the daily mean, min, and max temperatures?
+d. What is the monthly mean temperature?
+e. What is the annual mean temperature?
+f. Are there significant changes to daily, monthly and annual mean temperature and dissolved
+oxygen over time (year to year, across all years sampled)?
+g. How can we characterize seasonal variation over time and what differences, or patterns do we
+see in seasonal variation across the years?
+
+
+Task 3: Project Specific Analyses
+a. What are water quality conditions upstream/downstream/within project area(s) pre and post dam
+removal (assessing turbidity, conductivity, dissolved oxygen and temperature)?
+b. What are baseline water quality conditions upstream/downstream/within floodplain reforestation
+corridor(s) before and after tree plantings (assessing temperature, dissolved oxygen)?
+c. What are baseline water quality conditions downstream Hyper Humus (assessing temperature,
+dissolved oxygen)?
+
+
+Task 4: Species specific analyses
+Updated 11.09.2021 Page 8 of 9
+a. Visualize and perform statistical analysis of macroinvertebrate and EPA Habitat Assessment
+scores, including assessing spatial patterns and temporal trends. Where do sites fall on the
+optimum/excellent to poor spectrum? How are scores changing over time at the level of the
+individual site and within the broader network as a whole?
+b. How are the individual component metrics contributing to the resulting macroinvertebrate and
+EPA Habitat Assessment scores at the sites? For example, are all “Poor” sites classified as such for
+the same reason or are there a range of contributing factors?
+
+Task 5: Create a reproducible data management and analysis pipeline
+a. Produce a set of recommendations for building a Reproducible Analytical Pipeline (RAP) for the
+river monitoring data, including data archiving, importing, quality checking, formatting,
+documenting with metadata, analyzing, and producing appropriate visualizations.
+b. Implement the RAP in the form of a user-friendly tutorial document that will guide the user
+through the process of re-running each analysis and reproducing each figure. The guide shall read
+like a series of step-by-step instructions, with explanatory text alternating with clearly labeled
+‘chunks’ of code to allow users to import data, perform analyses, and create plots. The document
+shall be created using RMarkdown (https://rmarkdown.rstudio.com) within the free RStudio
+software. The code shall be run directly (interactively) within RStudio and/or exported as PDF,
+Word, or HTML for easy viewing.
+c. A primary goal shall be to 1) make the guide readily useable even by those unfamiliar with coding
+or statistical software; and 2) design and write the document with future analysis/visualization
+needs of the user in mind.
+Products and Deliverables: The Contractor shall deliver the following Products:
+
+Product 1:
+• Data visualization (figures, maps, plots) of seasonal, monthly, and diel fluctuations in flow,
+physiochemical conditions to address the items in Task 1 with respect to state water quality
+criteria.
+• Meetings as needed to refine objectives and desired outputs.
+• Summary statistics and statistical analysis of same along with associated interpretative text.
+
+Product 2:
+• Evaluate the water quality characteristics highlighted in Task 2 with respect to the needs of key
+migratory species.
+• Meetings as needed to refine objectives and desired outputs.
+• Data visualization (figures, maps, plots) and statistical analysis to compare same across sites and
+assess trends through time, along with associated interpretative text.
+
+Product 3:
+• Evaluate project specific questions via statistical analysis and data visualization (figures, maps,
+plots).
+• Meetings as needed to refine objectives and desired outputs.
+• Assess spatial and temporal changes in water quality metrics with respect to dam removal
+(before/after, upstream/downstream), restoration projects, and other sites of interest (Hyper
+Humus). Provide associated interpretative text.
+
+Product 4:
+• Data visualization of habitat assessment and macroinvertebrate scores over time to address the
+items in Task 4 with respect to individual sites and the broader watershed wide monitoring
+network.
+• Meetings as needed to refine objectives and desired outputs.
+• Summary statistics and statistical analysis of same, along with associated interpretative text.
+
+Product 5:
+• Curated final data and code files.
+• RAP workflow tutorial document in RMarkdown, PDF, Word, and HTML formats.
+• README document to guide user through analysis.
+• Meetings as needed to refine objectives and desired outputs.
+
+
+Due Dates: The Contractor shall complete the following task and products per the due dates listed below:
+
+
+Task and Product 1 Due: February 10, 2022
+Task and Product 2 Due: March 10, 2022
+Task and Product 3 Due: April 10, 2022
+Task and Product 4 Due: April 25, 2022
+Task and Product 5 Due: May 25, 2022

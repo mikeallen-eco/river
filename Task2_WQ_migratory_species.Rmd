@@ -6,6 +6,12 @@ output:
   html_document: default
   pdf_document: default
 ---
+# To Do
+1. Plots E&F: make points bigger
+2. Plots E&F: represent as mean +/- 2*SE
+3. Plots E&F: add min/max language to x-axis title
+ 
+
 #Task 2: Site specific water quality conditions important to us other than SWQS
 a. Determine which sites are more supportive of migrating species during key lifecycle periods over time
 spring adult migration (~ 15 Apr - 15 May) 
@@ -228,178 +234,11 @@ dosum_season <- dodata %>%
 
 rm(p)
 ```
-# Modeling mean temperature by site in each season
-```{r}
-# intercept varying among years and among days within years (nested random effects)
-
-# fit model during migration period
-temp_mod_migrate <- lmer(temp ~ site + (1 | yearf/dayf), 
-             data = filter(tdata, is.na(temp)==F,
-                           season == "migrate"))
-summary(temp_mod_migrate)
-
-# fit model during spawning period
-temp_mod_spawn <- 
-  lmer(temp ~ site + (1 | yearf/dayf), 
-             data = filter(tdata, is.na(temp)==F,
-                           season == "spawn"))
-summary(temp_mod_spawn)
-
-# fit model during larval period
-temp_mod_lar <- 
-  lmer(temp ~ site + (1 | yearf/dayf), 
-             data = filter(tdata, is.na(temp)==F,
-                           season == "larvae"))
-summary(temp_mod_lar)
-
-# fit model during juvenile period
-temp_mod_juv <- 
-  lmer(temp ~ site + (1 | yearf/dayf), 
-             data = filter(tdata, is.na(temp)==F,
-                           season == "juvenile"))
-summary(temp_mod_juv)
-
-# fit model during fall migration period
-temp_mod_fall <- 
-  lmer(temp ~ site + (1 | yearf/dayf), 
-             data = filter(tdata, is.na(temp)==F,
-                           season == "fall_mig"))
-summary(temp_mod_fall)
-```
-# Generate bootstrapped CI's for predictions
-```{r}
-# make prediction covariate data for migration
-newdat_migrate <- expand.grid(site = unique(tdata$site)) %>%
-  filter(site %in% filter(tdata, is.na(temp)==F,
-                          season == "migrate")$site) %>%
-  droplevels()
-
-# make prediction covariate data for spawning
-newdat_spawn <- expand.grid(site = unique(tdata$site)) %>%
-  filter(site %in% filter(tdata, is.na(temp)==F,
-                          season == "spawn")$site) %>%
-  droplevels()
-
-# make prediction covariate data for larvae
-newdat_lar <- expand.grid(site = unique(tdata$site)) %>%
-  filter(site %in% filter(tdata, is.na(temp)==F,
-                          season == "larvae")$site) %>%
-  droplevels()
-
-# make prediction covariate data for juvenile
-newdat_juv <- expand.grid(site = unique(tdata$site)) %>%
-  filter(site %in% filter(tdata, is.na(temp)==F,
-                          season == "juvenile")$site) %>%
-  droplevels()
-
-# make prediction covariate data for fall migration
-newdat_fall <- expand.grid(site = unique(tdata$site)) %>%
-  filter(site %in% filter(tdata, is.na(temp)==F,
-                          season == "fall_mig")$site) %>%
-  droplevels()
-
-
-# Bootstrapped CIs for predicted mean temperature - Spawning
-pred_fun_spawn <- function(.) {
-  c(predict(., data.frame(site = unique(newdat_spawn$site)), 
-            re.form = NA))
-}
-
-bootCI_spawn = bootMer(temp_mod_spawn, pred_fun_spawn, 
-                 re.form=NA, nsim = 1000,
-                 verbose = T)
-
-saveRDS(bootCI_spawn, "output/Task2_WQ_migratory_species/statistical_analysis/temp_mod_spawn_bootstraps.rds")
-
-# Bootstrapped CIs for predicted mean temperature - Larvae
-pred_fun_lar <- function(.) {
-  c(predict(., data.frame(site = unique(newdat_lar$site)), 
-            re.form = NA))
-}
-
-bootCI_lar = bootMer(temp_mod_lar, pred_fun_lar, 
-                 re.form=NA, nsim = 1000,
-                 verbose = T)
-
-saveRDS(bootCI_lar, "output/Task2_WQ_migratory_species/statistical_analysis/temp_mod_lar_bootstraps.rds")
-
-# Bootstrapped CIs for predicted mean temperature - Juvenile
-pred_fun_juv <- function(.) {
-  c(predict(., data.frame(site = unique(newdat_juv$site)), 
-            re.form = NA))
-}
-
-bootCI_juv = bootMer(temp_mod_juv, pred_fun_juv, 
-                 re.form=NA, nsim = 1000,
-                 verbose = T)
-
-saveRDS(bootCI_juv, "output/Task2_WQ_migratory_species/statistical_analysis/temp_mod_juv_bootstraps.rds")
-
-# Bootstrapped CIs for predicted mean temperature - Fall migration
-pred_fun_fall <- function(.) {
-  c(predict(., data.frame(site = unique(newdat_fall$site)), 
-            re.form = NA))
-}
-
-bootCI_fall = bootMer(temp_mod_fall, pred_fun_fall, 
-                 re.form=NA, nsim = 1000,
-                 verbose = T)
-
-saveRDS(bootCI_fall, "output/Task2_WQ_migratory_species/statistical_analysis/temp_mod_fall_bootstraps.rds")
-
-
-# Bootstrapped CIs for predicted mean temperature - Migration
-pred_fun_migrate <- function(.) {
-  c(predict(., data.frame(site = unique(newdat_migrate$site)), 
-            re.form = NA))
-}
-
-bootCI_migrate = bootMer(temp_mod_migrate, pred_fun_migrate, 
-                 re.form=NA, nsim = 1000,
-                 verbose = T)
-
-saveRDS(bootCI_migrate, "output/Task2_WQ_migratory_species/statistical_analysis/temp_mod_migrate_bootstraps.rds")
-
-
-
-bootCI = readRDS("output/Task2_WQ_migratory_species/statistical_analysis/temp_mod_hr_bootstraps.rds")
-tplot <- apply(bootCI$t, 2, 
-               function(x) quantile(x, c(0.025,0.975))) %>% 
-  t() %>%
-  as.data.frame() %>%
-  bind_cols(predict(temp_mod_hr_spawn, 
-                    data.frame(site = unique(newdat_spawn$site)), 
-                    re.form = NA)) %>%
-  rename(q2.5 = 1, q97.5 = 2, fit = 3) %>%
-  mutate(site = unique(tdata2$site)) %>%
-  select(site, fit, q2.5, q97.5) %>%
-  mutate(site = fct_reorder(site, fit))
-
-tplot %>%
-  ggplot() +
-  geom_point(aes(y = site, x = fit)) +
-  geom_errorbar(aes(y = site, xmin = q2.5, xmax = q97.5))
-                      
-
-# try Bayesian later...
-# y ~ dnorm(mu, tau)
-# mu ~ site[s] + day[y] + year[y]
-# or in BRMS
-# library(brms)
-# temp_mod_hr_seas <- brm(temp ~ site + migrate + 
-#                        spawn + juvenile + fall_mig +
-#                        (1 | yearf/dayf/hour), 
-#              data = filter(tdata, is.na(temp)==F))
-# saveRDS(temp_mod_hr_seas, "output/Task2_WQ_migratory_species/statistical_analysis/temp_mod_hr_seas_stanmod.rds")
-```
-
 i. What is the daily min, max, mean temperature and dissolved oxygen?
 ```{r}
 sites <- unique(tdata$site)
 
-
-
-# i = sites[2]
+i = sites[2]
 for(i in sites){
 # x11(8,5); 
 print(i)
@@ -423,8 +262,11 @@ tsum %>%
        title = i) +
   theme(text = element_text(size = 14),
         axis.title.y = element_text(size = 12)) +
+  scale_y_continuous(breaks = seq(0,30, by = 10),
+                     limits = c(0,32)) +
     scale_x_continuous(
     breaks = c(91, 152, 213, 274, 335),
+    limits = c(82, 339),
     labels = c("Apr", "Jun", "Aug",
                "Oct", "Dec")
   )
@@ -445,7 +287,7 @@ tsum_envelope <- tdata %>%
 
 i = sites[1]
 
-for( i in sites) {
+for( i in sites ) {
 print(i)
 tsum_month %>%
   filter(site == i) %>%
@@ -465,8 +307,11 @@ tsum_month %>%
        title = i, color = "") +
   theme(text = element_text(size = 14),
         axis.title.y = element_text(size = 12)) +
+    scale_y_continuous(breaks = seq(0,30, by = 10),
+                     limits = c(0,32)) +
     scale_x_continuous(
     breaks = c(91, 152, 213, 274, 335),
+    limits = c(82, 339),
     labels = c("Apr", "Jun", "Aug",
                "Oct", "Dec")
   ) +
@@ -481,8 +326,6 @@ ggsave(paste0("output/Task2_WQ_migratory_species/PlotB/PlotB_",i,"_monthly_temps
 
 # do monthly and daily
 ```{r}
-
-
 sites <- unique(dodata$site)
 
 i = sites[2]
@@ -510,8 +353,11 @@ dosum %>%
        title = i) +
   theme(text = element_text(size = 14),
         axis.title.y = element_text(size = 12)) +
+  scale_y_continuous(breaks = seq(0,16, by = 4),
+                     limits = c(0,16.5)) +
     scale_x_continuous(
     breaks = c(91, 152, 213, 274, 335),
+    limits = c(82, 339),
     labels = c("Apr", "Jun", "Aug",
                "Oct", "Dec")
   )
@@ -528,7 +374,7 @@ dosum_envelope <- dodata %>%
   group_by(site, day) %>%
   summarize(multi_min = min(do),
             multi_max = max(do),
-            .groups = "drop")
+            .groups = "drop") 
 
 i = "TNC_16"
 
@@ -552,18 +398,19 @@ dosum_month %>%
        title = i, color = "") +
   theme(text = element_text(size = 14),
         axis.title.y = element_text(size = 12)) +
+    scale_y_continuous(breaks = seq(0,16, by = 4),
+                     limits = c(0,16.5)) +
     scale_x_continuous(
     breaks = c(91, 152, 213, 274, 335),
+    limits = c(82, 339),
     labels = c("Apr", "Jun", "Aug",
                "Oct", "Dec")
-  ) +
+    ) +
   scale_color_manual(values = c(wes_palettes$Royal1,
                                 wes_palettes$Royal2))
 
 ggsave(paste0("output/Task2_WQ_migratory_species/PlotD/PlotD_",i,"_monthly_DO.png"), height = 5, width = 7, dpi = 400)
 }
-
-
 ```
 # mean/min/max temperature during migratory fish periods
 ```{r}
@@ -582,13 +429,16 @@ tsum_season %>%
                     xmin = mean_min, xmax = mean_max),
                 width = 0) +
   geom_point(aes(y = yearf, x = mean_mean, color = season2),
-             size = 2) +
+             size = 3) +
   facet_grid(season2~.) +
     theme_bw() +
-  labs(x = "Mean daily temperature", y = "",
+  labs(x = "Mean daily temperature\n(+/- average min and max)", y = "",
        title = i, color = "") +
+  scale_x_continuous(limits = c(6,27),
+                     breaks = seq(6,26, by = 4)) +
   theme(text = element_text(size = 14),
         axis.title.y = element_text(size = 12),
+        axis.text.y = element_text(size = 10),
         strip.text = element_blank(),
         strip.background = element_blank(),
         legend.position = "right") +
@@ -615,13 +465,16 @@ dosum_season %>%
                     xmin = mean_min, xmax = mean_max),
                 width = 0) +
   geom_point(aes(y = yearf, x = mean_mean, color = season2),
-             size = 2) +
+             size = 3) +
   facet_grid(season2~.) +
     theme_bw() +
-  labs(x = "Mean daily dissolved oxygen", y = "",
+    scale_x_continuous(limits = c(0,14),
+                     breaks = seq(0,14, by = 2)) +
+  labs(x = "Mean daily dissolved oxygen\n(+/- average min and max)", y = "",
        title = i, color = "") +
   theme(text = element_text(size = 14),
         axis.title.y = element_text(size = 12),
+        axis.text.y = element_text(size = 10),
         strip.text = element_blank(),
         strip.background = element_blank(),
         legend.position = "right") +
@@ -634,7 +487,6 @@ ggsave(paste0("output/Task2_WQ_migratory_species/PlotF/PlotF_",i,"_fish_seasons_
 # Tables of average daily temperatures by month
 - What is the monthly mean mean/min/max temperature?
 ```{r}
-
 sites <- unique(tdata$site)
 
 i = sites[1]
@@ -746,4 +598,387 @@ save_kable(t_fishseason_table,
 }
 
 ```
+# Modeling mean temperature by site in each season
+```{r}
+# intercept varying among years and among days within years (nested random effects)
 
+# fit model during migration period
+temp_mod_migrate <- lmer(temp ~ site + (1 | yearf/dayf), 
+             data = filter(tdata, is.na(temp)==F,
+                           season == "migrate"))
+summary(temp_mod_migrate)
+
+# fit model during spawning period
+temp_mod_spawn <- 
+  lmer(temp ~ site + (1 | yearf/dayf), 
+             data = filter(tdata, is.na(temp)==F,
+                           season == "spawn"))
+summary(temp_mod_spawn)
+
+# fit model during larval period
+temp_mod_lar <- 
+  lmer(temp ~ site + (1 | yearf/dayf), 
+             data = filter(tdata, is.na(temp)==F,
+                           season == "larvae"))
+summary(temp_mod_lar)
+
+# fit model during juvenile period
+temp_mod_juv <- 
+  lmer(temp ~ site + (1 | yearf/dayf), 
+             data = filter(tdata, is.na(temp)==F,
+                           season == "juvenile"))
+summary(temp_mod_juv)
+
+# fit model during fall migration period
+temp_mod_fall <- 
+  lmer(temp ~ site + (1 | yearf/dayf), 
+             data = filter(tdata, is.na(temp)==F,
+                           season == "fall_mig"))
+summary(temp_mod_fall)
+
+# make prediction covariate data for migration
+newdat_migrate <- expand.grid(site = unique(tdata$site)) %>%
+  filter(site %in% filter(tdata, is.na(temp)==F,
+                          season == "migrate")$site) %>%
+  droplevels()
+
+# make prediction covariate data for spawning
+newdat_spawn <- expand.grid(site = unique(tdata$site)) %>%
+  filter(site %in% filter(tdata, is.na(temp)==F,
+                          season == "spawn")$site) %>%
+  droplevels()
+
+# make prediction covariate data for larvae
+newdat_lar <- expand.grid(site = unique(tdata$site)) %>%
+  filter(site %in% filter(tdata, is.na(temp)==F,
+                          season == "larvae")$site) %>%
+  droplevels()
+
+# make prediction covariate data for juvenile
+newdat_juv <- expand.grid(site = unique(tdata$site)) %>%
+  filter(site %in% filter(tdata, is.na(temp)==F,
+                          season == "juvenile")$site) %>%
+  droplevels()
+
+# make prediction covariate data for fall migration
+newdat_fall <- expand.grid(site = unique(tdata$site)) %>%
+  filter(site %in% filter(tdata, is.na(temp)==F,
+                          season == "fall_mig")$site) %>%
+  droplevels()
+```
+# Generate bootstrapped CI's for predictions
+Warning: very long run time (& juv run needs lots of RAM)
+```{r}
+# Bootstrapped CIs for predicted mean temperature - Spawning
+pred_fun_spawn <- function(.) {
+  c(predict(., data.frame(site = unique(newdat_spawn$site)), 
+            re.form = NA))
+}
+
+bootCI_spawn = bootMer(temp_mod_spawn, pred_fun_spawn, 
+                 re.form=NA, nsim = 1000,
+                 verbose = T)
+
+saveRDS(bootCI_spawn, "output/Task2_WQ_migratory_species/statistical_analysis/temp_mod_spawn_bootstraps.rds")
+
+# Bootstrapped CIs for predicted mean temperature - Larvae
+pred_fun_lar <- function(.) {
+  c(predict(., data.frame(site = unique(newdat_lar$site)), 
+            re.form = NA))
+}
+
+bootCI_lar = bootMer(temp_mod_lar, pred_fun_lar, 
+                 re.form=NA, nsim = 1000,
+                 verbose = T)
+
+saveRDS(bootCI_lar, "output/Task2_WQ_migratory_species/statistical_analysis/temp_mod_lar_bootstraps.rds")
+
+# Bootstrapped CIs for predicted mean temperature - Juvenile
+pred_fun_juv <- function(.) {
+  c(predict(., data.frame(site = unique(newdat_juv$site)), 
+            re.form = NA))
+}
+
+bootCI_juv = bootMer(temp_mod_juv, pred_fun_juv, 
+                 re.form=NA, nsim = 1000,
+                 verbose = T)
+
+saveRDS(bootCI_juv, "output/Task2_WQ_migratory_species/statistical_analysis/temp_mod_juv_bootstraps.rds")
+
+# Bootstrapped CIs for predicted mean temperature - Fall migration
+pred_fun_fall <- function(.) {
+  c(predict(., data.frame(site = unique(newdat_fall$site)), 
+            re.form = NA))
+}
+
+bootCI_fall = bootMer(temp_mod_fall, pred_fun_fall, 
+                 re.form=NA, nsim = 1000,
+                 verbose = T)
+
+saveRDS(bootCI_fall, "output/Task2_WQ_migratory_species/statistical_analysis/temp_mod_fall_bootstraps.rds")
+
+
+# Bootstrapped CIs for predicted mean temperature - Migration
+pred_fun_migrate <- function(.) {
+  c(predict(., data.frame(site = unique(newdat_migrate$site)), 
+            re.form = NA))
+}
+
+bootCI_migrate = bootMer(temp_mod_migrate, pred_fun_migrate, 
+                 re.form=NA, nsim = 1000,
+                 verbose = T)
+
+saveRDS(bootCI_migrate, "output/Task2_WQ_migratory_species/statistical_analysis/temp_mod_migrate_bootstraps.rds")
+```
+# Plot modeled mean temp by fish stage w/ CIs
+```{r}
+bootCI_migrate <- readRDS("output/Task2_WQ_migratory_species/statistical_analysis/temp_mod_migrate_bootstraps.rds")
+
+bootCI_spawn <- readRDS("output/Task2_WQ_migratory_species/statistical_analysis/temp_mod_spawn_bootstraps.rds")
+
+bootCI_lar <- readRDS("output/Task2_WQ_migratory_species/statistical_analysis/temp_mod_lar_bootstraps.rds")
+
+bootCI_juv <- readRDS("output/Task2_WQ_migratory_species/statistical_analysis/temp_mod_juv_bootstraps.rds")
+
+bootCI_fall <- readRDS("output/Task2_WQ_migratory_species/statistical_analysis/temp_mod_fall_bootstraps.rds")
+
+boot_compile <- function(boot, mod, newdat, label){
+  
+tplot_df <- apply(boot$t, 2, 
+               function(x) quantile(x, c(0.025,0.975))) %>% 
+  t() %>%
+  as.data.frame() %>%
+  bind_cols(predict(mod, 
+                    data.frame(site = unique(newdat$site)), 
+                    re.form = NA)) %>%
+  rename(q2.5 = 1, q97.5 = 2, fit = 3) %>%
+  mutate(site = unique(newdat$site)) %>%
+  select(site, fit, q2.5, q97.5) %>%
+  mutate(site = fct_reorder(site, fit),
+         per = label)
+
+return(tplot_df)
+
+}
+
+tplots <- rbind.data.frame(
+  boot_compile(bootCI_juv, temp_mod_juv, 
+               newdat_juv, "Juvenile"),  boot_compile(bootCI_migrate, temp_mod_migrate, 
+               newdat_migrate, "Spring Migration"),
+  boot_compile(bootCI_spawn, temp_mod_spawn, 
+               newdat_spawn, "Spawning"),
+  boot_compile(bootCI_lar, temp_mod_lar, 
+               newdat_lar, "Larvae"),
+  boot_compile(bootCI_fall, temp_mod_fall, 
+               newdat_fall, "Fall Migration")
+) %>%
+  mutate(per = fct_rev(per))
+
+tplots %>%
+  ggplot() +
+  geom_point(aes(y = site, x = fit,
+                 ),
+             size = 2) +
+  geom_errorbar(aes(y = site, xmin = q2.5, 
+                    xmax = q97.5),
+                width = 0) +
+  facet_wrap(~ per, ncol = 5, scale = "free_x") +
+  theme_bw() +
+  labs(y = "", x = "Mean temperature (C; +/- 95% CI)") +
+  theme(strip.background = element_rect(fill = "white")) +
+  scale_x_continuous(breaks = seq(1,28, by = 2))
+                      
+ggsave("output/Task2_WQ_migratory_species/PlotG_modeled_mean_temp_by_fish_stage.png", width = 6, height = 4, dpi = 400)
+
+# try Bayesian later...
+# y ~ dnorm(mu, tau)
+# mu ~ site[s] + day[y] + year[y]
+# or in BRMS
+# library(brms)
+# temp_bmod_migrate <- brm(temp ~ site +
+#                        (1 | yearf/dayf),
+#              data = filter(tdata, is.na(temp)==F,
+#                            season== "migrate"))
+# saveRDS(temp_bmod_migrate, "output/Task2_WQ_migratory_species/statistical_analysis/temp_bmod_migrate_stanmod.rds")
+```
+
+# Modeling year trend in mean temperature within each season
+```{r}
+# intercept varying among sites and among days within sites (nested random effects)
+
+tdata$yearn <- tdata$year - 2015
+
+# fit model during migration period
+temp_trend_migrate <- lmerTest::lmer(temp ~ yearn + 
+                                       (1 | site/dayf), 
+             data = filter(tdata, is.na(temp)==F,
+                           season == "migrate"))
+
+summary(temp_trend_migrate)
+
+# fit model during spawning period
+temp_trend_spawn <- 
+  lmerTest::lmer(temp ~ yearn + (1 | site/dayf), 
+             data = filter(tdata, is.na(temp)==F,
+                           season == "spawn"))
+summary(temp_trend_spawn)
+
+# fit model during larval period
+temp_trend_lar <- 
+  lmerTest::lmer(temp ~ yearn + (1 | site/dayf), 
+             data = filter(tdata, is.na(temp)==F,
+                           season == "larvae"))
+summary(temp_trend_lar)
+
+# fit model during juvenile period
+temp_trend_juv <- 
+  lmerTest::lmer(temp ~ yearn + (1 | site/dayf), 
+             data = filter(tdata, is.na(temp)==F,
+                           season == "juvenile"), 
+             start = c(.2, 0))
+
+summary(temp_trend_juv)
+
+# fit model during fall migration period
+temp_trend_fall <- 
+  lmerTest::lmer(temp ~ yearn + (1 | site/dayf), 
+             data = filter(tdata, is.na(temp)==F,
+                           season == "fall_mig"))
+summary(temp_trend_fall)
+
+```
+# Plot temperature trends across sites
+```{r}
+
+library(ggeffects)
+
+migrate_temp_trend_df <- 
+  ggpredict(temp_trend_migrate, terms = "yearn")
+spawn_temp_trend_df <- 
+  ggpredict(temp_trend_spawn, terms = "yearn")
+larvae_temp_trend_df <- 
+  ggpredict(temp_trend_lar, terms = "yearn")
+juv_temp_trend_df <- 
+  ggpredict(temp_trend_juv, terms = "yearn")
+fall_temp_trend_df <- 
+  ggpredict(temp_trend_fall, terms = "yearn")
+
+# Plot of temperature trends in spring migration
+(migrate_temp_plot <- 
+    ggplot(migrate_temp_trend_df, aes(x, predicted)) +
+  geom_line() +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), 
+              alpha = .1) +
+  theme_bw() +
+  scale_y_continuous(limits = c(13, 16)) +
+    scale_x_continuous(breaks = 1:6,
+                       labels = 2016:2021) +
+    labs(x = "", 
+         y = "Mean temperature trend (C)",
+         title = "Apr 15 - May 15 (spring migration)") +
+    theme(text = element_text(size = 14)) +
+    annotate(geom = "text", x = 1, y = 13, 
+             label = paste0("Trend: ", 
+                            round(fixef(temp_trend_migrate)[2], 2),
+                            " C / yr"),
+             hjust = 0, vjust = 0)
+)
+
+ggsave("output/Task2_WQ_migratory_species/PlotH_mean_temperature_trends_spring_mig.png",
+       width = 5, height = 5, dpi = 400)
+
+# Plot of temperature trends in spawning season
+
+(spawn_temp_plot <- 
+    ggplot(spawn_temp_trend_df, aes(x, predicted)) +
+  geom_line() +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), 
+              alpha = .1) +
+  theme_bw() +
+  scale_y_continuous(limits = c(16.5, 19.5)) +
+    scale_x_continuous(breaks = 1:6,
+                       labels = 2016:2021) +
+    labs(x = "", 
+         y = "Mean temperature trend (C)",
+         title = "May 16-31 (spawning)") +
+    theme(text = element_text(size = 14)) +
+    annotate(geom = "text", x = 1, y = 16.5, 
+             label = paste0("Trend: ", 
+                            round(fixef(temp_trend_spawn)[2], 2),
+                            " C / yr"),
+             hjust = 0, vjust = 0)
+  )
+
+ggsave("output/Task2_WQ_migratory_species/PlotI_mean_temperature_trends_spawning.png",
+       width = 5, height = 5, dpi = 400)
+
+# Plot of temperature trends in larval season
+(larvae_temp_plot <- 
+    ggplot(larvae_temp_trend_df, aes(x, predicted)) +
+  geom_line() +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), 
+              alpha = .1) +
+  theme_bw() +
+  scale_y_continuous(limits = c(19, 22)) +
+    scale_x_continuous(breaks = 1:6,
+                       labels = 2016:2021) +
+    labs(x = "", 
+         y = "Mean temperature trend (C)",
+         title = "Jun 1-30 (larvae)") +
+    theme(text = element_text(size = 14)) +
+    annotate(geom = "text", x = 1, y = 19, 
+             label = paste0("Trend: ", 
+                            round(fixef(temp_trend_lar)[2], 2),
+                            " C / yr"),
+             hjust = 0, vjust = 0)
+  )
+
+ggsave("output/Task2_WQ_migratory_species/PlotJ_mean_temperature_trends_larvae.png",
+       width = 5, height = 5, dpi = 400)
+
+(juv_temp_plot <- 
+    ggplot(juv_temp_trend_df, aes(x, predicted)) +
+  geom_line() +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), 
+              alpha = .1) +
+  theme_bw() +
+  scale_y_continuous(limits = c(21, 24)) +
+    scale_x_continuous(breaks = 1:6,
+                       labels = 2016:2021) +
+    labs(x = "", 
+         y = "Mean temperature trend (C)",
+         title = "Jul 1 - Sep 15 (juvenile)") +
+    theme(text = element_text(size = 14)) +
+    annotate(geom = "text", x = 1, y = 21, 
+             label = paste0("Trend: ", 
+                            round(fixef(temp_trend_juv)[2], 2),
+                            " C / yr"),
+             hjust = 0, vjust = 0)
+  )
+
+ggsave("output/Task2_WQ_migratory_species/PlotK_mean_temperature_trends_juvenile.png",
+       width = 5, height = 5, dpi = 400)
+
+(fall_temp_plot <- 
+    ggplot(fall_temp_trend_df, aes(x, predicted)) +
+  geom_line() +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), 
+              alpha = .1) +
+  theme_bw() +
+  scale_y_continuous(limits = c(14, 17)) +
+    scale_x_continuous(breaks = 1:6,
+                       labels = 2016:2021) +
+    labs(x = "", 
+         y = "Mean temperature trend (C)",
+         title = "Sep 16 - Nov 30 (fall migration)") +
+    theme(text = element_text(size = 14)) +
+    annotate(geom = "text", x = 1, y = 14, 
+             label = paste0("Trend: ", 
+                            round(fixef(temp_trend_fall)[2], 2),
+                            " C / yr"),
+             hjust = 0, vjust = 0)
+  )
+
+ggsave("output/Task2_WQ_migratory_species/PlotL_mean_temperature_trends_fall.png",
+       width = 5, height = 5, dpi = 400)
+```
