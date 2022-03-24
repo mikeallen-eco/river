@@ -7,10 +7,9 @@ output:
   pdf_document: default
 ---
 # To Do
-1. Plots E&F: make points bigger
-2. Plots E&F: represent as mean +/- 2*SE
-3. Plots E&F: add min/max language to x-axis title
- 
+1. lmer check about making year random effect too
+2. lmer for dissolved oxygen
+3. redo plot F with larvae stage
 
 #Task 2: Site specific water quality conditions important to us other than SWQS
 a. Determine which sites are more supportive of migrating species during key lifecycle periods over time
@@ -171,10 +170,11 @@ dodata <- p %>%
   #                        year = 2016:2021, day = 82:339)) %>%
   arrange(site, year, day) %>%
     # Dates based on Anthony V. and shad reference he provided
-  mutate(season = case_when(day %in% 105:135 ~ "migrate",
-                            day %in% 136:151 ~ "spawn",
-                            day %in% 152:273 ~ "juvenile",
-                            day %in% 274:334 ~ "fall_mig"),
+  mutate(season = case_when(day %in% 105:135 ~ "migrate", #4/15-5/15
+                            day %in% 136:151 ~ "spawn", #5/16-5/31
+                            day %in% 152:181 ~ "larvae", #6/1-6/30
+                            day %in% 182:258 ~ "juvenile", #7/1-9/15
+                            day %in% 259:334 ~ "fall_mig"), #9/15-11
          yearf = as.factor(year),
          dayf = as.factor(day),
          hourf = as.factor(hour))
@@ -803,49 +803,167 @@ ggsave("output/Task2_WQ_migratory_species/PlotG_modeled_mean_temp_by_fish_stage.
 ```
 
 # Modeling year trend in mean temperature within each season
+Note: tried model with correlated random slope & intercept of year by site, uncorrelated, and just intercept. Correlated slope & intercept fit best for all seasons.
 ```{r}
-# intercept varying among sites and among days within sites (nested random effects)
-
 tdata$yearn <- tdata$year - 2015
+# tried quadratic day as continuous 
+# very similar results (for spawn anyway)
+# tdata <- tdata %>%
+#   group_by(season) %>%
+#   mutate(dayz = (day - mean(day))/sd(day))
 
 # fit model during migration period
+# correlated random slope & intercept of year by site
 temp_trend_migrate <- lmerTest::lmer(temp ~ yearn + 
-                                       (1 | site/dayf), 
+                                       (1 | dayf) + 
+                                        (yearn | site), 
              data = filter(tdata, is.na(temp)==F,
                            season == "migrate"))
-
 summary(temp_trend_migrate)
+ss <- getME(temp_trend_migrate,c("theta","fixef"))
+# get it to converge...
+# code from: https://rstudio-pubs-static.s3.amazonaws.com/33653_57fc7b8e5d484c909b615d8633c01d51.html
+temp_trend_migrate2 <- update(temp_trend_migrate,
+             start=ss,
+             control=lmerControl(optimizer="bobyqa",
+                            optCtrl=list(maxfun=2e5)))
+summary(temp_trend_migrate2)
+temp_trend_migrate <- temp_trend_migrate2
+
+# # uncorrelated random slope & intercept
+# temp_trend_migrate0 <- lmerTest::lmer(temp ~ yearn + 
+#                                        (1 | dayf) + (1 | site) + 
+#                                         (0 + yearn | site), 
+#              data = filter(tdata, is.na(temp)==F,
+#                            season == "migrate"))
+# summary(temp_trend_migrate0)
+# 
+# # just random intercept
+# temp_trend_migrate_int <- lmerTest::lmer(temp ~ yearn + (1 | dayf) +
+#                                        (1 | site), 
+#              data = filter(tdata, is.na(temp)==F,
+#                            season == "migrate"))
+# 
+# summary(temp_trend_migrate_int)
+# 
+# anova(temp_trend_migrate, 
+#       temp_trend_migrate0, 
+#       temp_trend_migrate_int)
 
 # fit model during spawning period
 temp_trend_spawn <- 
-  lmerTest::lmer(temp ~ yearn + (1 | site/dayf), 
+  lmerTest::lmer(temp ~ yearn + (1 | dayf) +
+                   (yearn | site), 
              data = filter(tdata, is.na(temp)==F,
                            season == "spawn"))
 summary(temp_trend_spawn)
 
+temp_trend_spawn0 <- 
+  lmerTest::lmer(temp ~ yearn + (1 | dayf) + 
+                   (1|site) + (0 + yearn | site), 
+             data = filter(tdata, is.na(temp)==F,
+                           season == "spawn"))
+summary(temp_trend_spawn0)
+
+temp_trend_spawn_int <- 
+  lmerTest::lmer(temp ~ yearn + (1 | dayf) + 
+                   (1|site), 
+             data = filter(tdata, is.na(temp)==F,
+                           season == "spawn"))
+summary(temp_trend_spawn_int)
+
+anova(temp_trend_spawn, 
+      temp_trend_spawn0, 
+      temp_trend_spawn_int)
+
 # fit model during larval period
 temp_trend_lar <- 
-  lmerTest::lmer(temp ~ yearn + (1 | site/dayf), 
+  lmerTest::lmer(temp ~ yearn + (1 | dayf) + (yearn | site), 
              data = filter(tdata, is.na(temp)==F,
                            season == "larvae"))
 summary(temp_trend_lar)
 
+temp_trend_lar0 <- 
+  lmerTest::lmer(temp ~ yearn + (1 | dayf) + (1|site) + 
+                   (0 + yearn | site), 
+             data = filter(tdata, is.na(temp)==F,
+                           season == "larvae"))
+summary(temp_trend_lar0)
+
+temp_trend_lar_int <- 
+  lmerTest::lmer(temp ~ yearn + (1 | dayf) + (1|site), 
+             data = filter(tdata, is.na(temp)==F,
+                           season == "larvae"))
+summary(temp_trend_lar_int)
+
+anova(temp_trend_lar, temp_trend_lar0, temp_trend_lar_int)
+
 # fit model during juvenile period
 temp_trend_juv <- 
-  lmerTest::lmer(temp ~ yearn + (1 | site/dayf), 
+  lmerTest::lmer(temp ~ yearn + (1 | dayf) + (yearn | site), 
              data = filter(tdata, is.na(temp)==F,
-                           season == "juvenile"), 
-             start = c(.2, 0))
-
+                           season == "juvenile"))
 summary(temp_trend_juv)
+# get it to converge...
+ss <- getME(temp_trend_juv, c("theta","fixef"))
+temp_trend_juv2 <- update(temp_trend_juv,
+             start=ss,
+             control=lmerControl(optimizer="bobyqa",
+                            optCtrl=list(maxfun=2e5)))
+summary(temp_trend_juv2)
+temp_trend_juv <- temp_trend_juv2
+# aa <- allFit(temp_trend_lar)
+
+temp_trend_juv0 <- 
+  lmerTest::lmer(temp ~ yearn + (1 | dayf) + 
+                   (1|site) + (0 + yearn | site), 
+             data = filter(tdata, is.na(temp)==F,
+                           season == "juvenile"))
+
+summary(temp_trend_juv0)
+
+temp_trend_juv_int <- 
+  lmerTest::lmer(temp ~ yearn + (1 | dayf) + 
+                   (1|site), 
+             data = filter(tdata, is.na(temp)==F,
+                           season == "juvenile"))
+
+summary(temp_trend_juv_int)
+
+anova(temp_trend_juv, 
+      temp_trend_juv0, 
+      temp_trend_juv_int)
 
 # fit model during fall migration period
 temp_trend_fall <- 
-  lmerTest::lmer(temp ~ yearn + (1 | site/dayf), 
+  lmerTest::lmer(temp ~ yearn + (1 | dayf) + (yearn | site), 
              data = filter(tdata, is.na(temp)==F,
                            season == "fall_mig"))
 summary(temp_trend_fall)
 
+temp_trend_fall_noday <- 
+  lmerTest::lmer(temp ~ yearn + (yearn | site), 
+             data = filter(tdata, is.na(temp)==F,
+                           season == "fall_mig"))
+summary(temp_trend_fall_noday)
+
+temp_trend_fall0 <- 
+  lmerTest::lmer(temp ~ yearn + (1 | dayf) + (1|site) +
+                   (0 + yearn|site), 
+             data = filter(tdata, is.na(temp)==F,
+                           season == "fall_mig"))
+summary(temp_trend_fall0)
+
+temp_trend_fall_int <- 
+  lmerTest::lmer(temp ~ yearn + (1 | dayf) + (1 | site), 
+             data = filter(tdata, is.na(temp)==F,
+                           season == "fall_mig"))
+summary(temp_trend_fall_int)
+
+anova(temp_trend_fall,
+      temp_trend_fall_noday,
+      temp_trend_fall0, 
+      temp_trend_fall_int)
 ```
 # Plot temperature trends across sites
 ```{r}
@@ -855,32 +973,56 @@ library(ggeffects)
 migrate_temp_trend_df <- 
   ggpredict(temp_trend_migrate, terms = "yearn")
 spawn_temp_trend_df <- 
-  ggpredict(temp_trend_spawn, terms = "yearn")
+  ggpredict(temp_trend_spawn, terms = "yearn", type = "fixed")
 larvae_temp_trend_df <- 
   ggpredict(temp_trend_lar, terms = "yearn")
 juv_temp_trend_df <- 
   ggpredict(temp_trend_juv, terms = "yearn")
 fall_temp_trend_df <- 
-  ggpredict(temp_trend_fall, terms = "yearn")
+  ggpredict(temp_trend_fall, terms = c("yearn"))
+fall_temp_trend_df_noday <- 
+  ggpredict(temp_trend_fall_noday, terms = c("yearn"))
 
 # Plot of temperature trends in spring migration
+
+season_pts <- tsum_season %>%
+  # filter(n > 10) %>%
+  group_by(season, yearf) %>% 
+  summarise(mean = mean(mean_mean),
+            sd = sd(mean_mean),
+            n = length(mean_mean),
+            .groups = "drop") %>%
+  mutate(se = sd/sqrt(n),
+            ll = mean-2*se,
+            ul = mean+2*se,
+            yearn = as.numeric(as.character(yearf))-2015)
+
 (migrate_temp_plot <- 
-    ggplot(migrate_temp_trend_df, aes(x, predicted)) +
-  geom_line() +
-  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), 
+    ggplot(migrate_temp_trend_df) +
+  geom_line(aes(x, predicted),
+            size = 1.25, color = "dodgerblue") +
+  geom_ribbon(aes(x = x, ymin = conf.low, ymax = conf.high), 
               alpha = .1) +
+  geom_point(aes(x = yearn, y = mean), 
+             data = filter(season_pts, season == "migrate"),
+               size = 2) +
+  geom_errorbar(aes(x = yearn, ymin = mean-2*se, ymax = mean+2*se),
+                width = 0,
+                data = filter(season_pts, season == "migrate")) +
   theme_bw() +
-  scale_y_continuous(limits = c(13, 16)) +
+  # scale_y_continuous(limits = c(13, 16)) +
     scale_x_continuous(breaks = 1:6,
                        labels = 2016:2021) +
     labs(x = "", 
          y = "Mean temperature trend (C)",
          title = "Apr 15 - May 15 (spring migration)") +
     theme(text = element_text(size = 14)) +
-    annotate(geom = "text", x = 1, y = 13, 
-             label = paste0("Trend: ", 
+    annotate(geom = "text", x = 1, y = 12.3, 
+             label = paste0("Trend = ", 
                             round(fixef(temp_trend_migrate)[2], 2),
-                            " C / yr"),
+                            " C / yr",
+            "\np-value = ",                   
+            round(summary(temp_trend_migrate)$coefficients[2,5], 3)),
              hjust = 0, vjust = 0)
 )
 
@@ -890,22 +1032,30 @@ ggsave("output/Task2_WQ_migratory_species/PlotH_mean_temperature_trends_spring_m
 # Plot of temperature trends in spawning season
 
 (spawn_temp_plot <- 
-    ggplot(spawn_temp_trend_df, aes(x, predicted)) +
-  geom_line() +
-  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), 
+    ggplot(spawn_temp_trend_df) +
+  geom_line(aes(x, predicted), size = 1.25, color = "dodgerblue") +
+  geom_ribbon(aes(x = x, ymin = conf.low, ymax = conf.high), 
               alpha = .1) +
+  geom_point(aes(x = yearn, y = mean), 
+             data = filter(season_pts, season == "spawn"),
+               size = 2) +
+  geom_errorbar(aes(x = yearn, ymin = mean-2*se, ymax = mean+2*se),
+                width = 0,
+                data = filter(season_pts, season == "spawn")) +
   theme_bw() +
-  scale_y_continuous(limits = c(16.5, 19.5)) +
+  # scale_y_continuous(limits = c(16.5, 19.5)) +
     scale_x_continuous(breaks = 1:6,
                        labels = 2016:2021) +
     labs(x = "", 
          y = "Mean temperature trend (C)",
          title = "May 16-31 (spawning)") +
     theme(text = element_text(size = 14)) +
-    annotate(geom = "text", x = 1, y = 16.5, 
-             label = paste0("Trend: ", 
+    annotate(geom = "text", x = 1, y = 16, 
+             label = paste0("Trend = ", 
                             round(fixef(temp_trend_spawn)[2], 2),
-                            " C / yr"),
+                            " C / yr",
+            "\np-value = ",                   
+            round(summary(temp_trend_spawn)$coefficients[2,5], 3)),
              hjust = 0, vjust = 0)
   )
 
@@ -914,12 +1064,18 @@ ggsave("output/Task2_WQ_migratory_species/PlotI_mean_temperature_trends_spawning
 
 # Plot of temperature trends in larval season
 (larvae_temp_plot <- 
-    ggplot(larvae_temp_trend_df, aes(x, predicted)) +
-  geom_line() +
-  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), 
+    ggplot(larvae_temp_trend_df) +
+  geom_line(aes(x, predicted), size = 1.25, color = "dodgerblue") +
+  geom_ribbon(aes(x = x, ymin = conf.low, ymax = conf.high), 
               alpha = .1) +
+  geom_point(aes(x = yearn, y = mean), 
+             data = filter(season_pts, season == "larvae"),
+               size = 2) +
+  geom_errorbar(aes(x = yearn, ymin = mean-2*se, ymax = mean+2*se),
+                width = 0,
+                data = filter(season_pts, season == "larvae")) +
   theme_bw() +
-  scale_y_continuous(limits = c(19, 22)) +
+  # scale_y_continuous(limits = c(17.5, 20.5)) +
     scale_x_continuous(breaks = 1:6,
                        labels = 2016:2021) +
     labs(x = "", 
@@ -927,9 +1083,11 @@ ggsave("output/Task2_WQ_migratory_species/PlotI_mean_temperature_trends_spawning
          title = "Jun 1-30 (larvae)") +
     theme(text = element_text(size = 14)) +
     annotate(geom = "text", x = 1, y = 19, 
-             label = paste0("Trend: ", 
+             label = paste0("Trend = ", 
                             round(fixef(temp_trend_lar)[2], 2),
-                            " C / yr"),
+                            " C / yr",
+            "\np-value = ",                   
+            round(summary(temp_trend_lar)$coefficients[2,5], 3)),
              hjust = 0, vjust = 0)
   )
 
@@ -937,22 +1095,30 @@ ggsave("output/Task2_WQ_migratory_species/PlotJ_mean_temperature_trends_larvae.p
        width = 5, height = 5, dpi = 400)
 
 (juv_temp_plot <- 
-    ggplot(juv_temp_trend_df, aes(x, predicted)) +
-  geom_line() +
-  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), 
+    ggplot(juv_temp_trend_df) +
+  geom_line(aes(x, predicted), size = 1.25, color = "dodgerblue") +
+  geom_ribbon(aes(x=x,ymin = conf.low, ymax = conf.high), 
               alpha = .1) +
+  geom_point(aes(x = yearn, y = mean), 
+             data = filter(season_pts, season == "juvenile"),
+               size = 2) +
+  geom_errorbar(aes(x = yearn, ymin = mean-2*se, ymax = mean+2*se),
+                width = 0,
+                data = filter(season_pts, season == "juvenile")) +
   theme_bw() +
-  scale_y_continuous(limits = c(21, 24)) +
+  # scale_y_continuous(limits = c(22, 25)) +
     scale_x_continuous(breaks = 1:6,
                        labels = 2016:2021) +
     labs(x = "", 
          y = "Mean temperature trend (C)",
          title = "Jul 1 - Sep 15 (juvenile)") +
     theme(text = element_text(size = 14)) +
-    annotate(geom = "text", x = 1, y = 21, 
-             label = paste0("Trend: ", 
+    annotate(geom = "text", x = 1, y = 19.5, 
+             label = paste0("Trend = ", 
                             round(fixef(temp_trend_juv)[2], 2),
-                            " C / yr"),
+                            " C / yr",
+            "\np-value = ",                   
+            round(summary(temp_trend_juv)$coefficients[2,5], 3)),
              hjust = 0, vjust = 0)
   )
 
@@ -960,25 +1126,419 @@ ggsave("output/Task2_WQ_migratory_species/PlotK_mean_temperature_trends_juvenile
        width = 5, height = 5, dpi = 400)
 
 (fall_temp_plot <- 
-    ggplot(fall_temp_trend_df, aes(x, predicted)) +
-  geom_line() +
-  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), 
+    ggplot(fall_temp_trend_df) +
+  geom_line(aes(x, predicted), size = 1.25, color = "dodgerblue") +
+  geom_ribbon(aes(x=x, ymin = conf.low, ymax = conf.high), 
               alpha = .1) +
+  geom_line(aes(x, predicted), size = 1, color = "dodgerblue",
+            data = fall_temp_trend_df_noday, lty = 2) +
+  geom_point(aes(x = yearn, y = mean), 
+             data = filter(season_pts, season == "fall_mig"),
+               size = 2) +
+  geom_errorbar(aes(x = yearn, ymin = mean-2*se, ymax = mean+2*se),
+                width = 0,
+                data = filter(season_pts, season == "fall_mig")) +
   theme_bw() +
-  scale_y_continuous(limits = c(14, 17)) +
+  scale_y_continuous(limits = c(10, 19.5)) +
     scale_x_continuous(breaks = 1:6,
                        labels = 2016:2021) +
     labs(x = "", 
          y = "Mean temperature trend (C)",
          title = "Sep 16 - Nov 30 (fall migration)") +
     theme(text = element_text(size = 14)) +
-    annotate(geom = "text", x = 1, y = 14, 
-             label = paste0("Trend: ", 
+    annotate(geom = "text", x = 1, y = 10, 
+             label = paste0("Trend = ", 
                             round(fixef(temp_trend_fall)[2], 2),
-                            " C / yr"),
+                            " C / yr",
+            "\np-value = ",                   
+            round(summary(temp_trend_fall)$coefficients[2,5], 3)),
              hjust = 0, vjust = 0)
   )
 
 ggsave("output/Task2_WQ_migratory_species/PlotL_mean_temperature_trends_fall.png",
        width = 5, height = 5, dpi = 400)
+
+gg <- gridExtra::arrangeGrob(migrate_temp_plot, 
+                             spawn_temp_plot,
+                             larvae_temp_plot,
+                             juv_temp_plot,
+                             fall_temp_plot)
+
+ggsave("output/Task2_WQ_migratory_species/PlotM_mean_temperature_trends_all_stages.png", plot = gg, width = 10, height = 10, dpi = 400)
+```
+
+
+
+
+# Modeling year trend in mean DO within each season
+Note: tried model with correlated random slope & intercept of year by site, uncorrelated, and just intercept. Correlated slope & intercept fit best for all seasons.
+```{r}
+
+dodata$yearn <- dodata$year - 2015
+
+# fit model during migration period
+# correlated random slope & intercept of year by site
+do_trend_migrate <- lmerTest::lmer(do ~ yearn + 
+                                       (1 | dayf) + 
+                                        (yearn | site), 
+             data = filter(dodata, is.na(do)==F,
+                           season == "migrate"))
+summary(do_trend_migrate)
+
+# uncorrelated random slope & intercept
+do_trend_migrate0 <- lmerTest::lmer(do ~ yearn + 
+                                       dayf + (1 | site) + 
+                                        (0 + yearn | site), 
+             data = filter(dodata, is.na(do)==F,
+                           season == "migrate"))
+summary(do_trend_migrate0)
+
+# just random intercept
+do_trend_migrate_int <- lmerTest::lmer(do ~ yearn + dayf +
+                                       (1 | site), 
+             data = filter(dodata, is.na(do)==F,
+                           season == "migrate"))
+
+summary(do_trend_migrate_int)
+
+anova(do_trend_migrate, 
+      do_trend_migrate0, 
+      do_trend_migrate_int)
+
+# fit model during spawning period
+do_trend_spawn <- 
+  lmerTest::lmer(do ~ yearn + (1 | dayf) + (yearn | site), 
+             data = filter(dodata, is.na(do)==F,
+                           season == "spawn"))
+summary(do_trend_spawn)
+
+do_trend_spawn0 <- 
+  lmerTest::lmer(do ~ yearn + dayf + 
+                   (1|site) + (0 + yearn | site), 
+             data = filter(dodata, is.na(do)==F,
+                           season == "spawn"))
+summary(do_trend_spawn0)
+
+do_trend_spawn_int <- 
+  lmerTest::lmer(do ~ yearn + dayf + 
+                   (1|site), 
+             data = filter(dodata, is.na(do)==F,
+                           season == "spawn"))
+summary(do_trend_spawn_int)
+
+anova(do_trend_spawn, 
+      do_trend_spawn0, 
+      do_trend_spawn_int)
+
+# fit model during larval period
+do_trend_lar <-
+  lmerTest::lmer(do ~ yearn + (1|dayf) + (yearn | site),
+             data = filter(dodata, is.na(do)==F,
+                           season == "larvae"))
+summary(do_trend_lar)
+
+# uncorrelated random slope & intercept
+do_trend_lar0 <- lmerTest::lmer(do ~ yearn + 
+                                       (1|dayf) + (1 | site) + 
+                                        (0 + yearn | site), 
+             data = filter(dodata, is.na(do)==F,
+                           season == "larvae"))
+summary(do_trend_migrate0)
+
+# just random intercept
+do_trend_lar_int <- lmerTest::lmer(do ~ yearn + (1|dayf) +
+                                       (1 | site), 
+             data = filter(dodata, is.na(do)==F,
+                           season == "larvae"))
+
+summary(do_trend_lar_int)
+
+anova(do_trend_lar, 
+      do_trend_lar0, 
+      do_trend_lar_int)
+
+# fit model during juvenile period
+do_trend_juv <- 
+  lmerTest::lmer(do ~ yearn + (1|dayf) + (yearn | site), 
+             data = filter(dodata, is.na(do)==F,
+                           season == "juvenile"))
+summary(do_trend_juv)
+ss <- getME(do_trend_juv, c("theta","fixef"))
+# get it to converge...
+# code from: https://rstudio-pubs-static.s3.amazonaws.com/33653_57fc7b8e5d484c909b615d8633c01d51.html
+do_trend_juv2 <- update(do_trend_juv,
+             start=ss,
+             control=lmerControl(optimizer="bobyqa",
+                            optCtrl=list(maxfun=2e5)))
+summary(do_trend_juv2)
+do_trend_juv <- do_trend_juv2
+# aa <- allFit(do_trend_juv)
+
+do_trend_juv0 <- 
+  lmerTest::lmer(do ~ yearn + (1|dayf) + 
+                   (1|site) + (0 + yearn | site), 
+             data = filter(dodata, is.na(do)==F,
+                           season == "juvenile"))
+
+summary(do_trend_juv0)
+
+do_trend_juv_int <- 
+  lmerTest::lmer(do ~ yearn + (1|dayf) + 
+                   (1|site), 
+             data = filter(dodata, is.na(do)==F,
+                           season == "juvenile"))
+
+summary(do_trend_juv_int)
+
+anova(do_trend_juv, 
+      do_trend_juv0, 
+      do_trend_juv_int)
+
+# fit model during fall migration period
+do_trend_fall <- 
+  lmerTest::lmer(do ~ yearn + (1|dayf) + (yearn | site), 
+             data = filter(dodata, is.na(do)==F,
+                           season == "fall_mig"))
+summary(do_trend_fall)
+
+do_trend_fall_noday <- 
+  lmerTest::lmer(do ~ yearn + (yearn | site), 
+             data = filter(dodata, is.na(do)==F,
+                           season == "fall_mig"))
+summary(do_trend_fall_noday)
+ss <- getME(do_trend_fall_noday, c("theta","fixef"))
+# get it to converge...
+# code from: https://rstudio-pubs-static.s3.amazonaws.com/33653_57fc7b8e5d484c909b615d8633c01d51.html
+do_trend_fall_noday2 <- update(do_trend_fall_noday,
+             start=ss,
+             control=lmerControl(optimizer="bobyqa",
+                            optCtrl=list(maxfun=2e5)))
+summary(do_trend_fall_noday2)
+do_trend_fall_noday <- do_trend_fall_noday2
+# aa <- allFit(do_trend_fall_noday)
+
+do_trend_fall0 <- 
+  lmerTest::lmer(do ~ yearn + (1|dayf) + (1|site) +
+                   (0 + yearn|site), 
+             data = filter(dodata, is.na(do)==F,
+                           season == "fall_mig"))
+summary(do_trend_fall0)
+
+do_trend_fall_int <- 
+  lmerTest::lmer(do ~ yearn + (1|dayf) + (1 | site), 
+             data = filter(dodata, is.na(do)==F,
+                           season == "fall_mig"))
+summary(do_trend_fall_int)
+
+anova(temp_trend_fall, 
+      temp_trend_fall0, 
+      temp_trend_fall_int)
+
+
+```
+# Plot temperature trends across sites
+```{r}
+
+library(ggeffects)
+
+migrate_do_trend_df <- 
+  ggpredict(do_trend_migrate, terms = "yearn")
+spawn_do_trend_df <- 
+  ggpredict(do_trend_spawn, terms = "yearn")
+larvae_do_trend_df <- 
+  ggpredict(do_trend_lar, terms = "yearn")
+juv_do_trend_df <- 
+  ggpredict(do_trend_juv, terms = "yearn")
+fall_do_trend_df <- 
+  ggpredict(do_trend_fall, terms = "yearn")
+fall_do_trend_df_noday <- 
+  ggpredict(do_trend_fall_noday, terms = "yearn")
+
+# Plot of DO trends in spring migration
+
+season_pts_do <- dosum_season %>%
+  # filter(n > 10) %>%
+  group_by(season, yearf) %>% 
+  summarise(mean = mean(mean_mean),
+            sd = sd(mean_mean),
+            n = length(mean_mean),
+            .groups = "drop") %>%
+  mutate(se = sd/sqrt(n),
+            ll = mean-2*se,
+            ul = mean+2*se,
+            yearn = as.numeric(as.character(yearf))-2015)
+
+
+(migrate_do_plot <- 
+    ggplot(migrate_do_trend_df) +
+  geom_line(aes(x, predicted), size = 1.25, color = "firebrick") +
+  geom_ribbon(aes(x = x, ymin = conf.low, ymax = conf.high), 
+              alpha = .1) +
+  geom_point(aes(x = yearn, y = mean), 
+             data = filter(season_pts_do, season == "migrate"),
+               size = 2) +
+  geom_errorbar(aes(x = yearn, ymin = mean-2*se, ymax = mean+2*se),
+                width = 0,
+                data = filter(season_pts_do, 
+                              season == "migrate")) +  
+    theme_bw() +
+  # scale_y_continuous(limits = c(8, 10)) +
+    scale_x_continuous(breaks = 1:6,
+                       labels = 2016:2021) +
+    labs(x = "", 
+         y = "Mean DO trend",
+         title = "Apr 15 - May 15 (spring migration)") +
+    theme(text = element_text(size = 14)) +
+    annotate(geom = "text", x = 1, y = 8.5, 
+             label = paste0("Trend = ", 
+                            round(fixef(do_trend_migrate)[2], 2),
+                            " / yr",
+            "\np-value = ",                   
+            round(summary(do_trend_migrate)$coefficients[2,5], 3)),
+             hjust = 0, vjust = 0)
+)
+
+ggsave("output/Task2_WQ_migratory_species/PlotN_mean_DO_trends_spring_mig.png",
+       width = 5, height = 5, dpi = 400)
+
+# Plot of DO trends in spawning season
+
+(spawn_do_plot <- 
+    ggplot(spawn_do_trend_df) +
+  geom_line(aes(x, predicted), size = 1.25, color = "firebrick") +
+  geom_ribbon(aes(x=x, ymin = conf.low, ymax = conf.high), 
+              alpha = .1) +
+  geom_point(aes(x = yearn, y = mean), 
+             data = filter(season_pts_do, season == "spawn"),
+               size = 2) +
+  geom_errorbar(aes(x = yearn, ymin = mean-2*se, ymax = mean+2*se),
+                width = 0,
+                data = filter(season_pts_do, 
+                              season == "spawn")) +  
+  theme_bw() +
+  # scale_y_continuous(limits = c(8, 10.5)) +
+    scale_x_continuous(breaks = 1:6,
+                       labels = 2016:2021) +
+    labs(x = "", 
+         y = "Mean DO trend",
+         title = "May 16-31 (spawning)") +
+    theme(text = element_text(size = 14)) +
+    annotate(geom = "text", x = 1, y = 6.75, 
+             label = paste0("Trend = ", 
+                            round(fixef(do_trend_spawn)[2], 2),
+                            " / yr",
+            "\np-value = ",                   
+            round(summary(do_trend_spawn)$coefficients[2,5], 3)),
+             hjust = 0, vjust = 0)
+  )
+
+ggsave("output/Task2_WQ_migratory_species/PlotO_mean_DO_trends_spawning.png",
+       width = 5, height = 5, dpi = 400)
+
+# Plot of DO trends in larval season
+(larvae_do_plot <- 
+    ggplot(larvae_do_trend_df) +
+  geom_line(size = 1.25, color = "firebrick", aes(x, predicted)) +
+  geom_ribbon(aes(x=x,ymin = conf.low, ymax = conf.high), 
+              alpha = .1) +
+  geom_point(aes(x = yearn, y = mean), 
+             data = filter(season_pts_do, season == "larvae"),
+               size = 2) +
+  geom_errorbar(aes(x = yearn, ymin = mean-2*se, ymax = mean+2*se),
+                width = 0,
+                data = filter(season_pts_do, 
+                              season == "larvae")) +  
+  theme_bw() +
+  # scale_y_continuous(limits = c(6.5, 11.5)) +
+    scale_x_continuous(breaks = 1:6,
+                       labels = 2016:2021) +
+    labs(x = "", 
+         y = "Mean DO trend",
+         title = "Jun 1-30 (larvae)") +
+    theme(text = element_text(size = 14)) +
+    annotate(geom = "text", x = 1, y = 5.5, 
+             label = paste0("Trend = ", 
+                            round(fixef(do_trend_lar)[2], 2),
+                            " / yr",
+            "\np-value = ",                   
+            round(summary(do_trend_lar)$coefficients[2,5], 3)),
+             hjust = 0, vjust = 0)
+  )
+
+ggsave("output/Task2_WQ_migratory_species/PlotP_mean_DO_trends_larvae.png",
+       width = 5, height = 5, dpi = 400)
+
+(juv_do_plot <- 
+    ggplot(juv_do_trend_df) +
+  geom_line(size = 1.25, color = "firebrick", aes(x, predicted)) +
+  geom_ribbon(aes(x=x,ymin = conf.low, ymax = conf.high), 
+              alpha = .1) +
+  geom_point(aes(x = yearn, y = mean), 
+             data = filter(season_pts_do, season == "juvenile"),
+               size = 2) +
+  geom_errorbar(aes(x = yearn, ymin = mean-2*se, ymax = mean+2*se),
+                width = 0,
+                data = filter(season_pts_do, 
+                              season == "juvenile")) +  
+  theme_bw() +
+  # scale_y_continuous(limits = c(5,10)) +
+    scale_x_continuous(breaks = 1:6,
+                       labels = 2016:2021) +
+    labs(x = "", 
+         y = "Mean DO trend",
+         title = "Jul 1 - Sep 15 (juvenile)") +
+    theme(text = element_text(size = 14)) +
+    annotate(geom = "text", x = 1, y = 3.5, 
+             label = paste0("Trend = ", 
+                            round(fixef(do_trend_juv)[2], 2),
+                            " / yr",
+            "\np-value = ",                   
+            round(summary(do_trend_juv)$coefficients[2,5], 3)),
+             hjust = 0, vjust = 0)
+  )
+
+ggsave("output/Task2_WQ_migratory_species/PlotQ_mean_do_trends_juvenile.png",
+       width = 5, height = 5, dpi = 400)
+
+(fall_do_plot <- 
+    ggplot(fall_do_trend_df) +
+  geom_line(size = 1.25, color = "firebrick", aes(x, predicted)) +
+  geom_ribbon(aes(x=x, ymin = conf.low, ymax = conf.high), 
+              alpha = .1) +
+  geom_line(size = 1, color = "firebrick", aes(x, predicted),
+            data = fall_do_trend_df_noday, lty = 2) +  geom_point(aes(x = yearn, y = mean), 
+             data = filter(season_pts_do, season == "fall_mig"),
+               size = 2) +
+  geom_errorbar(aes(x = yearn, ymin = mean-2*se, ymax = mean+2*se),
+                width = 0,
+                data = filter(season_pts_do, 
+                              season == "fall_mig")) +  
+
+  theme_bw() +
+  scale_y_continuous(limits = c(4, 11)) +
+    scale_x_continuous(breaks = 1:6,
+                       labels = 2016:2021) +
+    labs(x = "", 
+         y = "Mean do trend",
+         title = "Sep 16 - Nov 30 (fall migration)") +
+    theme(text = element_text(size = 14)) +
+    annotate(geom = "text", x = 1, y = 4, 
+             label = paste0("Trend = ", 
+                            round(fixef(do_trend_fall)[2], 2),
+                            " / yr",
+            "\np-value = ",                   
+            round(summary(do_trend_fall)$coefficients[2,5], 3)),
+             hjust = 0, vjust = 0)
+  )
+
+ggsave("output/Task2_WQ_migratory_species/PlotS_mean_do_trends_fall.png",
+       width = 5, height = 5, dpi = 400)
+
+gg_do <- gridExtra::arrangeGrob(migrate_do_plot, 
+                             spawn_do_plot,
+                             larvae_do_plot,
+                             juv_do_plot,
+                             fall_do_plot)
+
+ggsave("output/Task2_WQ_migratory_species/PlotT_mean_do_trends_all_stages.png", plot = gg_do, width = 10, height = 10, dpi = 400)
 ```
