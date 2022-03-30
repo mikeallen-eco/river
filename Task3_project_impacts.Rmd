@@ -1,0 +1,387 @@
+---
+title: "Task 2. migratory species"
+author: "Mike Allen"
+date: "2/28/2022"
+output:
+  html_document: default
+  pdf_document: default
+---
+# To Do
+1. Columbia Dam: 
+  - boxplots:  downstream: TNC_25 (& 24) vs. upstream TNC_23
+  - time series plots of downstream/upstream diff by year
+  - boxplots: downstream 25 vs. inside 80/81? (only 2018+ data)
+  - BACI statistical analysis 25 vs. 23 before/after 2018
+
+# Task 3: Project Specific Analyses
+a. What are water quality conditions upstream/downstream/within project area(s) pre and post dam removal (assessing turbidity, conductivity, dissolved oxygen and temperature)?
+
+b. What are baseline water quality conditions 
+upstream/downstream/within floodplain reforestation corridor(s) before and after tree plantings (assessing temperature, dissolved oxygen)?
+
+c. What are baseline water quality conditions downstream Hyper Humus (assessing temperature, dissolved oxygen)?
+
+Task and Product 3 Due: April 10, 2022
+
+# Product 3:
+• Evaluate project specific questions via statistical analysis and data visualization (figures, maps,
+plots).
+• Meetings as needed to refine objectives and desired outputs.
+• Assess spatial and temporal changes in water quality metrics with respect to dam removal (before/after, upstream/downstream), restoration projects, and other sites of interest (Hyper Humus). Provide associated interpretative text.
+
+# Load libraries, format data, etc.
+```{r}
+library(dplyr)
+library(knitr)
+library(kableExtra)
+library(wesanderson)
+library(lubridate)
+library(ggplot2)
+library(forcats)
+# library(lme4)
+library(here)
+
+# read in compiled logger data (including flagged data)
+p <- readRDS("output/compiled_logger_data.rds") %>%
+  mutate(order = as.numeric(substr(site, 5, 6)),
+         site = fct_reorder(site, order))
+
+# format final compiled temperature data
+tdata <- p %>%
+  filter(FLAG_Temp == 0) %>%
+  mutate(day = yday(datetime),
+         month = month(datetime),
+         hour = hour(datetime),
+         minute = minute(datetime),
+         dtime = hour + minute/60) %>%
+  # remove obvious outliers at start of time series
+  filter(as.logical(1-(site == "TNC_25" & 
+                         year == 2018 & 
+                         day == 122))) %>%
+  filter(as.logical(1-(site == "TNC_23" & 
+                         year == 2018 & 
+                         day == 122))) %>%
+  filter(as.logical(1-(site == "TNC_23" & 
+                         year == 2021 & 
+                         day == 118))) %>%
+  # right_join(expand.grid(site = unique(p$site), 
+  #                        year = 2016:2021, day = 82:339)) %>%
+  arrange(site, year, day) %>%
+  # peak movement ~ 15 April - 15 May in Raritan per Anthony V.
+  mutate(season = case_when(day %in% 105:135 ~ "migrate", #4/15-5/15
+                            day %in% 136:151 ~ "spawn", #5/16-5/31
+                            day %in% 152:181 ~ "larvae", #6/1-6/30
+                            day %in% 182:258 ~ "juvenile", #7/1-9/15
+                            day %in% 259:334 ~ "fall_mig"), #9/15-11
+         yearf = as.factor(year),
+         dayf = as.factor(day),
+         hourf = as.factor(hour),
+         season = as.factor(season))
+
+# Columbia Dam - Temperature
+    # upstream: TNC_23, downstream: TNC_25 (& 24), in: 80 & 81
+col <- tdata %>%
+  filter(site %in% c("TNC_23", "TNC_25", 
+                     "TNC_24", "TNC_81", "TNC_80")) %>%
+  mutate(monthf = as.factor(month)) %>%
+    group_by(site, yearf, monthf, dayf, hourf) %>%
+  summarize(mean_temp = mean(temp),
+            .groups = "drop") %>%
+  group_by(site, yearf, monthf, dayf) %>%
+  summarize(mean_temp = mean(mean_temp),
+            .groups = "drop") %>%
+  tidyr::pivot_wider(names_from = "site", 
+                     values_from = "mean_temp") %>%
+  mutate(d25.23 = TNC_25-TNC_23,
+         d25.80 = TNC_25-TNC_80,
+         d25.81 = TNC_25-TNC_81,
+         stage = as.factor(case_when(yearf %in% 2016:2017 ~ 1,
+                           yearf == 2018 & as.numeric(as.character(monthf))<7~1,
+                           yearf == 2018 & as.numeric(as.character(monthf))>=7 |
+                             yearf == 2019 & as.numeric(as.character(monthf))<5~2,
+                           yearf == 2019 & as.numeric(as.character(monthf))>=5~3,
+                           yearf %in% 2020:2021 ~ 3))
+         )
+
+# format final compiled DO data
+dodata <- p %>%
+  filter(FLAG_DO == 0) %>%
+  mutate(day = yday(datetime),
+         month = month(datetime),
+         hour = hour(datetime),
+         minute = minute(datetime),
+         dtime = hour + minute/60,
+         do_adj2 = case_when((is.na(do)==F & is.na(do_adj)==T) ~
+                               do,
+                             TRUE ~ do_adj),
+         adj = case_when(is.na(do_adj)==F ~ 1,
+                         TRUE ~ 0)) %>%
+  select(-do, -do_adj) %>%
+  rename(do = do_adj2) %>%
+  # right_join(expand.grid(site = unique(p$site), 
+  #                        year = 2016:2021, day = 82:339)) %>%
+  arrange(site, year, day) %>%
+    # Dates based on Anthony V. and shad reference he provided
+  mutate(season = case_when(day %in% 105:135 ~ "migrate", #4/15-5/15
+                            day %in% 136:151 ~ "spawn", #5/16-5/31
+                            day %in% 152:181 ~ "larvae", #6/1-6/30
+                            day %in% 182:258 ~ "juvenile", #7/1-9/15
+                            day %in% 259:334 ~ "fall_mig"), #9/15-11
+         yearf = as.factor(year),
+         dayf = as.factor(day),
+         hourf = as.factor(hour))
+  
+# summarize DO data by day
+dosum <- dodata %>%
+    group_by(site, yearf, month, day, dayf) %>%
+  summarise(min_do = min(do, na.rm = T),
+            mean_do = mean(do, na.rm = T),
+            max_do = max(do, na.rm = T),
+            .groups = "drop") %>%
+  arrange(site, yearf, day)
+
+# summarize daily DO data by month
+dosum_month <- dosum %>%
+  group_by(site, yearf, month) %>%
+  summarize(mean_mean = mean(mean_do),
+            mean_max = mean(max_do),
+            mean_min = mean(min_do),
+            n = length(mean_do),
+            .groups = "drop") %>%
+  mutate(mid = case_when(month == 3 ~ yday("2021-03-15"),
+                         month == 4 ~ yday("2021-04-15"),
+                         month == 5 ~ yday("2021-05-15"),
+                         month == 6 ~ yday("2021-06-15"),
+                         month == 7 ~ yday("2021-07-15"),
+                         month == 8 ~ yday("2021-08-15"),
+                         month == 9 ~ yday("2021-09-15"),
+                         month == 10 ~ yday("2021-10-15"),
+                         month == 11 ~ yday("2021-11-15")
+                         ))
+
+# summarize daily DO data by fish life history season
+dosum_season <- dodata %>%
+    group_by(site, yearf, season, day, dayf) %>%
+  summarise(min_do = min(do, na.rm = T),
+            max_do = max(do, na.rm = T),
+            mean_do = mean(do, na.rm = T),
+            .groups = "drop")  %>%
+  group_by(site, yearf, season) %>%
+  summarize(mean_mean = mean(mean_do),
+            mean_max = mean(max_do),
+            mean_min = mean(min_do),
+            n = length(mean_do),
+            .groups = "drop") %>%
+  mutate(order = case_when(season == "migrate" ~ 1,
+                           season == "spawn" ~ 2,
+                           season == "larvae" ~ 3,
+                           season == "juvenile" ~ 4,
+                           season == "fall_mig" ~ 5),
+         season2 = case_when(season == "migrate" ~ "Migrate (S)",
+                           season == "spawn" ~ "Spawn",
+                           season == "larvae" ~ "Larvae",
+                           season == "juvenile" ~ "Juvenile",
+                           season == "fall_mig" ~ "Migrate (F)"),
+         season2 = fct_reorder(season2, order))
+
+rm(p)
+```
+
+# Plot A - Columbia Dam - Temperature upstream vs. downstream - raw data by year
+upstream: TNC_23, downstream: TNC_25 (& 24), in: 80 & 81
+first notch July 2018, completed April 2019
+```{r}
+col %>%
+  ggplot() +
+  geom_abline(intercept = 0, slope = 0, lty = 3, color = "steelblue")  +
+  geom_boxplot(aes(y = d25.23, x = yearf), 
+               fill = "steelblue", alpha = 0.5,
+               color = "steelblue"
+              ) +
+  theme_bw() +
+  theme(text = element_text(size = 14)) +
+  labs(x = "", y = "Temp. difference (C)\n(downstream - upstream)",
+       title = "Columbia Dam") 
+
+
+ggsave(here::here("output/Task3_project_impacts/",
+                  "PlotA_columbia_up_downstream_diff_by_year.png"),
+                  height = 4, width = 6, dpi = 400)
+
+```
+# PlotB_assessing variability in upstream/downstream temp diff by month/year
+```{r}
+col %>%
+  ggplot() +
+  geom_abline(intercept = 0, slope = 0, lty = 3, color = "steelblue")  +
+  geom_boxplot(aes(x = monthf, 
+                y = d25.23), 
+               color = "steelblue", fill = "steelblue",
+               alpha = 0.5) +
+  facet_wrap(~yearf) + 
+  theme_bw() +
+  theme(text = element_text(size = 14),
+        strip.background = element_rect(fill = "white")) +
+  labs(x = "", y = "Temp. difference (C)\n(downstream - upstream)",
+       title = "Columbia Dam") +
+  scale_x_discrete(breaks = c(3,6,9,12),
+                     labels = c("Mar","Jun","Sep","Dec"))
+  
+# testing for temporal autocorrelation (most years not much, but see 2021)
+# pacf(filter(col, yearf==2019, is.na(d25.23)==F)$d25.23)
+
+ggsave(here::here("output/Task3_project_impacts/",
+                  "PlotB_columbia_up_downstream_diff_by_year.png"),
+                  height = 5, width = 7, dpi = 400)
+```
+
+# Model A - Columbia Dam downstream/upstream BACI - by stage
+```{r}
+
+col_jags_tdata_nointeraction <- list(
+  N = nrow(filter(col, is.na(d25.23) == F)),
+  tdiff = filter(col, is.na(d25.23) == F)$d25.23,
+  tdiff_lag = c(0.77, lag(filter(
+    col, is.na(d25.23) == F
+  )$d25.23)[2:860]),
+  stage = as.numeric(as.character(filter(
+    col, is.na(d25.23) == F
+  )$stage)),
+  year = as.numeric(filter(col, is.na(d25.23) == F)$yearf),
+  month = as.numeric(as.character(filter(
+    col, is.na(d25.23) == F
+  )$monthf)),
+  cov.mat = as.matrix(
+    model.matrix(d25.23 ~ stage + monthf + stage:monthf ,
+                 data = filter(col, is.na(d25.23) == F))[, c(2:3, 5:12)]
+  )
+)
+
+cat(file = "scripts/columbia_baci_no_interaction.txt", 
+"
+model{
+
+  # likelihood
+  for( i in 1:N ){
+  tdiff[i] ~ dnorm(mu[i], tau[stage[i]])
+  mu[i] <- beta0 + inprod(beta.cov[], cov.mat[i,])
+
+  }
+  
+  # priors
+  beta0 ~ dnorm(0, 1.0E-06)
+  
+  for( s in 1:3 ) {
+  tau[s] ~ dgamma(1, 1)
+  }
+  
+  for( m in 1:10 ){ # or 1:10 without the interaction
+  beta.cov[m] ~ dnorm(0, 1.0E-06)
+  }
+  
+  # derrived
+  mean_month <- (beta.cov[3]+beta.cov[4]+beta.cov[5]+beta.cov[6]+beta.cov[7]+
+                    beta.cov[8]+beta.cov[9]+beta.cov[10])/9
+  mean_pre <- beta0 + beta.cov[5]
+  mean_dur <- beta0 + beta.cov[1] + beta.cov[5]
+  mean_post <- beta0 + beta.cov[2] + beta.cov[5]
+  mean_pre2 <- beta0 + mean_month
+  mean_dur2 <- beta0 + beta.cov[1] + mean_month
+  mean_post2 <- beta0 + beta.cov[2] + mean_month
+  ba_diff <- mean_post - mean_pre
+  ba_diff2 <- mean_post2 - mean_pre2
+  
+  for(s in 1:3){
+  sigma[s] <- pow(tau[s], -0.5)
+  }
+  
+}
+"
+)
+
+col_jags_tmod_ni <- jagsUI::jags(data = col_jags_tdata_nointeraction,
+             model.file = "scripts/columbia_baci_no_interaction.txt",
+             n.iter = 2000, n.burnin = 1000,
+             parameters.to.save = c("mean_pre",
+                                    "mean_dur",
+                                    "mean_post",
+                                    "mean_pre2",
+                                    "mean_dur2",
+                                    "mean_post2",
+                                    "ba_diff",
+                                    "ba_diff2",
+                                    "beta0",
+                                    "beta.cov",
+                                    "sigma",
+                                    "tau",
+                                    "mean_month"),
+             n.chains = 3, parallel = T, n.thin = 1
+             ); col_jags_tmod_ni
+
+# DIC w/ month: 506 
+    # w/o month: 553.954
+# dev.new(6,6);plot(col_jags_tmod)
+
+
+# jagsUI::traceplot(col_jags_tmod)
+
+saveRDS(col_jags_tmod_ni, here::here("output/Task3_project_impacts/",
+                            "statistical_analysis/",
+                          "ModelA_columbia_jags_tmod_no_interaction.rds"))
+```
+# Plot C estimated upstream/downstream tdiff by restoration stage
+```{r}
+
+col_jags_tmod_ni <- readRDS(here::here("output/Task3_project_impacts/",
+                            "statistical_analysis/",
+                          "ModelA_columbia_jags_tmod_no_interaction.rds"))
+
+col_tdiff_plot <- 
+  data.frame(draws = col_jags_tmod_ni$sims.list$mean_pre2,
+           var = "Before\nremoval") %>%
+  bind_rows(
+    data.frame(draws = col_jags_tmod_ni$sims.list$mean_dur2,
+           var = "During\nremoval")) %>%
+  bind_rows(
+  data.frame(draws = col_jags_tmod_ni$sims.list$mean_post2,
+           var = "After\nremoval")) %>%
+  bind_rows(
+  data.frame(draws = col_jags_tmod_ni$sims.list$ba_diff,
+           var = "change")) %>%
+  group_by(var) %>%
+  summarise(mu = mean(draws),
+            q2.5 = quantile(draws, 0.025),
+            q10 = quantile(draws, 0.1),
+            q50 = quantile(draws, 0.5),
+            q90 = quantile(draws, 0.9),
+            q97.5 = quantile(draws, 0.975)) %>%
+  mutate(order = c(3,1,4,2),
+         var = fct_reorder(var, order))
+
+col_tdiff_plot %>%
+  filter(var != "change") %>%
+  ggplot() +
+  geom_line(aes(x = var, y = mu, group = 1), 
+            size = .75, lty = 2) +
+  geom_errorbar(aes(x = var, ymin = q10, 
+                    ymax = q90), width = 0, size = 1.5) +
+  geom_errorbar(aes(x = var, ymin = q2.5, 
+                    ymax = q97.5), width = 0, size = .75) +
+  geom_point(aes(x = var, y = mu), size = 4) +
+
+  theme_bw() +
+  theme(text = element_text(size = 14),
+        axis.title.y = element_text(size = 12)) + 
+  annotate("text", x = 2.95, y = .46, 
+           label = "Change = -0.33C\n(95% CI = -0.41, -0.25)",
+           hjust = .5, color = "darkgray", size = 5) +  
+  labs(x = "", 
+       y = "Temperature difference (C)\n(downstream - upstream)",
+       title = "Columbia Dam")
+
+ggsave(here::here("output/Task3_project_impacts/",
+                  "PlotC_columbia_river_BACI_plot.png"),
+                  height = 4, width = 6, dpi = 400)
+  
+```
+

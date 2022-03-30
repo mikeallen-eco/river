@@ -1,0 +1,35 @@
+
+model{
+  # likelihood
+  
+  for( i in 1:N ){
+  tdiff[i] ~ dnorm(mu, tau)
+  }
+  
+  # hyperpriors
+  for(y in 1:2){
+  yearmean[y] ~ dnorm(mu_yearmean_before, tau_yearmean_after)
+  }
+  
+  for(y in 3:6){
+  yearmean[y] ~ dnorm(mu_yearmean_after, tau_yearmean_after)
+  }
+  
+  # priors
+  mu_yearmean_before ~ dnorm(0, 1.0E-06)
+  tau_yearmean_before ~ dgamma(1, 1)
+  mu_yearmean_after ~ dnorm(0, 1.0E-06)
+  tau_yearmean_after ~ dgamma(1, 1)
+  # tau_yearmean ~ dgamma(1, 1)
+
+  for(j in 1:6){
+  tau[j] ~ dgamma(1, 1)
+  }
+
+  # derrived
+  for(j in 1:6){
+  sigma[j] <- pow(tau[j], -0.5)
+  }
+  
+  ba_dif <- mu_yearmean_after - mu_yearmean_before
+}
