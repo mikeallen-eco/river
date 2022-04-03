@@ -1,35 +1,34 @@
 
 model{
+
   # likelihood
-  
   for( i in 1:N ){
-  tdiff[i] ~ dnorm(mu, tau)
-  }
-  
-  # hyperpriors
-  for(y in 1:2){
-  yearmean[y] ~ dnorm(mu_yearmean_before, tau_yearmean_after)
-  }
-  
-  for(y in 3:6){
-  yearmean[y] ~ dnorm(mu_yearmean_after, tau_yearmean_after)
+  tdiff[i] ~ dnorm(mu[i], tau[stage[i]])
+  mu[i] <- beta0 + inprod(beta.cov[], cov.mat[i,])
+
   }
   
   # priors
-  mu_yearmean_before ~ dnorm(0, 1.0E-06)
-  tau_yearmean_before ~ dgamma(1, 1)
-  mu_yearmean_after ~ dnorm(0, 1.0E-06)
-  tau_yearmean_after ~ dgamma(1, 1)
-  # tau_yearmean ~ dgamma(1, 1)
-
-  for(j in 1:6){
-  tau[j] ~ dgamma(1, 1)
-  }
-
-  # derrived
-  for(j in 1:6){
-  sigma[j] <- pow(tau[j], -0.5)
+  beta0 ~ dnorm(0, 1.0E-06)
+  
+  for( s in 1:3 ) {
+  tau[s] ~ dgamma(1, 1)
   }
   
-  ba_dif <- mu_yearmean_after - mu_yearmean_before
+  for( m in 1:9 ){ 
+  beta.cov[m] ~ dnorm(0, 1.0E-06)
+  }
+  
+  # derrived
+  mean_month <- (0+beta.cov[3]+beta.cov[4]+beta.cov[5]+beta.cov[6]+beta.cov[7]+beta.cov[8])/7
+  
+  mean_pre <- beta0 + mean_month
+  mean_dur <- beta0 + beta.cov[1] + mean_month
+  mean_post <- beta0 + beta.cov[2] + mean_month
+  ba_diff <- mean_post - mean_pre
+
+  for(s in 1:3){
+  sigma[s] <- pow(tau[s], -0.5)
+  }
+  
 }
