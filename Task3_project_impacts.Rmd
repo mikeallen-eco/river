@@ -46,6 +46,7 @@ library(ggplot2)
 library(forcats)
 # library(lme4)
 library(here)
+task_path <- "output/Task3_project_impacts/"
 
 # read in compiled logger data (including flagged data)
 p <- readRDS("output/compiled_logger_data.rds") %>%
@@ -179,6 +180,27 @@ coldo <- dodata %>%
                              yearf == 2019 & as.numeric(as.character(monthf))<5~2,
                            yearf == 2019 & as.numeric(as.character(monthf))>=5~3,
                            yearf %in% 2020:2021 ~ 3))
+         )
+
+# Tree planting area - DO
+    # upstream: TNC_4, within: TNC_5, downstream: TNC_8
+treedo <- dodata %>%
+  filter(site %in% c("TNC_4", "TNC_5", "TNC_8")) %>%
+  mutate(monthf = as.factor(month)) %>%
+    group_by(site, yearf, monthf, dayf, hourf) %>%
+  summarize(mean_do = mean(do),
+            .groups = "drop") %>%
+  group_by(site, yearf, monthf, dayf) %>%
+  summarize(mean_do = mean(mean_do),
+            .groups = "drop") %>%
+  tidyr::pivot_wider(names_from = "site", 
+                     values_from = "mean_do") %>%
+  mutate(d8.4 = TNC_8-TNC_4,
+         d5.4 = TNC_5-TNC_4,
+         d4.8 = TNC_4-TNC_8,
+         d4.5 = TNC_4-TNC_5,
+         stage = as.factor(case_when(yearf %in% 2016:2018 ~ 1,
+                           yearf %in% 2019:2021 ~ 2))
          )
 
 rm(p)
@@ -770,8 +792,9 @@ tree %>%
 #                 "PlotK_tree_plant_downstream_within_temp_by_mo_year.png"),
 #                   height = 5, width = 7, dpi = 400)
 ```
-
-# Tree planting - evaluating temperature trend across years
+# Model C - Tree planting temperature trend (downstream - upstream)
+TNC_8 - TNC_4
+Model to estimate mean trend. Redo plot I showing trend info.
 ```{r}
 treet_jags <- tree %>% 
   filter(is.na(d8.4) == F,
@@ -781,6 +804,7 @@ treet_jags <- tree %>%
 treet_jags_data <- list(
   N = nrow(treet_jags),
   tdiff = treet_jags$d8.4,
+  year_mean = mean(as.numeric(treet_jags$yearf)),
   stage = as.numeric(as.character(treet_jags$stage)),
   year = as.numeric(treet_jags$yearf),
   month = as.numeric(as.character(treet_jags$monthf))
@@ -792,32 +816,32 @@ model{
 
   # likelihood
   for( i in 1:N ){
-  tdiff[i] ~ dnorm(mu[i], tau)
-  mu[i] <- beta0[month[i]] + beta.year[month[i]]*year[i]
+  tdiff[i] ~ dnorm(mu[i], pow(sigma, -2))
+  mu[i] <- beta0[month[i]] + beta.year[month[i]]*(year[i]-year_mean)
   }
   
   # hyper priors
   for(i in 5:9){
-  beta0[i] ~ dnorm(mu.beta0, tau.beta0)
-  beta.year[i] ~ dnorm(mu.beta.year, tau.beta.year)
+  beta0[i] ~ dnorm(mu.beta0, pow(sigma.beta0, -2))
+  beta.year[i] ~ dnorm(mu.beta.year, pow(sigma.beta.year, -2))
   }
   
   # priors
-  tau ~ dgamma(0.001, 0.001)
+  sigma ~ dunif(0, 50)
   mu.beta0 ~ dnorm(0, 1.0E-06)
   mu.beta.year ~ dnorm(0, 1.0E-06)
-  tau.beta0 ~ dgamma(0.001, 0.001)
-  tau.beta.year ~ dgamma(0.001, 0.001)
+  sigma.beta0 ~ dunif(0, 50)
+  sigma.beta.year ~ dunif(0, 50)
 
   # derrived
   for(i in 1:5){
-  diff_pred[i] <- mu.beta0 + mu.beta.year*i
+  diff_pred[i] <- mu.beta.year*(i-year_mean)
   }
   
 }
 "
 )
-test <- lme4::lmer(tdiff)
+
 treet_jags_mod <- jagsUI::jags(data = treet_jags_data,
              model.file = "scripts/tree_trend.txt",
              n.iter = 10000, n.burnin = 4000,
@@ -825,15 +849,289 @@ treet_jags_mod <- jagsUI::jags(data = treet_jags_data,
                                     "mu.beta.year",
                                     "beta0",
                                     "beta.year",
+                                    "sigma",
                                     "tau",
                                     "tau.beta0",
                                     "tau.beta.year",
+                                    "sigma.beta0",
+                                    "sigma.beta.year",
                                     "diff_pred"),
-             n.chains = 3, parallel = T, n.thin = 6
+             n.chains = 3, parallel = T, n.thin = 3
              ); treet_jags_mod
 
-# DIC w/ month: ~500 
-    # w/o month: ~550
-dev.new(6,6);plot(treet_jags_mod)
+# dev.new(6,6);plot(treet_jags_mod)
+
+saveRDS(treet_jags_mod, 
+        here(task_path,
+             "statistical_analysis/",
+             "ModelC_tree_planting_temperature_trends.rds")
+)
+```
+# Plotting tree planting temperature modeled mean trend (downstream - upstream)
+TNC_8 - TNC_4
+Model to estimate mean temperature trend. Redo plot I showing trend info.
+```{r}
+treet_jags_mod <- here(task_path,
+             "statistical_analysis/",
+             "ModelC_tree_planting_temperature_trends.rds")
+
+treet_jags_plot <- apply(.495+treet_jags_mod$sims.list$diff_pred, 2, function(x) quantile(x, c(0.025, 0.1, 0.5, 0.90, 0.975))) %>%
+  t() %>%
+  as.data.frame() %>%
+  rename(q2.5 = 1, q10 = 2, med = 3, q90 = 4, q97.5 = 5) %>%
+  mutate(year = 2017:2021) 
+
+tree %>%
+  filter(yearf != 2016,
+         monthf %in% 5:9) %>%
+  droplevels() %>%
+  rename(val1 = d8.4) %>%
+  group_by(yearf, monthf) %>%
+  summarise(val = mean(val1, na.rm = T),
+            sd = sd(val1, na.rm = T),
+            n = length(is.na(val1)),
+            se = sd/sqrt(n)) %>%
+  mutate(mo = case_when(monthf == 5 ~ "May",
+                        monthf == 6 ~ "Jun",
+                        monthf == 7 ~ "Jul",
+                        monthf == 8 ~ "Aug",
+                        monthf == 9 ~ "Sep"),
+         mo = fct_reorder(mo, as.numeric(monthf))) %>%
+  ggplot() +
+  geom_abline(intercept = 0, slope = 0, 
+              lty = 2, color = "darkgray")  +
+  geom_line(aes(x = yearf,
+                y = val, color = mo,
+                group = monthf),
+               size = .75, lty = 1) +
+  geom_point(aes(x = yearf, 
+                y = val, 
+                color = mo), 
+               size = 4) +
+  geom_errorbar(aes(x = yearf, 
+                ymin = val-2*se, ymax = val+2*se,
+                color = mo), 
+               size = 1, width = 0) +
+  geom_line(aes(x = as.factor(year), y = med, 
+                group = 1), size = 1, 
+            data = treet_jags_plot) +
+  theme_bw() +
+  theme(text = element_text(size = 14)) +
+  labs(x = "", y = "Temp. difference (C)\n(downstream - upstream)",
+       title = "Tree planting area",
+       color = "Month") +
+  scale_x_discrete(breaks = c(2017,2019,2021)) + 
+  scale_color_manual(values = wes_palettes$Darjeeling1) +
+ scale_y_continuous(limits = c(-0.5, 1.5)) +
+  annotate("text", x = 5.25, y = -0.49, 
+           label = "mean trend = +0.04 C/yr\n95% CI = -0.003, 0.088", 
+           hjust = 1, vjust = 0)
+
+ggsave(here::here("output/Task3_project_impacts/",
+                  "PlotI2_tree_planting_up_downstream_diff_by_mo_year_w_trend.png"),
+                  height = 5, width = 7, dpi = 400)
+
+```
+# Model D - Tree planting temperature trend (within - upstream)
+TNC_5 - TNC_4. Model to estimate mean trend.
+```{r}
+treet_jags <- tree %>% 
+  filter(is.na(d5.4) == F,
+         monthf %in% 5:9) %>%
+  droplevels()
+
+treet_jags_data <- list(
+  N = nrow(treet_jags),
+  tdiff = treet_jags$d5.4,
+  year_mean = mean(as.numeric(treet_jags$yearf)),
+  stage = as.numeric(as.character(treet_jags$stage)),
+  year = as.numeric(treet_jags$yearf),
+  month = as.numeric(as.character(treet_jags$monthf))
+)
+
+treet_jags_mod2 <- jagsUI::jags(data = treet_jags_data,
+             model.file = "scripts/tree_trend.txt",
+             n.iter = 10000, n.burnin = 4000,
+             parameters.to.save = c("mu.beta0",
+                                    "mu.beta.year",
+                                    "beta0",
+                                    "beta.year",
+                                    "sigma",
+                                    "tau",
+                                    "tau.beta0",
+                                    "tau.beta.year",
+                                    "sigma.beta0",
+                                    "sigma.beta.year",
+                                    "diff_pred"),
+             n.chains = 3, parallel = T, n.thin = 3
+             ); treet_jags_mod2
+
+# dev.new(6,6);plot(treet_jags_mod2)
+
+saveRDS(treet_jags_mod, 
+        here(task_path,
+             "statistical_analysis/",
+             "ModelD_tree_planting_temp_trends_within_up.rds")
+)
+```
+# Plotting tree planting temperature trend (within - upstream)
+TNC_5 - TNC_4
+Model to estimate mean trend. Redo plot J showing trend info.
+```{r}
+treet_jags_mod <- here(task_path,
+             "statistical_analysis/",
+             "ModelD_tree_planting_temp_trends_within_up.rds")
+
+treet_jags_plot <- apply(.386+treet_jags_mod2$sims.list$diff_pred, 2, function(x) quantile(x, c(0.025, 0.1, 0.5, 0.90, 0.975))) %>%
+  t() %>%
+  as.data.frame() %>%
+  rename(q2.5 = 1, q10 = 2, med = 3, q90 = 4, q97.5 = 5) %>%
+  mutate(year = 2017:2021) 
+
+tree %>%
+  filter(yearf %in% 2018:2021,
+         monthf %in% 5:9) %>%
+  droplevels() %>%
+  rename(val1 = d5.4) %>%
+  group_by(yearf, monthf) %>%
+  summarise(val = mean(val1, na.rm = T),
+            sd = sd(val1, na.rm = T),
+            n = length(is.na(val1)),
+            se = sd/sqrt(n)) %>%
+  mutate(mo = case_when(monthf == 5 ~ "May",
+                        monthf == 6 ~ "Jun",
+                        monthf == 7 ~ "Jul",
+                        monthf == 8 ~ "Aug",
+                        monthf == 9 ~ "Sep"),
+         mo = fct_reorder(mo, as.numeric(monthf))) %>%
+  ggplot() +
+  geom_abline(intercept = 0, slope = 0, 
+              lty = 2, color = "darkgray")  +
+  geom_line(aes(x = yearf,
+                y = val, color = mo,
+                group = monthf),
+               size = .75, lty = 1) +
+  geom_point(aes(x = yearf, 
+                y = val, 
+                color = mo), 
+               size = 4) +
+  geom_errorbar(aes(x = yearf, 
+                ymin = val-2*se, ymax = val+2*se,
+                color = mo), 
+               size = 1, width = 0) +
+  geom_line(aes(x = as.factor(year), y = med, 
+                group = 1), size = 1, 
+            data = filter(treet_jags_plot, year != 2017)) +
+  theme_bw() +
+  theme(text = element_text(size = 14)) +
+  labs(x = "", y = "Temp. difference (C)\n(restoration area - upstream)",
+       title = "Tree planting area",
+       color = "Month") +
+  scale_x_discrete(breaks = c(2017,2019,2021)) + 
+  scale_color_manual(values = wes_palettes$Darjeeling1) +
+  scale_y_continuous(limits = c(-0.5, 1.5)) +
+  annotate("text", x = 4.25, y = -0.49, 
+           label = "mean trend = +0.044 C/yr\n95% CI = -0.027, 0.116", 
+           hjust = 1, vjust = 0)
+  
+# ggsave(here::here("output/Task3_project_impacts/",
+#                 "PlotJ2_tree_planting_upstream_within_diff_by_mo_year_w_trend.png"),
+#                   height = 5, width = 7, dpi = 400)
+
 ```
 
+
+# Plot L - Tree planting - upstream/downstream DO diff by month/year
+TNC_8 (downstream) - TNC_4 (upstream)
+```{r}
+treedo %>%
+  filter(yearf != 2016,
+         monthf %in% 5:9) %>%
+  droplevels() %>%
+  rename(val1 = d8.4) %>%
+  group_by(yearf, monthf) %>%
+  summarise(val = mean(val1, na.rm = T),
+            sd = sd(val1, na.rm = T),
+            n = length(is.na(val1)),
+            se = sd/sqrt(n)) %>%
+  mutate(mo = case_when(monthf == 5 ~ "May",
+                        monthf == 6 ~ "Jun",
+                        monthf == 7 ~ "Jul",
+                        monthf == 8 ~ "Aug",
+                        monthf == 9 ~ "Sep"),
+         mo = fct_reorder(mo, as.numeric(monthf))) %>%
+  ggplot() +
+  geom_abline(intercept = 0, slope = 0, 
+              lty = 2, color = "darkgray")  +
+  geom_line(aes(x = yearf,
+                y = val, color = mo,
+                group = monthf),
+               size = .75, lty = 1) +
+  geom_point(aes(x = yearf, 
+                y = val, 
+                color = mo), 
+               size = 4) +
+  geom_errorbar(aes(x = yearf, 
+                ymin = val-2*se, ymax = val+2*se,
+                color = mo), 
+               size = 1, width = 0) +
+  theme_bw() +
+  theme(text = element_text(size = 14)) +
+  labs(x = "", y = "DO difference (mg/L)\n(downstream - upstream)",
+       title = "Tree planting area",
+       color = "Month") +
+  scale_x_discrete(breaks = c(2017,2019,2021)) + 
+  scale_color_manual(values = wes_palettes$Darjeeling1) +
+ scale_y_continuous(limits = c(-2, 1.5))
+  
+# ggsave(here::here("output/Task3_project_impacts/",
+#                   "PlotL_tree_planting_up_downstream_DO_diff_by_mo_year.png"),
+#                   height = 5, width = 7, dpi = 400)
+```
+
+# Plot M - Tree planting - upstream/within DO diff by month/year
+```{r}
+treedo %>%
+  filter(yearf %in% 2018:2021,
+         monthf %in% 5:9) %>%
+  droplevels() %>%
+  rename(val1 = d5.4) %>%
+  group_by(yearf, monthf) %>%
+  summarise(val = mean(val1, na.rm = T),
+            sd = sd(val1, na.rm = T),
+            n = length(is.na(val1)),
+            se = sd/sqrt(n)) %>%
+  mutate(mo = case_when(monthf == 5 ~ "May",
+                        monthf == 6 ~ "Jun",
+                        monthf == 7 ~ "Jul",
+                        monthf == 8 ~ "Aug",
+                        monthf == 9 ~ "Sep"),
+         mo = fct_reorder(mo, as.numeric(monthf))) %>%
+  ggplot() +
+  geom_abline(intercept = 0, slope = 0, 
+              lty = 2, color = "darkgray")  +
+  geom_line(aes(x = yearf,
+                y = val, color = mo,
+                group = monthf),
+               size = .75, lty = 1) +
+  geom_point(aes(x = yearf, 
+                y = val, 
+                color = mo), 
+               size = 4) +
+  geom_errorbar(aes(x = yearf, 
+                ymin = val-2*se, ymax = val+2*se,
+                color = mo), 
+               size = 1, width = 0) +
+  theme_bw() +
+  theme(text = element_text(size = 14)) +
+  labs(x = "", y = "DO difference (mg/L)\n(restoration area - upstream)",
+       title = "Tree planting area",
+       color = "Month") +
+  scale_x_discrete(breaks = c(2017,2019,2021)) + 
+  scale_color_manual(values = wes_palettes$Darjeeling1) #+
+  #scale_y_continuous(limits = c(-0.5, 1.5))
+  
+# ggsave(here::here("output/Task3_project_impacts/",
+#                 "PlotM_tree_planting_upstream_within_DOdiff_by_mo_year.png"),
+#                   height = 5, width = 7, dpi = 400)
+```

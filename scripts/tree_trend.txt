@@ -3,26 +3,26 @@ model{
 
   # likelihood
   for( i in 1:N ){
-  tdiff[i] ~ dnorm(mu[i], tau)
-  mu[i] <- beta0[month[i]] + beta.year[month[i]]*year[i]
+  tdiff[i] ~ dnorm(mu[i], pow(sigma, -2))
+  mu[i] <- beta0[month[i]] + beta.year[month[i]]*(year[i]-year_mean)
   }
   
   # hyper priors
   for(i in 5:9){
-  beta0[i] ~ dnorm(mu.beta0, tau.beta0)
-  beta.year[i] ~ dnorm(mu.beta.year, tau.beta.year)
+  beta0[i] ~ dnorm(mu.beta0, pow(sigma.beta0, -2))
+  beta.year[i] ~ dnorm(mu.beta.year, pow(sigma.beta.year, -2))
   }
   
   # priors
-  tau ~ dgamma(0.001, 0.001)
+  sigma ~ dunif(0, 50)
   mu.beta0 ~ dnorm(0, 1.0E-06)
   mu.beta.year ~ dnorm(0, 1.0E-06)
-  tau.beta0 ~ dgamma(0.001, 0.001)
-  tau.beta.year ~ dgamma(0.001, 0.001)
+  sigma.beta0 ~ dunif(0, 50)
+  sigma.beta.year ~ dunif(0, 50)
 
   # derrived
   for(i in 1:5){
-  diff_pred[i] <- mu.beta0 + mu.beta.year*i
+  diff_pred[i] <- mu.beta.year*(i-year_mean)
   }
   
 }
