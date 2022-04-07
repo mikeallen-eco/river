@@ -771,4 +771,69 @@ tree %>%
 #                   height = 5, width = 7, dpi = 400)
 ```
 
+# Tree planting - evaluating temperature trend across years
+```{r}
+treet_jags <- tree %>% 
+  filter(is.na(d8.4) == F,
+         monthf %in% 5:9) %>%
+  droplevels()
+
+treet_jags_data <- list(
+  N = nrow(treet_jags),
+  tdiff = treet_jags$d8.4,
+  stage = as.numeric(as.character(treet_jags$stage)),
+  year = as.numeric(treet_jags$yearf),
+  month = as.numeric(as.character(treet_jags$monthf))
+)
+
+cat(file = "scripts/tree_trend.txt", 
+"
+model{
+
+  # likelihood
+  for( i in 1:N ){
+  tdiff[i] ~ dnorm(mu[i], tau)
+  mu[i] <- beta0[month[i]] + beta.year[month[i]]*year[i]
+  }
+  
+  # hyper priors
+  for(i in 5:9){
+  beta0[i] ~ dnorm(mu.beta0, tau.beta0)
+  beta.year[i] ~ dnorm(mu.beta.year, tau.beta.year)
+  }
+  
+  # priors
+  tau ~ dgamma(0.001, 0.001)
+  mu.beta0 ~ dnorm(0, 1.0E-06)
+  mu.beta.year ~ dnorm(0, 1.0E-06)
+  tau.beta0 ~ dgamma(0.001, 0.001)
+  tau.beta.year ~ dgamma(0.001, 0.001)
+
+  # derrived
+  for(i in 1:5){
+  diff_pred[i] <- mu.beta0 + mu.beta.year*i
+  }
+  
+}
+"
+)
+test <- lme4::lmer(tdiff)
+treet_jags_mod <- jagsUI::jags(data = treet_jags_data,
+             model.file = "scripts/tree_trend.txt",
+             n.iter = 10000, n.burnin = 4000,
+             parameters.to.save = c("mu.beta0",
+                                    "mu.beta.year",
+                                    "beta0",
+                                    "beta.year",
+                                    "tau",
+                                    "tau.beta0",
+                                    "tau.beta.year",
+                                    "diff_pred"),
+             n.chains = 3, parallel = T, n.thin = 6
+             ); treet_jags_mod
+
+# DIC w/ month: ~500 
+    # w/o month: ~550
+dev.new(6,6);plot(treet_jags_mod)
+```
 
