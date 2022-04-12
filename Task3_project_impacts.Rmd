@@ -10,13 +10,13 @@ output:
 1. Columbia Dam: 
   * boxplots:  downstream: TNC_25 vs. upstream TNC_23
   * BACI statistical analysis 25 vs. 23 before/after 2018
-  - time series plots of downstream/upstream diff by year
   - plot & compare: downstream 25 vs. inside 80/81? (only 'after' 2018+ data)
   - address autocorrelation in residuals
   
 2. Tree planting:
-  - Plot TNC_4 (up), 5 (in), and 8 (down)
-  - Analysis: does 4/5 or 4/8 difference increase over time? (2015-2018)
+  * Plot TNC_4 (up), 5 (in), and 8 (down)
+  * Analysis: does 4/5 or 4/8 difference increase over time? (2015-2018)
+3. 
 
 # Task 3: Project Specific Analyses
 a. What are water quality conditions upstream/downstream/within project area(s) pre and post dam removal (assessing turbidity, conductivity, dissolved oxygen and temperature)?
@@ -201,6 +201,48 @@ treedo <- dodata %>%
          d4.5 = TNC_4-TNC_5,
          stage = as.factor(case_when(yearf %in% 2016:2018 ~ 1,
                            yearf %in% 2019:2021 ~ 2))
+         )
+
+
+# turbidity data
+# note: flag counts were as follower prior to filtering
+#      0    1.5      2      5      8 
+# 214779    188  33345  13893    340 
+turb <- p %>%
+  filter(is.na(turb) == F,
+         FLAG_NTU == 0) %>%
+    mutate(day = yday(datetime),
+         month = month(datetime),
+         hour = hour(datetime),
+         minute = minute(datetime),
+         dtime = hour + minute/60) %>%
+  arrange(site, year, day) %>%
+  mutate(yearf = as.factor(year),
+         dayf = as.factor(day),
+         hourf = as.factor(hour))
+
+# summarize turbidity data for columbia dam
+ colturb <- turb %>%
+  filter(site %in% c("TNC_23", "TNC_25", 
+                     "TNC_24", "TNC_81", "TNC_80")) %>%
+  mutate(monthf = as.factor(month)) %>%
+    group_by(site, yearf, monthf, dayf, hourf) %>%
+  summarize(mean_turb = mean(turb),
+            .groups = "drop") %>%
+  group_by(site, yearf, monthf, dayf) %>%
+  summarize(mean_turb = mean(mean_turb),
+            .groups = "drop") %>%
+  tidyr::pivot_wider(names_from = "site", 
+                     values_from = "mean_turb") %>%
+  mutate(d25.23 = log(TNC_25)-log(TNC_23),
+         d25.80 = log(TNC_25)-log(TNC_80),
+         d25.81 = log(TNC_25)-log(TNC_81),
+         stage = as.factor(case_when(yearf %in% 2016:2017 ~ 1,
+                           yearf == 2018 & as.numeric(as.character(monthf))<7~1,
+                           yearf == 2018 & as.numeric(as.character(monthf))>=7 |
+                             yearf == 2019 & as.numeric(as.character(monthf))<5~2,
+                           yearf == 2019 & as.numeric(as.character(monthf))>=5~3,
+                           yearf %in% 2020:2021 ~ 3))
          )
 
 rm(p)
@@ -446,7 +488,7 @@ col_tdiff_plot_sd %>%
 #                   "PlotD_columbia_river_temp_SD_BACI_plot.png"),
 #                   height = 4, width = 6, dpi = 400)
 ```
-# Plot E - Columbia Dam - Temperature upstream vs. downstream - raw data by year
+# Plot E - Columbia Dam - DO upstream vs. downstream - raw data by year
 upstream: TNC_23, downstream: TNC_25 (& 24), in: 80 & 81
 first notch July 2018, completed April 2019
 ```{r}
@@ -1134,4 +1176,176 @@ treedo %>%
 # ggsave(here::here("output/Task3_project_impacts/",
 #                 "PlotM_tree_planting_upstream_within_DOdiff_by_mo_year.png"),
 #                   height = 5, width = 7, dpi = 400)
+```
+# Plot N - Columbia Dam - Turbidity upstream vs. downstream - raw data by year
+upstream: TNC_23, downstream: TNC_25 (& 24), in: 80 & 81
+first notch July 2018, completed April 2019
+```{r}
+colturb %>%
+  select(yearf, value = TNC_25) %>%
+  bind_rows(select(rename(colturb, value = TNC_23), yearf, value)) %>%
+  mutate(site = c(rep("Downstream", 891), rep("Upstream", 891))) %>%
+  ggplot() +
+  geom_boxplot(aes(y = value, x = yearf, fill = site, color = site), 
+               alpha = 0.5
+              ) +
+  theme_bw() +
+  scale_y_log10() +
+  scale_fill_manual(values = c("firebrick", "steelblue")) +
+  scale_color_manual(values = c("firebrick", "steelblue")) +
+  theme(text = element_text(size = 14)) +
+  labs(x = "", y = "Turbidity (NTU)",
+       title = "Columbia Dam", fill = "", color = "") 
+
+
+# ggsave(here::here("output/Task3_project_impacts/",
+#                   "PlotN_columbia_turbidity_up_downstream_by_year.png"),
+#                   height = 4, width = 6, dpi = 400)
+
+```
+# Plot O - Columbia Dam - log turbidity difference, upstream vs. downstream - raw data by year
+upstream: TNC_23, downstream: TNC_25 (& 24), in: 80 & 81
+first notch July 2018, completed April 2019
+```{r}
+colturb %>%
+  ggplot() +
+  geom_abline(intercept = 0, slope = 0, lty = 3, color = "firebrick")  +
+  geom_boxplot(aes(y = d25.23, x = yearf), 
+               fill = "firebrick", alpha = 0.5,
+               color = "firebrick"
+              ) +
+  theme_bw() +
+  theme(text = element_text(size = 14)) +
+  labs(x = "", y = "Difference in log turbitity (NTU)\n(downstream - upstream)",
+       title = "Columbia Dam") 
+
+
+# ggsave(here::here("output/Task3_project_impacts/",
+#                   "PlotO_columbia_turbitity_up_downstream_diff_by_year.png"),
+#                   height = 4, width = 6, dpi = 400)
+
+```
+# PlotP_assessing variability in upstream/downstream turbidity by month/year
+```{r}
+colturb %>%
+  ggplot() +
+  geom_abline(intercept = 0, slope = 0, lty = 3, color = "steelblue")  +
+  geom_boxplot(aes(x = monthf, 
+                y = d25.23), 
+               color = "steelblue", fill = "steelblue",
+               alpha = 0.5) +
+  facet_wrap(~yearf) + 
+  theme_bw() +
+  theme(text = element_text(size = 14),
+        strip.background = element_rect(fill = "white")) +
+  labs(x = "", y = "Difference in log turbidity (NTU)\n(downstream - upstream)",
+       title = "Columbia Dam") +
+  scale_x_discrete(breaks = c(3,6,9,12),
+                     labels = c("Mar","Jun","Sep","Dec"))
+  
+# ggsave(here::here("output/Task3_project_impacts/",
+#                   "PlotP_columbia_turbitity_up_downstream_diff_by_year_mo.png"),
+#                   height = 5, width = 7, dpi = 400)
+```
+# Model E - Columbia Dam Turbidity - downstream/upstream BACI - by stage
+Upstream: TNC_23
+Downstream: TNC_25
+```{r}
+colturb_jags <- colturb %>% 
+  filter(is.na(d25.23) == F,
+         monthf %in% 4:11) %>%
+  droplevels()
+
+colturb_jags_data <- list(
+  N = nrow(colturb_jags),
+  tdiff = colturb_jags$d25.23,
+  stage = as.numeric(as.character(colturb_jags$stage)),
+  year = as.numeric(colturb_jags$yearf),
+  month = as.numeric(as.character(colturb_jags$monthf)),
+  cov.mat = as.matrix(
+    model.matrix(d25.23 ~ stage + monthf ,
+                 data = colturb_jags)[, c(2:10)]
+  )
+)
+
+colturb_jags_mod <- jagsUI::jags(data = colturb_jags_data,
+             model.file = "scripts/columbia_baci.txt",
+             n.iter = 3000, n.burnin = 1000,
+             parameters.to.save = c("mean_pre",
+                                    "mean_dur",
+                                    "mean_post",
+                                    "ba_diff",
+                                    "beta0",
+                                    "beta.cov",
+                                    "sigma",
+                                    "tau",
+                                    "mean_month"),
+             n.chains = 3, parallel = T, n.thin = 1
+             ); colturb_jags_mod
+
+dev.new(6,6);plot(colturb_jags_mod)
+
+
+# jagsUI::traceplot(colturb_jags_mod)
+
+saveRDS(colturb_jags_mod, here("output/Task3_project_impacts/",
+                            "statistical_analysis/",
+                          "ModelE_columbia_jags_turbmod.rds"))
+```
+# Plot Q estimated upstream/downstream tdiff by restoration stage
+```{r}
+
+col_jags_turbmod_ni <- readRDS(here::here("output/Task3_project_impacts/",
+                            "statistical_analysis/",
+                          "ModelE_columbia_jags_turbmod.rds"))
+
+col_turbdiff_plot <- 
+  data.frame(draws = col_jags_turbmod_ni$sims.list$mean_pre,
+           var = "Before\nremoval") %>%
+  bind_rows(
+    data.frame(draws = col_jags_turbmod_ni$sims.list$mean_dur,
+           var = "During\nremoval")) %>%
+  bind_rows(
+  data.frame(draws = col_jags_turbmod_ni$sims.list$mean_post,
+           var = "After\nremoval")) %>%
+  bind_rows(
+  data.frame(draws = col_jags_turbmod_ni$sims.list$ba_diff,
+           var = "change")) %>%
+  group_by(var) %>%
+  summarise(mu = mean(draws),
+            q2.5 = quantile(draws, 0.025),
+            q10 = quantile(draws, 0.1),
+            q50 = quantile(draws, 0.5),
+            q90 = quantile(draws, 0.9),
+            q97.5 = quantile(draws, 0.975)) %>%
+  mutate(order = c(3,1,4,2),
+         var = fct_reorder(var, order))
+
+col_turbdiff_plot %>%
+  filter(var != "change") %>%
+  ggplot() +
+  geom_line(aes(x = var, y = mu, group = 1), 
+            size = .75, lty = 2) +
+  geom_errorbar(aes(x = var, ymin = q10, 
+                    ymax = q90), width = 0, size = 1.5) +
+  geom_errorbar(aes(x = var, ymin = q2.5, 
+                    ymax = q97.5), width = 0, size = .75) +
+  geom_point(aes(x = var, y = mu), size = 4) +
+
+  theme_bw() +
+  theme(text = element_text(size = 14),
+        axis.title.y = element_text(size = 12)) + 
+  annotate("text", x = 2.95, y = 1.46, 
+           label = "Change = +0.05\n(95% CI = -0.13, 0.22)",
+           hjust = .5, color = "darkgray", size = 5) +  
+  # scale_y_continuous(limits = c(-0.05, 0.5)) +
+  geom_hline(yintercept = 0, lty = 2, color = "darkgray") + 
+  labs(x = "", 
+       y = "Difference in log turbidity (NTU)\n(downstream - upstream)",
+       title = "Columbia Dam")
+
+# ggsave(here::here("output/Task3_project_impacts/",
+#                   "PlotQ_columbia_river_turb_BACI_plot.png"),
+#                   height = 4, width = 6, dpi = 400)
+  
 ```
