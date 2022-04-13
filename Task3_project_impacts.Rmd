@@ -245,6 +245,53 @@ turb <- p %>%
                            yearf %in% 2020:2021 ~ 3))
          )
 
+ 
+# Paulina Dam - Temperature
+    # upstream: TNC_18, downstream: TNC_19
+pault <- tdata %>%
+  filter(site %in% c("TNC_18", "TNC_19")) %>%
+  mutate(monthf = as.factor(month)) %>%
+    group_by(site, yearf, monthf, dayf, hourf) %>%
+  summarize(mean_temp = mean(temp),
+            .groups = "drop") %>%
+  group_by(site, yearf, monthf, dayf) %>%
+  summarize(mean_temp = mean(mean_temp),
+            .groups = "drop") %>%
+  tidyr::pivot_wider(names_from = "site", 
+                     values_from = "mean_temp") %>%
+  mutate(d19.18 = TNC_19-TNC_18)
+         
+
+# Paulina Dam - DO
+    # upstream: TNC_18, downstream: TNC_19
+pauldo <- dodata %>%
+  filter(site %in% c("TNC_18", "TNC_19")) %>%
+  mutate(monthf = as.factor(month)) %>%
+    group_by(site, yearf, monthf, dayf, hourf) %>%
+  summarize(mean_do = mean(do),
+            .groups = "drop") %>%
+  group_by(site, yearf, monthf, dayf) %>%
+  summarize(mean_do = mean(mean_do),
+            .groups = "drop") %>%
+  tidyr::pivot_wider(names_from = "site", 
+                     values_from = "mean_do") %>%
+  mutate(d19.18 = TNC_19-TNC_18)
+
+# Paulina Dam - turbidity
+    # upstream: TNC_18, downstream: TNC_19
+paulturb <- turb %>%
+  filter(site %in% c("TNC_18", "TNC_19")) %>%
+  mutate(monthf = as.factor(month)) %>%
+    group_by(site, yearf, monthf, dayf, hourf) %>%
+  summarize(mean_turb = mean(turb),
+            .groups = "drop") %>%
+  group_by(site, yearf, monthf, dayf) %>%
+  summarize(mean_turb = mean(log(mean_turb)),
+            .groups = "drop") %>%
+  tidyr::pivot_wider(names_from = "site", 
+                     values_from = "mean_turb") %>%
+  mutate(d19.18 = TNC_19-TNC_18)
+
 rm(p)
 ```
 # Plot A - Columbia Dam - Temperature upstream vs. downstream - raw data by year
@@ -1130,7 +1177,6 @@ treedo %>%
 #                   "PlotL_tree_planting_up_downstream_DO_diff_by_mo_year.png"),
 #                   height = 5, width = 7, dpi = 400)
 ```
-
 # Plot M - Tree planting - upstream/within DO diff by month/year
 ```{r}
 treedo %>%
@@ -1349,3 +1395,131 @@ col_turbdiff_plot %>%
 #                   height = 4, width = 6, dpi = 400)
   
 ```
+# Plot R - Paulina Dam - Temperature
+TNC_18 and TNC_19 (compare with TNC_13?)
+```{r}
+# summarize daily temp data by month
+tsum_paulina <-  tdata %>%
+    group_by(site, yearf, month, day, dayf) %>%
+  summarise(min_temp = min(temp, na.rm = T),
+            max_temp = max(temp, na.rm = T),
+            mean_temp = mean(temp, na.rm = T),
+            .groups = "drop")  %>%
+  group_by(site, yearf, month) %>%
+  summarize(mean_mean = mean(mean_temp),
+            mean_max = mean(max_temp),
+            mean_min = mean(min_temp),
+            n = length(mean_temp),
+            .groups = "drop") %>%
+  mutate(mid = case_when(month == 3 ~ yday("2021-03-15"),
+                         month == 4 ~ yday("2021-04-15"),
+                         month == 5 ~ yday("2021-05-15"),
+                         month == 6 ~ yday("2021-06-15"),
+                         month == 7 ~ yday("2021-07-15"),
+                         month == 8 ~ yday("2021-08-15"),
+                         month == 9 ~ yday("2021-09-15"),
+                         month == 10 ~ yday("2021-10-15"),
+                         month == 11 ~ yday("2021-11-15")
+                         )) %>%
+  mutate(Month = case_when(month == 4 ~ "April",
+                           month == 5 ~ "May",
+                           month == 6 ~ "June",
+                           month == 7 ~ "July",
+                           month == 8 ~ "August",
+                           month == 9 ~ "September",
+                           month == 10 ~ "October",
+                           month == 11 ~ "November",
+                           month == 12 ~ "December")) %>%
+  filter(site %in% c("TNC_18", "TNC_19")) %>%
+  mutate(site = case_when(site == "TNC_18" ~ "Upstream",
+                          site == "TNC_19" ~ "Downstream"))
+
+tsum_envelope <- tdata %>%
+  group_by(site, day) %>%
+  summarize(multi_min = min(temp),
+            multi_max = max(temp),
+            .groups = "drop") %>%
+  filter(site %in% c("TNC_18", "TNC_19")) %>%
+  mutate(site = case_when(site == "TNC_18" ~ "Upstream",
+                          site == "TNC_19" ~ "Downstream"))
+
+tsum_paulina %>%
+  ggplot() +
+  geom_ribbon(aes(x = day, ymax = multi_max,
+                  ymin = multi_min), 
+              data = filter(tsum_envelope),
+              fill = "gray", alpha = 0.5) +
+  geom_line(aes(x = mid, y = mean_mean, color = yearf), size = .5,
+             shape = 16,
+             position = position_dodge(width = 10)) +      
+  geom_point(aes(x = mid, y = mean_mean, color = yearf), size = 2,
+             shape = 16,
+             position = position_dodge(width = 10)) +
+  theme_minimal() +
+  labs(x = "", y = "Mean monthly temperature",
+       title = "Paulina Dam", color = "") +
+  theme(text = element_text(size = 14),
+        axis.title.y = element_text(size = 12)) +
+    scale_y_continuous(breaks = seq(0,30, by = 10),
+                     limits = c(0,32)) +
+    scale_x_continuous(
+    breaks = c(91, 152, 213, 274, 335),
+    limits = c(82, 339),
+    labels = c("Apr", "Jun", "Aug",
+               "Oct", "Dec")
+  ) +
+  scale_color_manual(values = c(wes_palettes$Royal1,
+                                wes_palettes$Royal2)) +
+  facet_wrap(~site) +
+  geom_text(aes(x = mid, y = mean_mean, label = mes),
+            hjust = 0, size = 3, vjust = 0,
+            color = "darkgray",
+                       data = data.frame(mid = c(100,100),
+                                         mean_mean = c(0.5,0.5),
+                          mes = c("Montly mean:\n0.3 C warmer on average\nRange: 0 - 1.8 C", ""),
+                                         site = c("Downstream",
+                                                  "Upstream")))
+
+monthly_diff <- data.frame(diff = (filter(tsum_paulina, site == "Downstream")$mean_mean -
+  filter(tsum_paulina, site == "Upstream")$mean_mean),
+    month = filter(tsum_paulina, site == "Downstream")$month,
+  year = filter(tsum_paulina, site == "Downstream")$yearf,
+  n = filter(tsum_paulina, site == "Downstream")$n
+) %>% 
+  filter(n>=10)
+
+summary(monthly_diff$diff)
+
+# ggsave(here::here("output/Task3_project_impacts/",
+#                   "PlotR_paulina_dam_upstream_ds_temp.png"),
+#                   height = 4, width = 6.5, dpi = 400)
+```
+# Plot S - Paulina downstream (TNC_19) - upstream (TNC_18)
+Temp, DO, & Turbidity
+```{r}
+
+paulall = mutate(pault, meas = "Temperature") %>%
+  bind_rows(mutate(pauldo, meas = "DO")) %>%
+  bind_rows(mutate(paulturb, meas = "Turbidity"))
+
+paulall %>%
+  group_by(yearf, meas) %>%
+  ggplot() +
+  geom_boxplot(aes(x = yearf, y = d19.18), 
+               color = "steelblue", 
+               fill = "skyblue", alpha = 0.5) +
+  geom_hline(yintercept = 0, lty = 2, color = "darkgray") +
+  facet_wrap(~meas, scales = "free") +
+  theme_bw() +
+  theme(text = element_text(size = 14),
+        axis.text.x = element_text(size = 8),
+        strip.background = element_rect(fill = "white")) +
+  labs(x = "", y = "Difference\n(downstream - upstream)",
+       title = "Paulina Dam")
+
+ggsave(here::here("output/Task3_project_impacts/",
+                  "PlotS_paulina_dam_upstream_ds_all.png"),
+                  height = 4, width = 6.5, dpi = 400)
+
+```
+
