@@ -50,11 +50,17 @@ library(lubridate)
 library(ggplot2)
 library(forcats)
 library(lme4)
+library(ggeffects)
+'%notin%' <- Negate('%in%')
 
 # read in compiled logger data (including flagged data)
 p <- readRDS("output/compiled_logger_data.rds") %>%
   mutate(order = as.numeric(substr(site, 5, 6)),
          site = fct_reorder(site, order))
+
+# list of sites to exclude from "fish season" analyses
+exclude <- c("TNC_2", "TNC_10", "TNC_8", 
+             "TNC_5", "TNC_4", "TNC_28")
 
 # format final compiled temperature data
 tdata <- p %>%
@@ -89,7 +95,8 @@ tdata <- p %>%
          season = as.factor(season))
 
 # summarize data by day
-tsum <- tdata %>%
+tsum_exclude <- tdata %>%
+  filter(site %notin% exclude) %>%
     group_by(site, yearf, month, day, dayf) %>%
   summarise(min_temp = min(temp, na.rm = T),
             max_temp = max(temp, na.rm = T),
@@ -97,7 +104,7 @@ tsum <- tdata %>%
             .groups = "drop") 
 
 # summarize daily temp data by month
-tsum_month <- tsum %>%
+tsum_month_exclude <- tsum_exclude %>%
   group_by(site, yearf, month) %>%
   summarize(mean_mean = mean(mean_temp),
             mean_max = mean(max_temp),
@@ -126,6 +133,7 @@ tsum_month <- tsum %>%
 
 # summarize daily temp data by fish life history season
 tsum_season <- tdata %>%
+  filter(site %notin% exclude) %>%
     group_by(site, yearf, season, day, dayf) %>%
   summarise(min_temp = min(temp, na.rm = T),
             max_temp = max(temp, na.rm = T),
@@ -153,7 +161,8 @@ tsum_season <- tdata %>%
 
 # format final compiled DO data
 dodata <- p %>%
-  filter(FLAG_DO == 0) %>%
+  filter(FLAG_DO == 0,
+         site %notin% exclude) %>%
   mutate(day = yday(datetime),
          month = month(datetime),
          hour = hour(datetime),
@@ -209,6 +218,7 @@ dosum_month <- dosum %>%
 
 # summarize daily DO data by fish life history season
 dosum_season <- dodata %>%
+  filter(site %notin% exclude) %>%
     group_by(site, yearf, season, day, dayf) %>%
   summarise(min_do = min(do, na.rm = T),
             max_do = max(do, na.rm = T),
@@ -320,10 +330,7 @@ tsum_month %>%
 
 ggsave(paste0("output/Task2_WQ_migratory_species/PlotB/PlotB_",i,"_monthly_temps.png"), height = 5, width = 7, dpi = 400)
 }
-
-
 ```
-
 # do monthly and daily
 ```{r}
 sites <- unique(dodata$site)
@@ -603,68 +610,75 @@ save_kable(t_fishseason_table,
 # intercept varying among years and among days within years (nested random effects)
 
 # fit model during migration period
+tdata_migrate <- filter(tdata, is.na(temp)==F,
+                           season == "migrate",
+                        site %notin% exclude)
 temp_mod_migrate <- lmer(temp ~ site + (1 | yearf/dayf), 
-             data = filter(tdata, is.na(temp)==F,
-                           season == "migrate"))
+             data = tdata_migrate)
 summary(temp_mod_migrate)
 
 # fit model during spawning period
+tdata_spawn <- filter(tdata, is.na(temp)==F,
+                           season == "spawn",
+                        site %notin% exclude)
 temp_mod_spawn <- 
   lmer(temp ~ site + (1 | yearf/dayf), 
-             data = filter(tdata, is.na(temp)==F,
-                           season == "spawn"))
+             data = tdata_spawn)
 summary(temp_mod_spawn)
 
 # fit model during larval period
+tdata_lar <- filter(tdata, is.na(temp)==F,
+                           season == "larvae",
+                        site %notin% exclude)
 temp_mod_lar <- 
   lmer(temp ~ site + (1 | yearf/dayf), 
-             data = filter(tdata, is.na(temp)==F,
-                           season == "larvae"))
+             data = tdata_lar)
 summary(temp_mod_lar)
 
 # fit model during juvenile period
+tdata_juv <- filter(tdata, is.na(temp)==F,
+                           season == "juvenile",
+                        site %notin% exclude)
 temp_mod_juv <- 
   lmer(temp ~ site + (1 | yearf/dayf), 
-             data = filter(tdata, is.na(temp)==F,
-                           season == "juvenile"))
+             data = tdata_juv)
 summary(temp_mod_juv)
 
 # fit model during fall migration period
+tdata_fall <- filter(tdata, is.na(temp)==F,
+                           season == "fall_mig",
+                        site %notin% exclude)
 temp_mod_fall <- 
   lmer(temp ~ site + (1 | yearf/dayf), 
-             data = filter(tdata, is.na(temp)==F,
-                           season == "fall_mig"))
+             data = tdata_fall)
 summary(temp_mod_fall)
 
 # make prediction covariate data for migration
 newdat_migrate <- expand.grid(site = unique(tdata$site)) %>%
-  filter(site %in% filter(tdata, is.na(temp)==F,
-                          season == "migrate")$site) %>%
+  filter(site %in% tdata_migrate$site) %>%
   droplevels()
 
 # make prediction covariate data for spawning
 newdat_spawn <- expand.grid(site = unique(tdata$site)) %>%
-  filter(site %in% filter(tdata, is.na(temp)==F,
-                          season == "spawn")$site) %>%
+  filter(site %in% tdata_spawn$site) %>%
   droplevels()
 
 # make prediction covariate data for larvae
 newdat_lar <- expand.grid(site = unique(tdata$site)) %>%
-  filter(site %in% filter(tdata, is.na(temp)==F,
-                          season == "larvae")$site) %>%
+  filter(site %in% tdata_lar$site) %>%
   droplevels()
 
 # make prediction covariate data for juvenile
 newdat_juv <- expand.grid(site = unique(tdata$site)) %>%
-  filter(site %in% filter(tdata, is.na(temp)==F,
-                          season == "juvenile")$site) %>%
+  filter(site %in% tdata_juv$site) %>%
   droplevels()
 
 # make prediction covariate data for fall migration
 newdat_fall <- expand.grid(site = unique(tdata$site)) %>%
-  filter(site %in% filter(tdata, is.na(temp)==F,
-                          season == "fall_mig")$site) %>%
+  filter(site %in% tdata_fall$site) %>%
   droplevels()
+
+rm(tdata_migrate, tdata_spawn, tdata_lar, tdata_juv, tdata_fall)
 ```
 # Generate bootstrapped CI's for predictions
 Warning: very long run time (& juv run needs lots of RAM)
@@ -775,6 +789,7 @@ tplots <- rbind.data.frame(
   mutate(per = fct_rev(per))
 
 tplots %>%
+  filter(site %notin% exclude) %>%
   ggplot() +
   geom_point(aes(y = site, x = fit,
                  ),
@@ -789,19 +804,7 @@ tplots %>%
   scale_x_continuous(breaks = seq(1,28, by = 2))
                       
 ggsave("output/Task2_WQ_migratory_species/PlotG_modeled_mean_temp_by_fish_stage.png", width = 6, height = 4, dpi = 400)
-
-# try Bayesian later...
-# y ~ dnorm(mu, tau)
-# mu ~ site[s] + day[y] + year[y]
-# or in BRMS
-# library(brms)
-# temp_bmod_migrate <- brm(temp ~ site +
-#                        (1 | yearf/dayf),
-#              data = filter(tdata, is.na(temp)==F,
-#                            season== "migrate"))
-# saveRDS(temp_bmod_migrate, "output/Task2_WQ_migratory_species/statistical_analysis/temp_bmod_migrate_stanmod.rds")
 ```
-
 # Modeling year trend in mean temperature within each season
 Note: tried model with correlated random slope & intercept of year by site, uncorrelated, and just intercept. Correlated slope & intercept fit best for all seasons.
 ```{r}
@@ -818,7 +821,8 @@ temp_trend_migrate <- lmerTest::lmer(temp ~ yearn +
                                        (1 | dayf) + 
                                         (yearn | site), 
              data = filter(tdata, is.na(temp)==F,
-                           season == "migrate"))
+                           season == "migrate",
+                           site %notin% exclude))
 summary(temp_trend_migrate)
 ss <- getME(temp_trend_migrate,c("theta","fixef"))
 # get it to converge...
@@ -835,14 +839,16 @@ temp_trend_migrate <- temp_trend_migrate2
 #                                        (1 | dayf) + (1 | site) + 
 #                                         (0 + yearn | site), 
 #              data = filter(tdata, is.na(temp)==F,
-#                            season == "migrate"))
+#                            season == "migrate",
+                           # site %notin% exclude))
 # summary(temp_trend_migrate0)
 # 
 # # just random intercept
 # temp_trend_migrate_int <- lmerTest::lmer(temp ~ yearn + (1 | dayf) +
 #                                        (1 | site), 
 #              data = filter(tdata, is.na(temp)==F,
-#                            season == "migrate"))
+#                            season == "migrate",
+                           # site %notin% exclude))
 # 
 # summary(temp_trend_migrate_int)
 # 
@@ -855,54 +861,70 @@ temp_trend_spawn <-
   lmerTest::lmer(temp ~ yearn + (1 | dayf) +
                    (yearn | site), 
              data = filter(tdata, is.na(temp)==F,
-                           season == "spawn"))
+                           season == "spawn",
+                           site %notin% exclude))
 summary(temp_trend_spawn)
+ss <- getME(temp_trend_spawn,c("theta","fixef"))
+# get it to converge...
+# code from: https://rstudio-pubs-static.s3.amazonaws.com/33653_57fc7b8e5d484c909b615d8633c01d51.html
+temp_trend_spawn2 <- update(temp_trend_spawn,
+             start=ss,
+             control=lmerControl(optimizer="bobyqa",
+                            optCtrl=list(maxfun=2e5)))
+summary(temp_trend_spawn2)
+temp_trend_spawn <- temp_trend_spawn2
 
-temp_trend_spawn0 <- 
-  lmerTest::lmer(temp ~ yearn + (1 | dayf) + 
-                   (1|site) + (0 + yearn | site), 
-             data = filter(tdata, is.na(temp)==F,
-                           season == "spawn"))
-summary(temp_trend_spawn0)
-
-temp_trend_spawn_int <- 
-  lmerTest::lmer(temp ~ yearn + (1 | dayf) + 
-                   (1|site), 
-             data = filter(tdata, is.na(temp)==F,
-                           season == "spawn"))
-summary(temp_trend_spawn_int)
-
-anova(temp_trend_spawn, 
-      temp_trend_spawn0, 
-      temp_trend_spawn_int)
+# temp_trend_spawn0 <- 
+#   lmerTest::lmer(temp ~ yearn + (1 | dayf) + 
+#                    (1|site) + (0 + yearn | site), 
+#              data = filter(tdata, is.na(temp)==F,
+#                            season == "spawn",
+#                            site %notin% exclude))
+# summary(temp_trend_spawn0)
+# 
+# temp_trend_spawn_int <- 
+#   lmerTest::lmer(temp ~ yearn + (1 | dayf) + 
+#                    (1|site), 
+#              data = filter(tdata, is.na(temp)==F,
+#                            season == "spawn",
+#                            site %notin% exclude))
+# summary(temp_trend_spawn_int)
+# 
+# anova(temp_trend_spawn, 
+#       temp_trend_spawn0, 
+#       temp_trend_spawn_int)
 
 # fit model during larval period
 temp_trend_lar <- 
   lmerTest::lmer(temp ~ yearn + (1 | dayf) + (yearn | site), 
              data = filter(tdata, is.na(temp)==F,
-                           season == "larvae"))
+                           season == "larvae",
+                           site %notin% exclude))
 summary(temp_trend_lar)
 
-temp_trend_lar0 <- 
-  lmerTest::lmer(temp ~ yearn + (1 | dayf) + (1|site) + 
-                   (0 + yearn | site), 
-             data = filter(tdata, is.na(temp)==F,
-                           season == "larvae"))
-summary(temp_trend_lar0)
-
-temp_trend_lar_int <- 
-  lmerTest::lmer(temp ~ yearn + (1 | dayf) + (1|site), 
-             data = filter(tdata, is.na(temp)==F,
-                           season == "larvae"))
-summary(temp_trend_lar_int)
-
-anova(temp_trend_lar, temp_trend_lar0, temp_trend_lar_int)
+# temp_trend_lar0 <- 
+#   lmerTest::lmer(temp ~ yearn + (1 | dayf) + (1|site) + 
+#                    (0 + yearn | site), 
+#              data = filter(tdata, is.na(temp)==F,
+#                            season == "larvae",
+#                            site %notin% exclude))
+# summary(temp_trend_lar0)
+# 
+# temp_trend_lar_int <- 
+#   lmerTest::lmer(temp ~ yearn + (1 | dayf) + (1|site), 
+#              data = filter(tdata, is.na(temp)==F,
+#                            season == "larvae",
+#                            site %notin% exclude))
+# summary(temp_trend_lar_int)
+# 
+# anova(temp_trend_lar, temp_trend_lar0, temp_trend_lar_int)
 
 # fit model during juvenile period
 temp_trend_juv <- 
   lmerTest::lmer(temp ~ yearn + (1 | dayf) + (yearn | site), 
              data = filter(tdata, is.na(temp)==F,
-                           season == "juvenile"))
+                           season == "juvenile",
+                           site %notin% exclude))
 summary(temp_trend_juv)
 # get it to converge...
 ss <- getME(temp_trend_juv, c("theta","fixef"))
@@ -914,62 +936,65 @@ summary(temp_trend_juv2)
 temp_trend_juv <- temp_trend_juv2
 # aa <- allFit(temp_trend_lar)
 
-temp_trend_juv0 <- 
-  lmerTest::lmer(temp ~ yearn + (1 | dayf) + 
-                   (1|site) + (0 + yearn | site), 
-             data = filter(tdata, is.na(temp)==F,
-                           season == "juvenile"))
-
-summary(temp_trend_juv0)
-
-temp_trend_juv_int <- 
-  lmerTest::lmer(temp ~ yearn + (1 | dayf) + 
-                   (1|site), 
-             data = filter(tdata, is.na(temp)==F,
-                           season == "juvenile"))
-
-summary(temp_trend_juv_int)
-
-anova(temp_trend_juv, 
-      temp_trend_juv0, 
-      temp_trend_juv_int)
+# temp_trend_juv0 <- 
+#   lmerTest::lmer(temp ~ yearn + (1 | dayf) + 
+#                    (1|site) + (0 + yearn | site), 
+#              data = filter(tdata, is.na(temp)==F,
+#                            season == "juvenile",
+#                            site %notin% exclude))
+# 
+# summary(temp_trend_juv0)
+# 
+# temp_trend_juv_int <- 
+#   lmerTest::lmer(temp ~ yearn + (1 | dayf) + 
+#                    (1|site), 
+#              data = filter(tdata, is.na(temp)==F,
+#                            season == "juvenile",
+#                            site %notin% exclude))
+# 
+# summary(temp_trend_juv_int)
+# 
+# anova(temp_trend_juv, 
+#       temp_trend_juv0, 
+#       temp_trend_juv_int)
 
 # fit model during fall migration period
 temp_trend_fall <- 
   lmerTest::lmer(temp ~ yearn + (1 | dayf) + (yearn | site), 
              data = filter(tdata, is.na(temp)==F,
-                           season == "fall_mig"))
+                           season == "fall_mig",
+                           site %notin% exclude))
 summary(temp_trend_fall)
 
 temp_trend_fall_noday <- 
   lmerTest::lmer(temp ~ yearn + (yearn | site), 
              data = filter(tdata, is.na(temp)==F,
-                           season == "fall_mig"))
+                           season == "fall_mig",
+                           site %notin% exclude))
 summary(temp_trend_fall_noday)
 
-temp_trend_fall0 <- 
-  lmerTest::lmer(temp ~ yearn + (1 | dayf) + (1|site) +
-                   (0 + yearn|site), 
-             data = filter(tdata, is.na(temp)==F,
-                           season == "fall_mig"))
-summary(temp_trend_fall0)
-
-temp_trend_fall_int <- 
-  lmerTest::lmer(temp ~ yearn + (1 | dayf) + (1 | site), 
-             data = filter(tdata, is.na(temp)==F,
-                           season == "fall_mig"))
-summary(temp_trend_fall_int)
-
-anova(temp_trend_fall,
-      temp_trend_fall_noday,
-      temp_trend_fall0, 
-      temp_trend_fall_int)
+# temp_trend_fall0 <- 
+#   lmerTest::lmer(temp ~ yearn + (1 | dayf) + (1|site) +
+#                    (0 + yearn|site), 
+#              data = filter(tdata, is.na(temp)==F,
+#                            season == "fall_mig",
+#                            site %notin% exclude))
+# summary(temp_trend_fall0)
+# 
+# temp_trend_fall_int <- 
+#   lmerTest::lmer(temp ~ yearn + (1 | dayf) + (1 | site), 
+#              data = filter(tdata, is.na(temp)==F,
+#                            season == "fall_mig",
+#                            site %notin% exclude))
+# summary(temp_trend_fall_int)
+# 
+# anova(temp_trend_fall,
+#       temp_trend_fall_noday,
+#       temp_trend_fall0, 
+#       temp_trend_fall_int)
 ```
 # Plot temperature trends across sites
 ```{r}
-
-library(ggeffects)
-
 migrate_temp_trend_df <- 
   ggpredict(temp_trend_migrate, terms = "yearn")
 spawn_temp_trend_df <- 
@@ -1139,7 +1164,7 @@ ggsave("output/Task2_WQ_migratory_species/PlotK_mean_temperature_trends_juvenile
                 width = 0,
                 data = filter(season_pts, season == "fall_mig")) +
   theme_bw() +
-  scale_y_continuous(limits = c(10, 19.5)) +
+  scale_y_continuous(limits = c(10, 20.5)) +
     scale_x_continuous(breaks = 1:6,
                        labels = 2016:2021) +
     labs(x = "", 
@@ -1166,10 +1191,6 @@ gg <- gridExtra::arrangeGrob(migrate_temp_plot,
 
 ggsave("output/Task2_WQ_migratory_species/PlotM_mean_temperature_trends_all_stages.png", plot = gg, width = 10, height = 10, dpi = 400)
 ```
-
-
-
-
 # Modeling year trend in mean DO within each season
 Note: tried model with correlated random slope & intercept of year by site, uncorrelated, and just intercept. Correlated slope & intercept fit best for all seasons.
 ```{r}
@@ -1184,26 +1205,35 @@ do_trend_migrate <- lmerTest::lmer(do ~ yearn +
              data = filter(dodata, is.na(do)==F,
                            season == "migrate"))
 summary(do_trend_migrate)
+ss <- getME(do_trend_migrate, c("theta","fixef"))
+# get it to converge...
+# code from: https://rstudio-pubs-static.s3.amazonaws.com/33653_57fc7b8e5d484c909b615d8633c01d51.html
+do_trend_migrate2 <- update(do_trend_migrate,
+             start=ss,
+             control=lmerControl(optimizer="bobyqa",
+                            optCtrl=list(maxfun=2e5)))
+summary(do_trend_migrate2)
+do_trend_migrate <- do_trend_migrate2
 
 # uncorrelated random slope & intercept
-do_trend_migrate0 <- lmerTest::lmer(do ~ yearn + 
-                                       dayf + (1 | site) + 
-                                        (0 + yearn | site), 
-             data = filter(dodata, is.na(do)==F,
-                           season == "migrate"))
-summary(do_trend_migrate0)
+# do_trend_migrate0 <- lmerTest::lmer(do ~ yearn + 
+#                                        dayf + (1 | site) + 
+#                                         (0 + yearn | site), 
+#              data = filter(dodata, is.na(do)==F,
+#                            season == "migrate"))
+# summary(do_trend_migrate0)
 
 # just random intercept
-do_trend_migrate_int <- lmerTest::lmer(do ~ yearn + dayf +
-                                       (1 | site), 
-             data = filter(dodata, is.na(do)==F,
-                           season == "migrate"))
-
-summary(do_trend_migrate_int)
-
-anova(do_trend_migrate, 
-      do_trend_migrate0, 
-      do_trend_migrate_int)
+# do_trend_migrate_int <- lmerTest::lmer(do ~ yearn + dayf +
+#                                        (1 | site), 
+#              data = filter(dodata, is.na(do)==F,
+#                            season == "migrate"))
+# 
+# summary(do_trend_migrate_int)
+# 
+# anova(do_trend_migrate, 
+#       do_trend_migrate0, 
+#       do_trend_migrate_int)
 
 # fit model during spawning period
 do_trend_spawn <- 
@@ -1212,23 +1242,23 @@ do_trend_spawn <-
                            season == "spawn"))
 summary(do_trend_spawn)
 
-do_trend_spawn0 <- 
-  lmerTest::lmer(do ~ yearn + dayf + 
-                   (1|site) + (0 + yearn | site), 
-             data = filter(dodata, is.na(do)==F,
-                           season == "spawn"))
-summary(do_trend_spawn0)
-
-do_trend_spawn_int <- 
-  lmerTest::lmer(do ~ yearn + dayf + 
-                   (1|site), 
-             data = filter(dodata, is.na(do)==F,
-                           season == "spawn"))
-summary(do_trend_spawn_int)
-
-anova(do_trend_spawn, 
-      do_trend_spawn0, 
-      do_trend_spawn_int)
+# do_trend_spawn0 <- 
+#   lmerTest::lmer(do ~ yearn + dayf + 
+#                    (1|site) + (0 + yearn | site), 
+#              data = filter(dodata, is.na(do)==F,
+#                            season == "spawn"))
+# summary(do_trend_spawn0)
+# 
+# do_trend_spawn_int <- 
+#   lmerTest::lmer(do ~ yearn + dayf + 
+#                    (1|site), 
+#              data = filter(dodata, is.na(do)==F,
+#                            season == "spawn"))
+# summary(do_trend_spawn_int)
+# 
+# anova(do_trend_spawn, 
+#       do_trend_spawn0, 
+#       do_trend_spawn_int)
 
 # fit model during larval period
 do_trend_lar <-
@@ -1238,24 +1268,24 @@ do_trend_lar <-
 summary(do_trend_lar)
 
 # uncorrelated random slope & intercept
-do_trend_lar0 <- lmerTest::lmer(do ~ yearn + 
-                                       (1|dayf) + (1 | site) + 
-                                        (0 + yearn | site), 
-             data = filter(dodata, is.na(do)==F,
-                           season == "larvae"))
-summary(do_trend_migrate0)
-
-# just random intercept
-do_trend_lar_int <- lmerTest::lmer(do ~ yearn + (1|dayf) +
-                                       (1 | site), 
-             data = filter(dodata, is.na(do)==F,
-                           season == "larvae"))
-
-summary(do_trend_lar_int)
-
-anova(do_trend_lar, 
-      do_trend_lar0, 
-      do_trend_lar_int)
+# do_trend_lar0 <- lmerTest::lmer(do ~ yearn + 
+#                                        (1|dayf) + (1 | site) + 
+#                                         (0 + yearn | site), 
+#              data = filter(dodata, is.na(do)==F,
+#                            season == "larvae"))
+# summary(do_trend_migrate0)
+# 
+# # just random intercept
+# do_trend_lar_int <- lmerTest::lmer(do ~ yearn + (1|dayf) +
+#                                        (1 | site), 
+#              data = filter(dodata, is.na(do)==F,
+#                            season == "larvae"))
+# 
+# summary(do_trend_lar_int)
+# 
+# anova(do_trend_lar, 
+#       do_trend_lar0, 
+#       do_trend_lar_int)
 
 # fit model during juvenile period
 do_trend_juv <- 
@@ -1263,36 +1293,26 @@ do_trend_juv <-
              data = filter(dodata, is.na(do)==F,
                            season == "juvenile"))
 summary(do_trend_juv)
-ss <- getME(do_trend_juv, c("theta","fixef"))
-# get it to converge...
-# code from: https://rstudio-pubs-static.s3.amazonaws.com/33653_57fc7b8e5d484c909b615d8633c01d51.html
-do_trend_juv2 <- update(do_trend_juv,
-             start=ss,
-             control=lmerControl(optimizer="bobyqa",
-                            optCtrl=list(maxfun=2e5)))
-summary(do_trend_juv2)
-do_trend_juv <- do_trend_juv2
-# aa <- allFit(do_trend_juv)
 
-do_trend_juv0 <- 
-  lmerTest::lmer(do ~ yearn + (1|dayf) + 
-                   (1|site) + (0 + yearn | site), 
-             data = filter(dodata, is.na(do)==F,
-                           season == "juvenile"))
-
-summary(do_trend_juv0)
-
-do_trend_juv_int <- 
-  lmerTest::lmer(do ~ yearn + (1|dayf) + 
-                   (1|site), 
-             data = filter(dodata, is.na(do)==F,
-                           season == "juvenile"))
-
-summary(do_trend_juv_int)
-
-anova(do_trend_juv, 
-      do_trend_juv0, 
-      do_trend_juv_int)
+# do_trend_juv0 <- 
+#   lmerTest::lmer(do ~ yearn + (1|dayf) + 
+#                    (1|site) + (0 + yearn | site), 
+#              data = filter(dodata, is.na(do)==F,
+#                            season == "juvenile"))
+# 
+# summary(do_trend_juv0)
+# 
+# do_trend_juv_int <- 
+#   lmerTest::lmer(do ~ yearn + (1|dayf) + 
+#                    (1|site), 
+#              data = filter(dodata, is.na(do)==F,
+#                            season == "juvenile"))
+# 
+# summary(do_trend_juv_int)
+# 
+# anova(do_trend_juv, 
+#       do_trend_juv0, 
+#       do_trend_juv_int)
 
 # fit model during fall migration period
 do_trend_fall <- 
@@ -1301,6 +1321,7 @@ do_trend_fall <-
                            season == "fall_mig"))
 summary(do_trend_fall)
 
+# this is to plot dashed line showing model without day correction
 do_trend_fall_noday <- 
   lmerTest::lmer(do ~ yearn + (yearn | site), 
              data = filter(dodata, is.na(do)==F,
@@ -1330,17 +1351,12 @@ do_trend_fall_int <-
                            season == "fall_mig"))
 summary(do_trend_fall_int)
 
-anova(temp_trend_fall, 
-      temp_trend_fall0, 
-      temp_trend_fall_int)
-
-
+anova(do_trend_fall, 
+      do_trend_fall0, 
+      do_trend_fall_int)
 ```
 # Plot temperature trends across sites
 ```{r}
-
-library(ggeffects)
-
 migrate_do_trend_df <- 
   ggpredict(do_trend_migrate, terms = "yearn")
 spawn_do_trend_df <- 
