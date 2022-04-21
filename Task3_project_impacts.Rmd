@@ -46,6 +46,7 @@ library(ggplot2)
 library(forcats)
 # library(lme4)
 library(here)
+'%notin%' <- Negate('%in%')
 task_path <- "output/Task3_project_impacts/"
 
 # read in compiled logger data (including flagged data)
@@ -1517,9 +1518,246 @@ paulall %>%
   labs(x = "", y = "Difference\n(downstream - upstream)",
        title = "Paulina Dam")
 
-ggsave(here::here("output/Task3_project_impacts/",
-                  "PlotS_paulina_dam_upstream_ds_all.png"),
-                  height = 4, width = 6.5, dpi = 400)
+# ggsave(here::here("output/Task3_project_impacts/",
+#                   "PlotS_paulina_dam_upstream_ds_all.png"),
+#                   height = 4, width = 6.5, dpi = 400)
 
 ```
+# Plot T - Hyper Humus - Temperature & DO
+TNC_2 (compared with other site means)
+```{r}
+# summarize daily temp data by month
+tsum_hyper <-  tdata %>%
+    group_by(site, yearf, month, day, dayf) %>%
+  summarise(min_temp = min(temp, na.rm = T),
+            max_temp = max(temp, na.rm = T),
+            mean_temp = mean(temp, na.rm = T),
+            .groups = "drop")  %>%
+  group_by(site, yearf, month) %>%
+  summarize(mean_mean = mean(mean_temp),
+            mean_max = mean(max_temp),
+            mean_min = mean(min_temp),
+            n = length(mean_temp),
+            .groups = "drop") %>%
+  filter(n >= 2) %>%
+  mutate(mid = case_when(month == 3 ~ yday("2021-03-15"),
+                         month == 4 ~ yday("2021-04-15"),
+                         month == 5 ~ yday("2021-05-15"),
+                         month == 6 ~ yday("2021-06-15"),
+                         month == 7 ~ yday("2021-07-15"),
+                         month == 8 ~ yday("2021-08-15"),
+                         month == 9 ~ yday("2021-09-15"),
+                         month == 10 ~ yday("2021-10-15"),
+                         month == 11 ~ yday("2021-11-15")
+                         )) %>%
+  mutate(Month = case_when(month == 4 ~ "April",
+                           month == 5 ~ "May",
+                           month == 6 ~ "June",
+                           month == 7 ~ "July",
+                           month == 8 ~ "August",
+                           month == 9 ~ "September",
+                           month == 10 ~ "October",
+                           month == 11 ~ "November",
+                           month == 12 ~ "December")) %>%
+  filter(month %notin% c(4,11))
 
+# summarize daily temp data by month
+dosum_hyper <-  dodata %>%
+    group_by(site, yearf, month, day, dayf) %>%
+  summarise(min_do = min(do, na.rm = T),
+            max_do = max(do, na.rm = T),
+            mean_do = mean(do, na.rm = T),
+            .groups = "drop")  %>%
+  group_by(site, yearf, month) %>%
+  summarize(mean_mean = mean(mean_do),
+            mean_max = mean(max_do),
+            mean_min = mean(min_do),
+            n = length(mean_do),
+            .groups = "drop") %>%
+  filter(n >= 2) %>%
+  mutate(mid = case_when(month == 3 ~ yday("2021-03-15"),
+                         month == 4 ~ yday("2021-04-15"),
+                         month == 5 ~ yday("2021-05-15"),
+                         month == 6 ~ yday("2021-06-15"),
+                         month == 7 ~ yday("2021-07-15"),
+                         month == 8 ~ yday("2021-08-15"),
+                         month == 9 ~ yday("2021-09-15"),
+                         month == 10 ~ yday("2021-10-15"),
+                         month == 11 ~ yday("2021-11-15")
+                         )) %>%
+  mutate(Month = case_when(month == 4 ~ "April",
+                           month == 5 ~ "May",
+                           month == 6 ~ "June",
+                           month == 7 ~ "July",
+                           month == 8 ~ "August",
+                           month == 9 ~ "September",
+                           month == 10 ~ "October",
+                           month == 11 ~ "November",
+                           month == 12 ~ "December")) %>%
+  filter(month %notin% c(4,11))
+
+tsum_hyper %>%
+  filter(site == "TNC_2") %>%
+  ggplot() +
+  geom_line(aes(x = mid, y = mean_mean, #, color = yearf, 
+                group = site),
+              data = tsum_hyper,
+            color = wes_palettes$Royal1[2],
+              alpha = 0.5) +
+  geom_line(aes(x = mid, y = mean_mean, #, color = yearf, 
+                group = site),
+              data = dosum_hyper,
+            color = wes_palettes$Royal1[1],
+              alpha = 0.5) +
+  geom_line(aes(x = mid, y = mean_mean), size = .5,
+            color = "black") +      
+  geom_point(aes(x = mid, y = mean_mean), size = 2,
+             shape = 21, fill = wes_palettes$Royal1[2]) +
+  geom_line(aes(x = mid, y = mean_mean), size = .5,
+            color = "black",
+            data = filter(dosum_hyper, site == "TNC_2")) +      
+  geom_point(aes(x = mid, y = mean_mean), size = 2,
+             shape = 21, fill = wes_palettes$Royal1[1],
+             data = filter(dosum_hyper, site == "TNC_2")) +
+  theme_minimal() +
+  labs(x = "", y = "Mean monthly temperature (C)\n or dissolved oxygen (mg/L)",
+       title = "Hyper Humus", color = "") +
+  theme(text = element_text(size = 14),
+        axis.title.y = element_text(size = 12)) +
+    scale_y_continuous(breaks = seq(0,30, by = 10),
+                     limits = c(0,26)) +
+    scale_x_continuous(
+    breaks = c(91, 152, 213, 274, 335),
+    limits = c(112, 309),
+    labels = c("Apr", "Jun", "Aug",
+               "Oct", "Dec")
+  ) +
+  facet_wrap(~yearf) +
+  guides(fill = "none", color = "none")
+
+# ggsave(here::here(task_path,
+#               "PlotT_hyperhumus_downstream_temp_do.png"),
+#                   height = 4, width = 6.5, dpi = 400)
+
+rm(tsum_hyper, dosum_hyper)
+```
+# Plot U - County Line Dam - Temperature & DO
+TNC_9 (compared with other site means)
+```{r}
+# summarize daily temp data by month
+tsum_county <-  tdata %>%
+    group_by(site, yearf, month, day, dayf) %>%
+  summarise(min_temp = min(temp, na.rm = T),
+            max_temp = max(temp, na.rm = T),
+            mean_temp = mean(temp, na.rm = T),
+            .groups = "drop")  %>%
+  group_by(site, yearf, month) %>%
+  summarize(mean_mean = mean(mean_temp),
+            mean_max = mean(max_temp),
+            mean_min = mean(min_temp),
+            n = length(mean_temp),
+            .groups = "drop") %>%
+  filter(n >= 2) %>%
+  mutate(mid = case_when(month == 3 ~ yday("2021-03-15"),
+                         month == 4 ~ yday("2021-04-15"),
+                         month == 5 ~ yday("2021-05-15"),
+                         month == 6 ~ yday("2021-06-15"),
+                         month == 7 ~ yday("2021-07-15"),
+                         month == 8 ~ yday("2021-08-15"),
+                         month == 9 ~ yday("2021-09-15"),
+                         month == 10 ~ yday("2021-10-15"),
+                         month == 11 ~ yday("2021-11-15")
+                         )) %>%
+  mutate(Month = case_when(month == 4 ~ "April",
+                           month == 5 ~ "May",
+                           month == 6 ~ "June",
+                           month == 7 ~ "July",
+                           month == 8 ~ "August",
+                           month == 9 ~ "September",
+                           month == 10 ~ "October",
+                           month == 11 ~ "November",
+                           month == 12 ~ "December")) %>%
+  filter(month %notin% c(4,11),
+         as.numeric(as.character(yearf)) < 2018)
+
+# summarize daily temp data by month
+dosum_county <-  dodata %>%
+    group_by(site, yearf, month, day, dayf) %>%
+  summarise(min_do = min(do, na.rm = T),
+            max_do = max(do, na.rm = T),
+            mean_do = mean(do, na.rm = T),
+            .groups = "drop")  %>%
+  group_by(site, yearf, month) %>%
+  summarize(mean_mean = mean(mean_do),
+            mean_max = mean(max_do),
+            mean_min = mean(min_do),
+            n = length(mean_do),
+            .groups = "drop") %>%
+  filter(n >= 2) %>%
+  mutate(mid = case_when(month == 3 ~ yday("2021-03-15"),
+                         month == 4 ~ yday("2021-04-15"),
+                         month == 5 ~ yday("2021-05-15"),
+                         month == 6 ~ yday("2021-06-15"),
+                         month == 7 ~ yday("2021-07-15"),
+                         month == 8 ~ yday("2021-08-15"),
+                         month == 9 ~ yday("2021-09-15"),
+                         month == 10 ~ yday("2021-10-15"),
+                         month == 11 ~ yday("2021-11-15")
+                         )) %>%
+  mutate(Month = case_when(month == 4 ~ "April",
+                           month == 5 ~ "May",
+                           month == 6 ~ "June",
+                           month == 7 ~ "July",
+                           month == 8 ~ "August",
+                           month == 9 ~ "September",
+                           month == 10 ~ "October",
+                           month == 11 ~ "November",
+                           month == 12 ~ "December")) %>%
+  filter(month %notin% c(4,11),
+         as.numeric(as.character(yearf)) < 2018)
+
+tsum_county %>%
+  filter(site == "TNC_9") %>%
+  ggplot() +
+  geom_line(aes(x = mid, y = mean_mean, #, color = yearf, 
+                group = site),
+              data = tsum_county,
+            color = wes_palettes$Royal1[2],
+              alpha = 0.5) +
+  geom_line(aes(x = mid, y = mean_mean, #, color = yearf, 
+                group = site),
+              data = dosum_county,
+            color = wes_palettes$Royal1[1],
+              alpha = 0.5) +
+  geom_line(aes(x = mid, y = mean_mean), size = .5,
+            color = "black") +      
+  geom_point(aes(x = mid, y = mean_mean), size = 2,
+             shape = 21, fill = wes_palettes$Royal1[2]) +
+  geom_line(aes(x = mid, y = mean_mean), size = .5,
+            color = "black",
+            data = filter(dosum_county, site == "TNC_9")) +      
+  geom_point(aes(x = mid, y = mean_mean), size = 2,
+             shape = 21, fill = wes_palettes$Royal1[1],
+             data = filter(dosum_county, site == "TNC_9")) +
+  theme_minimal() +
+  labs(x = "", y = "Mean monthly temperature (C)\n or dissolved oxygen (mg/L)",
+       title = "County Line Dam", color = "") +
+  theme(text = element_text(size = 14),
+        axis.title.y = element_text(size = 12)) +
+    scale_y_continuous(breaks = seq(0,30, by = 10),
+                     limits = c(0,26)) +
+    scale_x_continuous(
+    breaks = c(91, 152, 213, 274, 335),
+    limits = c(112, 309),
+    labels = c("Apr", "Jun", "Aug",
+               "Oct", "Dec")
+  ) +
+  facet_wrap(~yearf) +
+  guides(fill = "none", color = "none")
+
+ggsave(here::here(task_path,
+              "PlotU_countyline_dam_downstream_temp_do.png"),
+                  height = 3.5, width = 4.5, dpi = 400)
+
+rm(tsum_county, dosum_county)
+```
