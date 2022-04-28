@@ -115,17 +115,54 @@ inv <- inv16 %>%
 rm(inv16, inv17, inv18, inv19)
 ```
 
-#PlotA - data visualization of index components
-Scatterplot matrix
+# Plot A - dot plot of overall index average by site/year
 ```{r}
 
+inv %>%
+  group_by(tnc_code) %>%
+  summarize(index_mean = mean(index),
+            min = min(index),
+            max = max(index),
+            n = length(index)) %>%
+  mutate(n2 = paste0(c(rep("",20),"n = "), n)) %>%
+  ggplot() +
+  geom_errorbar(aes(xmin = min, xmax = max, y = tnc_code),
+                width = 0, color = "black",
+                size = .75) +  
+  geom_point(aes(x = index_mean, y = tnc_code),
+             size = 3, fill = "skyblue", shape = 21) +
+
+  theme_bw() +
+  labs(y = "", x = "Overall Macroinvertebrate Index") +
+  geom_text(aes(x = 110, y = tnc_code, label = n2),
+            color = "darkgray", hjust = 1)
+
+ggsave(here(task_path, 
+            "PlotA_mean_macroinvertebrate_index_by_site.png"),
+       height = 4, width = 3, dpi = 400)
+```
+# Macroinvertebrate index table1
+values by site & year
+```{r}
+
+```
+
+# Macroinvertebrate index table2
+mean/sd/min/max/n values by site
+```{r}
+
+```
+#Plot (not saved) - data visualization of index components
+Scatterplot matrix to inspect data
+```{r}
 library(GGally)
 
 # ggpairs plot. Found code here:
 # https://www.r-bloggers.com/2016/02/multiple-regression-lines-in-ggpairs/
 my_smooth_fn <- function(data, mapping, ...){
-  p <- ggplot(data = data, mapping = mapping, color = tnc_code) + 
-    geom_point(alpha = 0.5, shape = 1, size = 1) + #color = "steelblue", 
+  p <- ggplot(data = data, mapping = mapping) + 
+    geom_point(color = "steelblue", alpha = 0.5, 
+               shape = 1, size = 1) + 
     # geom_density_2d(color = "black", size = 0.5, alpha = 0.5) +
     geom_smooth(method=loess, fill="steelblue", color="black", size = 0.5, ...)
   p
@@ -154,44 +191,6 @@ g = ggpairs(inv, columns = 3:9,
   theme_bw()
 g
 ```
-# Dot plot of overall index by site/year
-```{r}
-
-inv %>%
-  group_by(tnc_code) %>%
-  summarize(index_mean = mean(index),
-            min = min(index),
-            max = max(index),
-            n = length(index)) %>%
-  mutate(n2 = paste0(c(rep("",20),"n = "), n)) %>%
-  ggplot() +
-  geom_errorbar(aes(xmin = min, xmax = max, y = tnc_code),
-                width = 0, color = "black",
-                size = .75) +  
-  geom_point(aes(x = index_mean, y = tnc_code),
-             size = 3, fill = "skyblue", shape = 21) +
-
-  theme_bw() +
-  labs(y = "", x = "Overall Macroinvertebrate Index") +
-  geom_text(aes(x = 110, y = tnc_code, label = n2),
-            color = "darkgray", hjust = 1)
-
-ggsave(here(task_path, 
-            "PlotB_mean_macroinvertebrate_index_by_site.png"),
-       height = 4, width = 3, dpi = 400)
-```
-# Macroinvertebrate index table1
-values by site & year
-```{r}
-
-```
-
-# Macroinvertebrate index table2
-mean/sd/min/max/n values by site
-```{r}
-
-```
-
 # Plot C - Spiderweb plot of macroinvertebrate index
 Code from: https://r-graph-gallery.com/142-basic-radar-chart.html
 ```{r}
