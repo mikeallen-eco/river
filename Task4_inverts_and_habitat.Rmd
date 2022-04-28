@@ -1,0 +1,225 @@
+---
+title: "Invertebrates"
+author: "Mike Allen"
+date: "4/28/2022"
+output: html_document
+---
+# Task 4: Macroinvertebrates and quality scores
+a. Visualize and perform statistical analysis of macroinvertebrate and EPA Habitat Assessment scores, including assessing spatial patterns and temporal trends. 
+
+1. Where do sites fall on the optimum/excellent to poor spectrum? 
+2. How are scores changing over time at the level of the
+individual site and within the broader network as a whole?
+
+b. How are the individual component metrics contributing to the resulting macroinvertebrate and EPA Habitat Assessment scores at the sites? 
+
+For example, are all “Poor” sites classified as such for
+the same reason or are there a range of contributing factors?
+
+# Load libraries and read in data
+```{r}
+library(readxl)
+library(dplyr)
+library(ggplot2)
+library(here)
+library(lubridate)
+library(forcats)
+task_path <- "output/Task4_inverts_and_habitat/"
+
+inv16 <- read_xlsx(here("other",
+                        "Macro_Habitat_data_dl_20220428",
+                        "macro_habitat_data_2016_2017.xlsx"),
+                   skip = 2, 
+                   sheet = "macro_2016"
+                   ) %>%
+  select(c(3,4,32:40)) %>%
+  rename(num_gen = 3,
+         pct_noninsect = 4,
+         pct_ept = 5,
+         num_scraper = 6,
+         hilsenhoff = 7,
+         num_talu2 = 8,
+         num_talu3 = 9,
+         index = 10,
+         rating = 11
+         )
+
+inv17 <- read_xlsx(here("other",
+                        "Macro_Habitat_data_dl_20220428",
+                        "macro_habitat_data_2016_2017.xlsx"),
+                   skip = 3, 
+                   sheet = "macro_2017"
+                   ) %>%
+  select(c(3,4,32:40)) %>%
+  rename(tnc_code = 1,
+         date = 2,
+         num_gen = 3,
+         pct_noninsect = 4,
+         pct_ept = 5,
+         num_scraper = 6,
+         hilsenhoff = 7,
+         num_talu2 = 8,
+         num_talu3 = 9,
+         index = 10,
+         rating = 11
+         )
+ 
+inv18 <- read_xlsx(here("other",
+                        "Macro_Habitat_data_dl_20220428",
+                        "macro_habitat_data_2018_2019.xlsx"),
+                   skip = 3, 
+                   sheet = "macro_2018"
+                   ) %>%
+  select(c(3,4,32:40)) %>%
+  rename(tnc_code = 1,
+         date = 2,
+         num_gen = 3,
+         pct_noninsect = 4,
+         pct_ept = 5,
+         num_scraper = 6,
+         hilsenhoff = 7,
+         num_talu2 = 8,
+         num_talu3 = 9,
+         index = 10,
+         rating = 11
+         ) %>%
+  filter(is.na(tnc_code) == F)
+
+inv19 <- read_xlsx(here("other",
+                        "Macro_Habitat_data_dl_20220428",
+                        "macro_habitat_data_2018_2019.xlsx"),
+                   skip = 2, 
+                   sheet = "macro_2019"
+                   ) %>%
+  select(c(3,4,32:40)+1) %>%
+  rename(num_gen = 3,
+         pct_noninsect = 4,
+         pct_ept = 5,
+         num_scraper = 6,
+         hilsenhoff = 7,
+         num_talu2 = 8,
+         num_talu3 = 9,
+         index = 10,
+         rating = 11
+         )
+
+inv <- inv16 %>%
+  bind_rows(inv17) %>%
+  bind_rows(inv18) %>%
+  bind_rows(inv19) %>%
+  mutate(year = year(date),
+         yearf = as.factor(year)) %>%
+  mutate(yearf = fct_reorder(yearf, index, .fun = "mean"),
+         tnc_code = fct_reorder(tnc_code, index, .fun = "mean"))
+
+rm(inv16, inv17, inv18, inv19)
+```
+
+#PlotA - data visualization of index components
+Scatterplot matrix
+```{r}
+
+library(GGally)
+
+# ggpairs plot. Found code here:
+# https://www.r-bloggers.com/2016/02/multiple-regression-lines-in-ggpairs/
+my_smooth_fn <- function(data, mapping, ...){
+  p <- ggplot(data = data, mapping = mapping, color = tnc_code) + 
+    geom_point(alpha = 0.5, shape = 1, size = 1) + #color = "steelblue", 
+    # geom_density_2d(color = "black", size = 0.5, alpha = 0.5) +
+    geom_smooth(method=loess, fill="steelblue", color="black", size = 0.5, ...)
+  p
+}
+
+my_bar_fn <- function(data, mapping, ...){
+  the_mean <- mean(data)
+  p <- ggplot(data = data, mapping = mapping) + 
+    geom_histogram(color = "darkblue", 
+                   fill = "steelblue", alpha = 0.5, bins = 15) +
+    geom_vline(xintercept = mean(data$x), color = "red")
+}
+
+library(GGally)
+#require(scales)
+options(scipen=10000, digits = 0)
+g = ggpairs(inv, columns = 3:9, 
+            lower = list(continuous = my_smooth_fn),
+            diag = list(continuous = my_bar_fn),
+            upper = list(continuous = wrap("cor", method = "spearman"))#,
+            # columnLabels = c("Owner distance\n(log10 km)", 
+            #                  "Parcel area\n(log10 ha)", 
+            #                  "Marsh fraction\n(%)", 
+            #                  "Net value\n(log10 USD)")
+            ) +
+  theme_bw()
+g
+```
+# Dot plot of overall index by site/year
+```{r}
+
+inv %>%
+  group_by(tnc_code) %>%
+  summarize(index_mean = mean(index),
+            min = min(index),
+            max = max(index),
+            n = length(index)) %>%
+  mutate(n2 = paste0(c(rep("",20),"n = "), n)) %>%
+  ggplot() +
+  geom_errorbar(aes(xmin = min, xmax = max, y = tnc_code),
+                width = 0, color = "black",
+                size = .75) +  
+  geom_point(aes(x = index_mean, y = tnc_code),
+             size = 3, fill = "skyblue", shape = 21) +
+
+  theme_bw() +
+  labs(y = "", x = "Overall Macroinvertebrate Index") +
+  geom_text(aes(x = 110, y = tnc_code, label = n2),
+            color = "darkgray", hjust = 1)
+
+ggsave(here(task_path, 
+            "PlotB_mean_macroinvertebrate_index_by_site.png"),
+       height = 4, width = 3, dpi = 400)
+```
+# Macroinvertebrate index table1
+values by site & year
+```{r}
+
+```
+
+# Macroinvertebrate index table2
+mean/sd/min/max/n values by site
+```{r}
+
+```
+
+# Plot C - Spiderweb plot of macroinvertebrate index
+Code from: https://r-graph-gallery.com/142-basic-radar-chart.html
+```{r}
+# Library
+library(fmsb)
+ 
+# Create data: note in High school for Jonathan:
+data <- as.data.frame(matrix( sample( 2:20 , 10 , replace=T) , ncol=10))
+colnames(data) <- c("math" , "english" , "biology" , "music" , "R-coding", "data-viz" , "french" , "physic", "statistic", "sport" )
+ 
+# To use the fmsb package, I have to add 2 lines to the dataframe: the max and min of each topic to show on the plot!
+data <- rbind(rep(20,10) , rep(0,10) , data)
+ 
+# Check your data, it has to look like this!
+# head(data)
+
+# Custom the radarChart !
+radarchart( data  , axistype=1 , 
+ 
+    #custom polygon
+    pcol=rgb(0.2,0.5,0.5,0.9) , pfcol=rgb(0.2,0.5,0.5,0.5) , plwd=4 , 
+ 
+    #custom the grid
+    cglcol="grey", cglty=1, axislabcol="grey", caxislabels=seq(0,20,5), cglwd=0.8,
+ 
+    #custom labels
+    vlcex=0.8 
+    )
+```
+
+
