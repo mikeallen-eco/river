@@ -24,6 +24,9 @@ library(ggplot2)
 library(here)
 library(lubridate)
 library(forcats)
+library(GGally)
+library(fmsb)
+
 task_path <- "output/Task4_inverts_and_habitat/"
 
 inv16 <- read_xlsx(here("other",
@@ -133,13 +136,13 @@ inv %>%
              size = 3, fill = "skyblue", shape = 21) +
 
   theme_bw() +
-  labs(y = "", x = "Overall Macroinvertebrate Index") +
+  labs(y = "", x = "Macroinvertebrate Index") +
   geom_text(aes(x = 110, y = tnc_code, label = n2),
             color = "darkgray", hjust = 1)
 
-ggsave(here(task_path, 
-            "PlotA_mean_macroinvertebrate_index_by_site.png"),
-       height = 4, width = 3, dpi = 400)
+# ggsave(here(task_path,
+#             "PlotA_mean_macroinvertebrate_index_by_site.png"),
+#        height = 4, width = 3, dpi = 400)
 ```
 # Macroinvertebrate index table1
 values by site & year
@@ -152,10 +155,9 @@ mean/sd/min/max/n values by site
 ```{r}
 
 ```
-#Plot (not saved) - data visualization of index components
+#PlotB - data visualization of index components
 Scatterplot matrix to inspect data
 ```{r}
-library(GGally)
 
 # ggpairs plot. Found code here:
 # https://www.r-bloggers.com/2016/02/multiple-regression-lines-in-ggpairs/
@@ -176,49 +178,148 @@ my_bar_fn <- function(data, mapping, ...){
     geom_vline(xintercept = mean(data$x), color = "red")
 }
 
-library(GGally)
 #require(scales)
 options(scipen=10000, digits = 0)
 g = ggpairs(inv, columns = 3:9, 
             lower = list(continuous = my_smooth_fn),
             diag = list(continuous = my_bar_fn),
-            upper = list(continuous = wrap("cor", method = "spearman"))#,
-            # columnLabels = c("Owner distance\n(log10 km)", 
-            #                  "Parcel area\n(log10 ha)", 
-            #                  "Marsh fraction\n(%)", 
-            #                  "Net value\n(log10 USD)")
+            upper = list(continuous = wrap("cor", method = "spearman")),
+            columnLabels = c("No. genera",
+                             "% non-insects",
+                             "% sens. EPT",
+                             "No. scrapers",
+                             "Hilsenhoff",
+                             "No. TALU 2",
+                             "No. TALU 3")
             ) +
   theme_bw()
 g
+
+# ggsave(plot = g, here(task_path, 
+#                "PlotB_macroinvertebrate_scatterplot_matrix.png"), 
+#        dpi = 400, width = 7, height = 7)
+
+rm(g)
 ```
 # Plot C - Spiderweb plot of macroinvertebrate index
 Code from: https://r-graph-gallery.com/142-basic-radar-chart.html
 ```{r}
-# Library
-library(fmsb)
- 
-# Create data: note in High school for Jonathan:
-data <- as.data.frame(matrix( sample( 2:20 , 10 , replace=T) , ncol=10))
-colnames(data) <- c("math" , "english" , "biology" , "music" , "R-coding", "data-viz" , "french" , "physic", "statistic", "sport" )
- 
-# To use the fmsb package, I have to add 2 lines to the dataframe: the max and min of each topic to show on the plot!
-data <- rbind(rep(20,10) , rep(0,10) , data)
- 
-# Check your data, it has to look like this!
-# head(data)
+# format data
+inv_radar <- inv %>%
+  select(c(1, 3:9)) %>%
+  group_by(tnc_code) %>%
+  summarize_all(mean)
 
-# Custom the radarChart !
-radarchart( data  , axistype=1 , 
+
+for(i in 1:nrow(inv_radar)){
+
+print(i)
+
+the_title <- as.character(inv_radar$tnc_code[i])
+
+png(here(task_path, 
+         "PlotC_macro_radar_plots",
+         paste0("PlotC_", the_title, "_macro_radar.png")), res = 400,
+    height = 5, width = 5, units = "in")
+
+# data
+data <- inv_radar[i,2:8]
+
+# add 2 lines to the dataframe: the max and min you want to show on the plot
+data <- rbind(rep(100,7) , rep(0,7) , data)
+ 
+# Make the radarChart !
+radarchart( data  , axistype=1 , maxmin = T,
  
     #custom polygon
     pcol=rgb(0.2,0.5,0.5,0.9) , pfcol=rgb(0.2,0.5,0.5,0.5) , plwd=4 , 
  
     #custom the grid
-    cglcol="grey", cglty=1, axislabcol="grey", caxislabels=seq(0,20,5), cglwd=0.8,
+    cglcol="grey", cglty=1, axislabcol="grey", caxislabels=seq(0,100,25),
+    cglwd=0.8,
  
     #custom labels
-    vlcex=0.8 
+    vlcex=0.8, title = the_title
     )
+dev.off()
+}
 ```
 
+# Plot D - macroinvertebrate index over time (separate plots by site)
+```{r}
+for(i in unique(inv$tnc_code)){
 
+print(i)
+  
+inv %>%
+  filter(tnc_code == i) %>%
+  group_by(year) %>%
+  summarize(index = mean(index)) %>%
+  ggplot() +
+  geom_line(aes(x = year, y = index), 
+            color = "olivedrab",
+            size = 1) +
+  geom_point(aes(x = year, y = index), 
+            color = "olivedrab",
+            size = 4, data = filter(inv, tnc_code == i)) +
+  scale_y_continuous(limits = c(0, 100)) +
+    theme_bw() +
+    theme(text = element_text(size = 14)) +
+    labs(y = "Macroinvertebrate Index", x = "",
+         title = i)
+
+  ggsave(here(task_path, "PlotD_macro_by_year",
+              paste0("PlotD_macro_by_year_site_", i, ".png")),
+         width = 6, height = 4, dpi = 400)
+}
+
+```
+
+# Plot E - macroinvertebrate index over time at Columbia Dam sites
+```{r}
+sites <- c("TNC_25", "TNC_23")
+inv %>%
+  filter(tnc_code %in% sites) %>%
+  group_by(tnc_code, year) %>%
+  summarize(index = mean(index)) %>%
+  ggplot() +
+  geom_line(aes(x = year, y = index, color = tnc_code), 
+            size = 1) +
+  geom_point(aes(x = year, y = index, color = tnc_code), 
+            size = 4) +
+  scale_y_continuous(limits = c(0, 100)) +
+  scale_color_manual(values = c("olivedrab", "orange")) +
+    theme_bw() +
+    theme(text = element_text(size = 14)) +
+    labs(y = "Macroinvertebrate Index", x = "",
+         title = "Columbia Dam", color = "")
+
+  ggsave(here(task_path, 
+              "PlotE_macro_by_year_Columbia_Dam.png"),
+         width = 6, height = 4, dpi = 400)
+
+```
+# Plot F - macroinvertebrate index over time at Paulina Dam sites
+```{r}
+sites <- c("TNC_18", "TNC_19")
+inv %>%
+  filter(tnc_code %in% sites) %>%
+  group_by(tnc_code, year) %>%
+  summarize(index = mean(index)) %>%
+  ggplot() +
+  geom_line(aes(x = year, y = index, color = tnc_code), 
+            size = 1) +
+  geom_point(aes(x = year, y = index, color = tnc_code), 
+            size = 4) +
+  scale_y_continuous(limits = c(0, 100)) +
+  scale_color_manual(values = c("olivedrab", "orange")) +
+    theme_bw() +
+    theme(text = element_text(size = 14)) +
+    labs(y = "Macroinvertebrate Index", x = "",
+         title = "Paulina Dam", color = "")
+
+  ggsave(here(task_path, 
+              "PlotE_macro_by_year_Paulina_Dam.png"),
+         width = 6, height = 4, dpi = 400)
+
+```
