@@ -26,9 +26,11 @@ library(lubridate)
 library(forcats)
 library(GGally)
 library(fmsb)
+library(wesanderson)
 
 task_path <- "output/Task4_inverts_and_habitat/"
 
+# Read in Macroinvertebrate data
 inv16 <- read_xlsx(here("other",
                         "Macro_Habitat_data_dl_20220428",
                         "macro_habitat_data_2016_2017.xlsx"),
@@ -113,11 +115,65 @@ inv <- inv16 %>%
   mutate(year = year(date),
          yearf = as.factor(year)) %>%
   mutate(yearf = fct_reorder(yearf, index, .fun = "mean"),
-         tnc_code = fct_reorder(tnc_code, index, .fun = "mean"))
+         tnc_code = fct_reorder(tnc_code, index, .fun = "mean"),
+         rating = case_when(rating == "EXCELLENT" ~ "Excellent",
+                            rating == "GOOD" ~ "Good",
+                            rating == "FAIR" ~ "Fair",
+                            rating == "POOR" ~ "Poor",
+                            TRUE ~ rating),
+         rating_col = case_when(rating == "Excellent" ~ "green",
+                            rating == "Good" ~ "darkgreen",
+                            rating == "Fair" ~ "orange",
+                            rating == "Poor" ~ "firebrick"))
 
 rm(inv16, inv17, inv18, inv19)
-```
 
+# Read in habitat data
+hab16 <- read_xlsx(here("other",
+                        "Macro_Habitat_data_dl_20220428",
+                        "macro_habitat_data_2016_2017.xlsx"),
+                   skip = 0, 
+                   sheet = "Habitat_2016"
+                   ) %>%
+  select(c(3:17,19:20)) %>%
+  rename(epifaunal_sub = 3,
+         pool_sub = 4,
+         pool_var = 5,
+         sed_dep = 6,
+         channel_flow = 7,
+         channel_alt = 8,
+         channel_sin = 9,
+         bank_stab_l = 10,
+         bank_stab_r = 11,
+         bank_veg_l = 12,
+         bank_veg_r = 13,
+         rip_veg_l = 14,
+         rip_veg_r = 15)
+
+# Read in habitat data
+hab17 <- read_xlsx(here("other",
+                        "Macro_Habitat_data_dl_20220428",
+                        "macro_habitat_data_2016_2017.xlsx"),
+                   skip = 0, 
+                   sheet = "Habitat_2017"
+                   ) %>%
+  select(c(3:17,19:20)) %>%
+  rename(epifaunal_sub = 3,
+         pool_sub = 4,
+         pool_var = 5,
+         sed_dep = 6,
+         channel_flow = 7,
+         channel_alt = 8,
+         channel_sin = 9,
+         bank_stab_l = 10,
+         bank_stab_r = 11,
+         bank_veg_l = 12,
+         bank_veg_r = 13,
+         rip_veg_l = 14,
+         rip_veg_r = 15)
+
+
+```
 # Plot A - dot plot of overall index average by site/year
 ```{r}
 
@@ -244,28 +300,47 @@ radarchart( data  , axistype=1 , maxmin = T,
 dev.off()
 }
 ```
-
 # Plot D - macroinvertebrate index over time (separate plots by site)
 ```{r}
 for(i in unique(inv$tnc_code)){
 
 print(i)
-  
+
+color_vector <- c("olivedrab",
+            "olivedrab2",
+            wes_palettes$BottleRocket2[1:2])
+
+all_colors <- data.frame(
+    rating = c("Excellent", "Good", "Fair", "Poor"),
+    col = color_vector,
+    year = 2017,
+    index = 200)
+
+
+the_colors = inv %>%
+  filter(tnc_code == i) %>%
+  select(rating) %>%
+  distinct() %>%
+  arrange(rating) %>%
+    left_join(all_colors, by = "rating")
+
+
 inv %>%
   filter(tnc_code == i) %>%
   group_by(year) %>%
   summarize(index = mean(index)) %>%
   ggplot() +
   geom_line(aes(x = year, y = index), 
-            color = "olivedrab",
+            color = "darkgray",
             size = 1) +
-  geom_point(aes(x = year, y = index), 
-            color = "olivedrab",
+  geom_point(aes(x = year, y = index, color = rating), 
             size = 4, data = filter(inv, tnc_code == i)) +
   scale_y_continuous(limits = c(0, 100)) +
+  scale_color_manual(values = the_colors$col) +
     theme_bw() +
     theme(text = element_text(size = 14)) +
     labs(y = "Macroinvertebrate Index", x = "",
+         color = "Rating",
          title = i)
 
   ggsave(here(task_path, "PlotD_macro_by_year",
@@ -274,7 +349,6 @@ inv %>%
 }
 
 ```
-
 # Plot E - macroinvertebrate index over time at Columbia Dam sites
 ```{r}
 sites <- c("TNC_25", "TNC_23")
