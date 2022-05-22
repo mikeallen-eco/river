@@ -354,6 +354,8 @@ dev.off()
 ```
 # Plot D - macroinvertebrate index over time (separate plots by site)
 ```{r}
+# for testing
+i <- unique(inv$tnc_code)[13]
 for(i in unique(inv$tnc_code)){
 
 print(i)
@@ -368,7 +370,6 @@ all_colors <- data.frame(
     year = 2017,
     index = 200)
 
-
 the_colors = inv %>%
   filter(tnc_code == i) %>%
   select(rating) %>%
@@ -376,9 +377,11 @@ the_colors = inv %>%
   arrange(rating) %>%
     left_join(all_colors, by = "rating")
 
+plot_data <- inv %>%
+  mutate(rating = fct_reorder(rating, index, .desc = T)) %>%
+  filter(tnc_code == i) 
 
-inv %>%
-  filter(tnc_code == i) %>%
+plot_data %>%
   group_by(year) %>%
   summarize(index = mean(index)) %>%
   ggplot() +
@@ -386,16 +389,18 @@ inv %>%
             color = "darkgray",
             size = 1) +
   geom_point(aes(x = year, y = index, color = rating), 
-            size = 4, data = filter(inv, tnc_code == i)) +
+            size = 4, data = plot_data) +
   scale_y_continuous(limits = c(0, 100)) +
-  scale_color_manual(values = the_colors$col) +
+  scale_x_continuous(breaks = 2016:2021) +
+  scale_color_manual(values = color_vector,
+                     drop = F) +
     theme_bw() +
     theme(text = element_text(size = 14)) +
     labs(y = "Macroinvertebrate Index", x = "",
          color = "Rating",
          title = i)
 
-  ggsave(here(task_path, "PlotD_macro_by_year",
+ggsave(here(task_path, "PlotD_macro_by_year",
               paste0("PlotD_macro_by_year_site_", i, ".png")),
          width = 6, height = 4, dpi = 400)
 }

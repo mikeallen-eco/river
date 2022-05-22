@@ -1,0 +1,34 @@
+To do
+
+Task 4
+IMPORTANT- fix decimal years in Plot D
+IMPORTANT- put entire Rating legend on each plot in Plot D (and make in correct order)
+IMPORTANT- put rating numerical ranges in Plot D (and mark the boundaries on the plot?)
+IMPORTANT- update plots when 2020-2021 data are added
+- Put TNC_80 on the Columbia Dam macroinvertebrate plot (E)
+- Rename Plot J files (from "Plot C")
+IMPORTANT- Combine Left and right bank indices to one number (scale 0-20)
+IMPORTANT- Combine Plots D and Plots K (macro and habitat) into one graph 
+IMPORTANT- Look for way to plot changes over time in whole watershed
+IMPORTANT- Make a model of that too
+
+Task 3
+- make hyperhumus-type figure for tree planting project sites
+IMPORTANT- - rename County Line to Paulinkill
+IMPORTANT- - Make same fig for County Line Dam
+- Remove 26 and 27 from all plots (even for Task 2? ask Michelle)
+
+Task 2
+- Plot D: remove lines connected points spanning missing data
+- Plot E: add annotation for date range
+IMPORTANT: - Plot F: add "larvae" stage to graphs
+- Model A: repaste output into ModelA text file (fixed effects were missing for some reason)
+- Plots H-M: make all the y-axes the same range
+- Plots N-T: same
+- Plot S: make "DO" uppercase in y-axis legend
+
+Task 1: 
+- Plots K & L: if time, break up these plots into individual plots by site
+- TNC_23: plot B, check on (remove?) the outlier high temp in November 2019
+
+
