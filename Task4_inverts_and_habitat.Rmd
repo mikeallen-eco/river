@@ -259,7 +259,7 @@ hab20 <- read_xlsx(here("other",
                    skip = 0, 
                    sheet = "Habitat_2020"
                    ) %>%
-  select(c(3:17,19:20)) %>%
+  select(c(3:17,18,20)) %>%
   rename(epifaunal_sub = 3,
          pool_sub = 4,
          pool_var = 5,
@@ -272,7 +272,8 @@ hab20 <- read_xlsx(here("other",
          bank_veg_l = 12,
          bank_veg_r = 13,
          rip_veg_l = 14,
-         rip_veg_r = 15)
+         rip_veg_r = 15,
+         habitat_score = 16)
 
 hab21 <- read_xlsx(here("other",
                         "Macro_Habitat_data_dl_20220428",
@@ -299,6 +300,8 @@ hab <- hab16 %>%
   bind_rows(hab17) %>%
   bind_rows(hab18) %>%
   bind_rows(hab19) %>%
+  bind_rows(hab20) %>%
+  bind_rows(hab21) %>%
   rename(date = date_collected) %>%
   mutate(year = year(date),
          yearf = as.factor(year)) %>%
@@ -310,13 +313,21 @@ hab <- hab16 %>%
          bank_stab = bank_stab_r + bank_stab_l) %>%
   select(-c(bank_stab_l, bank_stab_r,
             bank_veg_l, bank_veg_r,
-            rip_veg_l, rip_veg_r))
+            rip_veg_l, rip_veg_r)) %>%
+  mutate(habitat_rating = case_when(habitat_rating == "OPTIMAL" ~
+                                      "Optimal",
+                                    habitat_rating == "SUB-OPTIMAL" ~
+                                      "Sub-Optimal",
+                                    TRUE ~ habitat_rating))
 
-rm(hab16, hab17, hab18, hab19)
+rm(hab16, hab17, hab18, hab19, hab20, hab21)
 
 ```
 # Plot A - dot plot of overall index average by site/year
 ```{r}
+color_vector <- c("olivedrab",
+            "olivedrab2",
+            wes_palettes$BottleRocket2[1:2])
 
 inv %>%
   group_by(tnc_code) %>%
@@ -324,22 +335,37 @@ inv %>%
             min = min(index),
             max = max(index),
             n = length(index)) %>%
-  mutate(n2 = paste0(c(rep("",20),"n = "), n)) %>%
+  mutate(n2 = paste0(c(rep("",22),"n = "), n),
+         Rating = case_when(index_mean >= 63 ~ "Excellent",
+                            index_mean < 63 & 
+                              index_mean >= 42 ~ "Good",
+                            index_mean < 42 &
+                              index_mean >= 21 ~ "Fair",
+                            index_mean < 21 ~ "Poor")) %>%
+  mutate(Rating = fct_reorder(Rating, index_mean, .desc = T)) %>%
   ggplot() +
+  geom_vline(xintercept = 63, lty = 2, color = color_vector[1],
+             alpha = 0.75) +
+  geom_vline(xintercept = 42, lty = 2, color = color_vector[2],
+             alpha = 0.75) +
+  geom_vline(xintercept = 21, lty = 2, color = color_vector[3],
+             alpha = 0.75) +
+  geom_vline(xintercept = 0, lty = 2, color = color_vector[4],
+             alpha = 0.75) +  
   geom_errorbar(aes(xmin = min, xmax = max, y = tnc_code),
                 width = 0, color = "black",
                 size = .75) +  
-  geom_point(aes(x = index_mean, y = tnc_code),
-             size = 3, fill = "skyblue", shape = 21) +
-
-  theme_bw() +
+  geom_point(aes(x = index_mean, y = tnc_code, fill = Rating),
+             size = 3, shape = 21) +
+  scale_fill_manual(values = color_vector) +
+  theme_classic() +
   labs(y = "", x = "Macroinvertebrate Index") +
   geom_text(aes(x = 110, y = tnc_code, label = n2),
             color = "darkgray", hjust = 1)
 
 # ggsave(here(task_path,
-#             "PlotA_mean_macroinvertebrate_index_by_site.png"),
-#        height = 4, width = 3, dpi = 400)
+#             "PlotA_mean_macroinvertebrate_index_by_site3.png"),
+#        height = 4, width = 4.5, dpi = 400)
 ```
 # Macroinvertebrate index table1
 values by site & year
@@ -392,9 +418,9 @@ g = ggpairs(inv, columns = 3:9,
   theme_bw()
 g
 
-# ggsave(plot = g, here(task_path, 
-#                "PlotB_macroinvertebrate_scatterplot_matrix.png"), 
-#        dpi = 400, width = 7, height = 7)
+ggsave(plot = g, here(task_path,
+               "PlotB_macroinvertebrate_scatterplot_matrix.png"),
+       dpi = 400, width = 7, height = 7)
 
 rm(g)
 ```
@@ -503,7 +529,7 @@ inv %>%
   geom_point(aes(x = year, y = index, color = tnc_code), 
             size = 4) +
   scale_y_continuous(limits = c(0, 100)) +
-  scale_color_manual(values = c("olivedrab", "orange")) +
+  scale_color_manual(values = c("olivedrab", "orange", "dodgerblue")) +
     theme_bw() +
     theme(text = element_text(size = 14)) +
     labs(y = "Macroinvertebrate Index", x = "",
@@ -534,7 +560,7 @@ inv %>%
          title = "Paulina Dam", color = "")
 
   ggsave(here(task_path, 
-              "PlotE_macro_by_year_Paulina_Dam.png"),
+              "PlotF_macro_by_year_Paulina_Dam.png"),
          width = 6, height = 4, dpi = 400)
 
 ```
@@ -547,7 +573,7 @@ hab %>%
             min = min(habitat_score),
             max = max(habitat_score),
             n = length(habitat_score)) %>%
-  mutate(n2 = paste0(c(rep("",20),"n = "), n)) %>%
+  mutate(n2 = paste0(c(rep("",22),"n = "), n)) %>%
   ggplot() +
   geom_errorbar(aes(xmin = min, xmax = max, y = tnc_code),
                 width = 0, color = "black",
@@ -561,7 +587,7 @@ hab %>%
             color = "darkgray", hjust = 1)
 
 ggsave(here(task_path,
-            "PlotG_mean_habitat_score_by_site.png"),
+            "PlotG_mean_habitat_score_by_site2.png"),
        height = 4, width = 3, dpi = 400)
 ```
 # Plot H - macroinvertebrate index vs. habitat score
@@ -599,7 +625,7 @@ hab %>%
             color = "black", hjust = .5, size = 2.5)
 
 ggsave(here(task_path,
-            "PlotH_habitat_score_vs_macro_by_site.png"),
+            "PlotH_habitat_score_vs_macro_by_site2.png"),
        height = 4, width = 6, dpi = 400)
 
 ```
@@ -630,7 +656,7 @@ my_bar_fn <- function(data, mapping, ...){
 
 #require(scales)
 options(scipen=10000, digits = 0)
-g = ggpairs(hab, columns = 3:16, 
+g = ggpairs(hab, columns = c(3:9,14:16,10), 
             lower = list(continuous = my_smooth_fn),
             diag = list(continuous = my_bar_fn),
             upper = list(continuous = wrap("cor", method = "spearman")),
@@ -641,12 +667,9 @@ g = ggpairs(hab, columns = 3:16,
                              "Channel flow",
                              "Channel alt.",
                              "Channel sin.",
-                             "Bank stab. L",
-                             "Bank stab. R",
-                             "Bank veg. L",
-                             "Bank veg. R",
-                             "Rip. zone L",
-                             "Rip. zone R",
+                             "Rip. zone",
+                             "Bank veg",
+                             "Bank stab.",
                              "Habitat score")
             ) +
   theme_bw() +
@@ -654,7 +677,7 @@ g = ggpairs(hab, columns = 3:16,
 g
 
 ggsave(plot = g, here(task_path,
-               "PlotI_macroinvertebrate_scatterplot_matrix.png"),
+               "PlotI_habitat_scatterplot_matrix2.png"),
        dpi = 400, width = 10, height = 10)
 
 rm(g)
@@ -706,14 +729,15 @@ dev.off()
 
 # Plot K - habitat score over time (separate plots by site)
 ```{r}
-# for testing 
-i = unique(hab$tnc_code)[1]
-
 for(i in unique(hab$tnc_code)){
 
 print(i)
+ 
+# color_vector <- c("olivedrab",
+#             wes_palettes$BottleRocket2[1:2])
 
 color_vector <- c("olivedrab",
+            "olivedrab2",
             wes_palettes$BottleRocket2[1:2])
 
 plot_data <- hab %>%
@@ -733,6 +757,8 @@ hab %>%
              alpha = 0.75) +
   geom_hline(yintercept = 55, lty = 2, color = color_vector[3],
              alpha = 0.75) +
+  geom_hline(yintercept = 0, lty = 2, color = color_vector[4],
+             alpha = 0.75) +
   geom_line(aes(x = year, y = habitat_score), 
             color = "darkgray",
             size = 1) +
@@ -740,6 +766,7 @@ hab %>%
                  color = habitat_rating), 
             size = 4, data = plot_data) +
   scale_y_continuous(limits = c(0, 200)) +
+  scale_x_continuous(breaks = 2016:2021) +
   scale_color_manual(values = color_vector,
                      drop = F) +
     theme_classic() +
@@ -752,9 +779,9 @@ hab %>%
               paste0("PlotK_hab_score_by_year_site_", i, ".png")),
          width = 6, height = 4, dpi = 400)
 }
-
 ```
-# Plot L - macroinvertebrate index over time (separate plots by site)
+# Plot L - habitat & macroinvertebrate index over time 
+separate plots by site
 ```{r}
 for(i in unique(inv$tnc_code)){
 

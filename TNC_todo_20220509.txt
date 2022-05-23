@@ -5,17 +5,17 @@ Task 4
 * put entire Rating legend on each plot in Plot D (and make in correct order)
 * mark the boundaries of the assessment score ratings on Plot D
 - put rating numerical ranges of in Plot D  (Excel. ≥63; Good 63-42; Fair 42-21; Poor <21)
-- (IMPORTANT) update plots with 2020-2021 data
+* read in and format 2020-2021 data
+* update plots with 2020-2021 data
 can't. Put TNC_80 on the Columbia Dam macroinvertebrate plot (E) (TNC_80 not in the data file?)
 * Rename Plot J files (from "Plot C")
-* (IMPORTANT) Plot J: Combine Left and right bank indices to one number (scale 0-20)
+* Plot J: Combine Left and right bank indices to one number (scale 0-20)
 * rename plot K files (from "Plot D")
 * put entire hab score legend on each plot in Plot K (and make in correct order)
 * mark boundaries of hab score categories on plot with lines
 - put numerical ranges of hab score categories in plots
-- make new plot combining Plots D and Plots K (macro and habitat) into one graph 
-	(try faceting)
-- Look for way to plot changes over time in whole watershed
+* make new plot combining Plots D and Plots K (macro and habitat) into one graph 
+- Look into ways to plot changes over time in whole watershed
 - Make a model of that too
 
 Task 3
