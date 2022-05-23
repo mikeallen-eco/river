@@ -111,8 +111,29 @@ inv19 <- read_xlsx(here("other",
 inv20 <- read_xlsx(here("other",
                         "Macro_Habitat_data_dl_20220428",
                         "macro_habitat_data_2020_2021.xlsx"),
-                   skip = 2, 
+                   skip = 3, 
                    sheet = "macro_2020"
+                   ) %>%
+  select(c(3,4,32:40)) %>%
+  rename(tnc_code = 1,
+         date = 2,
+         num_gen = 3,
+         pct_noninsect = 4,
+         pct_ept = 5,
+         num_scraper = 6,
+         hilsenhoff = 7,
+         num_talu2 = 8,
+         num_talu3 = 9,
+         index = 10,
+         rating = 11
+         ) %>%
+  filter(is.na(num_gen) != T)
+
+inv21 <- read_xlsx(here("other",
+                        "Macro_Habitat_data_dl_20220428",
+                        "macro_habitat_data_2020_2021.xlsx"),
+                   skip = 2, 
+                   sheet = "macro_2021"
                    ) %>%
   select(c(3,4,32:40)+1) %>%
   rename(num_gen = 3,
@@ -130,6 +151,8 @@ inv <- inv16 %>%
   bind_rows(inv17) %>%
   bind_rows(inv18) %>%
   bind_rows(inv19) %>%
+  bind_rows(inv20) %>%
+  bind_rows(inv21) %>%
   mutate(year = year(date),
          yearf = as.factor(year)) %>%
   mutate(yearf = fct_reorder(yearf, index, .fun = "mean"),
@@ -140,7 +163,7 @@ inv <- inv16 %>%
                             rating == "POOR" ~ "Poor",
                             TRUE ~ rating))
 
-rm(inv16, inv17, inv18, inv19)
+rm(inv16, inv17, inv18, inv19, inv20, inv21)
 
 # Read in habitat data
 hab16 <- read_xlsx(here("other",
@@ -214,6 +237,48 @@ hab19 <- read_xlsx(here("other",
                         "macro_habitat_data_2018_2019.xlsx"),
                    skip = 0, 
                    sheet = "Habitat_2019"
+                   ) %>%
+  select(c(3:17,19:20)) %>%
+  rename(epifaunal_sub = 3,
+         pool_sub = 4,
+         pool_var = 5,
+         sed_dep = 6,
+         channel_flow = 7,
+         channel_alt = 8,
+         channel_sin = 9,
+         bank_stab_l = 10,
+         bank_stab_r = 11,
+         bank_veg_l = 12,
+         bank_veg_r = 13,
+         rip_veg_l = 14,
+         rip_veg_r = 15)
+
+hab20 <- read_xlsx(here("other",
+                        "Macro_Habitat_data_dl_20220428",
+                        "macro_habitat_data_2020_2021.xlsx"),
+                   skip = 0, 
+                   sheet = "Habitat_2020"
+                   ) %>%
+  select(c(3:17,19:20)) %>%
+  rename(epifaunal_sub = 3,
+         pool_sub = 4,
+         pool_var = 5,
+         sed_dep = 6,
+         channel_flow = 7,
+         channel_alt = 8,
+         channel_sin = 9,
+         bank_stab_l = 10,
+         bank_stab_r = 11,
+         bank_veg_l = 12,
+         bank_veg_r = 13,
+         rip_veg_l = 14,
+         rip_veg_r = 15)
+
+hab21 <- read_xlsx(here("other",
+                        "Macro_Habitat_data_dl_20220428",
+                        "macro_habitat_data_2020_2021.xlsx"),
+                   skip = 0, 
+                   sheet = "Habitat_2021"
                    ) %>%
   select(c(3:17,19:20)) %>%
   rename(epifaunal_sub = 3,
@@ -379,7 +444,7 @@ dev.off()
 # Plot D - macroinvertebrate index over time (separate plots by site)
 ```{r}
 # for testing
-i <- unique(inv$tnc_code)[13]
+i <- unique(inv$tnc_code)[12]
 for(i in unique(inv$tnc_code)){
 
 print(i)
@@ -691,8 +756,6 @@ hab %>%
 ```
 # Plot L - macroinvertebrate index over time (separate plots by site)
 ```{r}
-# for testing
-i <- unique(inv$tnc_code)[13]
 for(i in unique(inv$tnc_code)){
 
 print(i)
@@ -706,49 +769,101 @@ color_vector_hab <- c("olivedrab",
 
 plot_data_inv <- inv %>%
   mutate(rating = fct_reorder(rating, index, .desc = T)) %>%
-  filter(tnc_code == i) 
+  filter(tnc_code == i) %>%
+  select(year, rating, index) %>%
+  mutate(type = "Macroinvertebrates")
 
 line_data_inv <- plot_data_inv %>%
   group_by(year) %>%
-  summarize(index = mean(index)) 
+  summarize(index = mean(index)) %>%
+  mutate(type = "Macroinvertebrates")
 
 plot_data_hab <- hab %>%
   mutate(habitat_rating = fct_reorder(habitat_rating, habitat_score, 
                               .desc = T)) %>%
-  filter(tnc_code == i) 
+  filter(tnc_code == i) %>%
+  select(year, rating = habitat_rating, index = habitat_score) %>%
+  mutate(type = "Habitat",
+         index = index/2)
 
 line_data_hab <- plot_data_hab %>%
-  filter(tnc_code == i) %>%
-  group_by(year, habitat_rating) %>%
-  summarize(habitat_score = mean(habitat_score, na.rm = T),
-            .groups = "drop")
+  group_by(year, rating) %>%
+  summarize(index = mean(index, na.rm = T),
+            .groups = "drop") %>%
+  select(year, index = index) %>%
+  mutate(type = "Habitat",
+         index = index)
 
-  ggplot() +
+line_data <- line_data_inv %>%
+  bind_rows(line_data_hab)
+
+plot_data <- plot_data_inv %>%
+  bind_rows(plot_data_hab)
+  
+topline <- data.frame(type = c("Habitat","Habitat", 
+                              "Macroinvertebrates","Macroinvertebrates"),
+                     year = rep(c(min(plot_data$year),
+                                  max(plot_data$year)),2),
+                     index = c(155/2,155/2, 63, 63)
+  )
+
+midline <- data.frame(type = c("Habitat","Habitat", 
+                              "Macroinvertebrates","Macroinvertebrates"),
+                     year = rep(c(min(plot_data$year),
+                                  max(plot_data$year)),2),
+                     index = c(105/2,105/2, 42, 42)
+  )
+
+botline <- data.frame(type = c("Habitat","Habitat", 
+                              "Macroinvertebrates","Macroinvertebrates"),
+                     year = rep(c(min(plot_data$year),
+                                  max(plot_data$year)),2),
+                     index = c(55/2,55/2, 21, 21)
+  )
+
+ggplot() +
+  # top threshold line
+  geom_line(aes(x = year, y = index), lty = 2, 
+            color = color_vector_inv[1],
+             alpha = 0.75,
+            data = topline) +
+  # mid threshold line
+  geom_line(aes(x = year, y = index), lty = 2, 
+            color = c(color_vector_inv[2], 
+                      color_vector_inv[2],
+                      color_vector_inv[2],
+                      color_vector_inv[2]),
+             alpha = 0.75,
+            data = midline) +
+  # bottom threshold line
+  geom_line(aes(x = year, y = index), lty = 2, 
+            color = c(color_vector_inv[3]),
+             alpha = 0.75,
+            data = botline) +
+  geom_hline(yintercept = 0, color = color_vector_inv[4], 
+             lty = 2, alpha = 0.75) +
   geom_line(aes(x = year, y = index), 
             color = "darkgray",
             size = 1,
-            data = line_data_inv) +
+            data = line_data) +
   geom_point(aes(x = year, y = index, color = rating), 
-            size = 4, data = plot_data_inv) +
-  geom_line(aes(x = year, y = habitat_score/2),
-            color = "darkgray",
-            size = 1,
-            data = line_data_hab) +
-  geom_point(aes(x = year, y = habitat_score/2,
-                 color = habitat_rating),
-            size = 4, data = plot_data_hab) +
-  scale_y_continuous(limits = c(0, 100)) +
+            size = 4, data = plot_data) +
+  scale_y_continuous(limits = c(0,100)) +
   scale_x_continuous(breaks = 2016:2021) +
-  scale_color_manual(values = color_vector,
+  facet_wrap(~type) +
+  theme_bw() +
+  guides(color = "none") +
+  # note: this color order works because factor levels are in this order
+  scale_color_manual(values = c(color_vector_inv, color_vector_inv),
                      drop = F) +
-    theme_classic() +
-    theme(text = element_text(size = 14)) +
-    labs(y = "Macroinvertebrate Index", x = "",
-         color = "Invertebrate",
+  theme(text = element_text(size = 14),
+        strip.background = element_rect(fill = "white"),
+        axis.text.x = element_text(size = 9)) +
+  labs(y = "Index value", x = "",
          title = i)
 
-ggsave(here(task_path, "PlotD_macro_by_year",
-              paste0("PlotD_macro_by_year_site_", i, ".png")),
+ggsave(here(task_path, "PlotL_habitat_and_invert_by_year",
+              paste0("PlotL_macro_and_hab_by_year_site_", i, ".png")),
          width = 6, height = 4, dpi = 400)
 }
 ```
