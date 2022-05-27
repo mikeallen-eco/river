@@ -585,6 +585,10 @@ ggsave(here(task_path,
 ```
 # Plot H - macroinvertebrate index vs. habitat score
 ```{r}
+color_vector <- c("olivedrab",
+            "olivedrab2",
+            wes_palettes$BottleRocket2[1:2])
+
 hab %>%
   left_join(inv, by = c("tnc_code", "year", "yearf")) %>%
   group_by(tnc_code) %>%
@@ -601,6 +605,54 @@ hab %>%
          num = gsub(tnc_code, pattern = "TNC_", 
                     replacement = "")) %>%
   ggplot() +
+  geom_vline(xintercept = 160, lty = 2, color = color_vector[1],
+             alpha = 0.75) +
+  annotate("text", x = 160+2, y = 12.5, vjust = 1, hjust = 0.5,
+           label = "Optimal",
+           angle = 90, color = color_vector[1],
+           size = 2.5) +  
+  geom_vline(xintercept = 110, lty = 2, color = color_vector[2],
+             alpha = 0.75) +
+  annotate("text", x = 110+2, y = 12.5, vjust = 1, hjust = 0.5,
+           label = "Sub-optimal",
+           angle = 90, color = color_vector[2],
+           size = 2.5) +   
+  geom_vline(xintercept = 60, lty = 2, color = color_vector[3],
+             alpha = 0.75) +
+  annotate("text", x = 60+2, y = 12.5, vjust = 1, hjust = 0.5,
+           label = "Marginal",
+           angle = 90, color = color_vector[3],
+           size = 2.5) +    
+  geom_vline(xintercept = 0, lty = 2, color = color_vector[4],
+             alpha = 0.75) +
+  annotate("text", x = 0+2, y = 12.5, vjust = 1, hjust = 0.5,
+           label = "Poor",
+           angle = 90, color = color_vector[4],
+           size = 2.5) +
+  geom_hline(yintercept = 63, lty = 2, color = color_vector[1],
+             alpha = 0.75) +
+  annotate("text", x = 0+25, y = 63+2, vjust = 0, hjust = 0.5,
+           label = "Excellent",
+           angle = 0, color = color_vector[1],
+           size = 2.5) +
+  geom_hline(yintercept = 42, lty = 2, color = color_vector[2],
+             alpha = 0.75) +
+  annotate("text", x = 0+25, y = 42+2, vjust = 0, hjust = 0.5,
+           label = "Good",
+           angle = 0, color = color_vector[2],
+           size = 2.5) +
+  geom_hline(yintercept = 21, lty = 2, color = color_vector[3],
+             alpha = 0.75) +
+  annotate("text", x = 0+25, y = 21+2, vjust = 0, hjust = 0.5,
+           label = "Fair",
+           angle = 0, color = color_vector[3],
+           size = 2.5) +
+  geom_hline(yintercept = 0, lty = 2, color = color_vector[4],
+             alpha = 0.75) +
+  annotate("text", x = 0+25, y = 2, vjust = 0, hjust = 0.5,
+           label = "Poor",
+           angle = 0, color = color_vector[4],
+           size = 2.5) +
   geom_errorbar(aes(xmin = hab_min, xmax = hab_max, y = index_mean),
                 width = 0, color = "darkgray",
                 size = .75, alpha = .5) +  
@@ -609,18 +661,17 @@ hab %>%
                 width = 0, color = "darkgray",
                 size = .75, alpha = .5) +  
   geom_point(aes(y = index_mean, x = hab_mean),
-             size = 5, fill = "olivedrab2", 
+             size = 5, fill = "darkgray", 
              shape = 21) +
-  theme_bw() +
-  labs(x = "Habitat Score",
-       y = "Macroinvertebrate Index") +
+  theme_classic() +
+  labs(x = "Habitat score",
+       y = "Macroinvertebrate index") +
   geom_text(aes(y = index_mean, x = hab_mean, label = num),
-            color = "black", hjust = .5, size = 2.5)
+            color = "white", hjust = .5, size = 2.5)
 
 ggsave(here(task_path,
-            "PlotH_habitat_score_vs_macro_by_site2.png"),
-       height = 4, width = 6, dpi = 400)
-
+            "PlotH_habitat_score_vs_macro_by_site.png"),
+       height = 4, width = 5, dpi = 400)
 ```
 #Plot I - data visualization of habitat score components
 Scatterplot matrix to inspect data
