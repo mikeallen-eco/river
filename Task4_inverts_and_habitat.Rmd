@@ -30,9 +30,11 @@ library(wesanderson)
 
 task_path <- "output/Task4_inverts_and_habitat/"
 
+# path where the Macroinvertebrate and Habitat Quality data are stored
+mh_path <- "data/Macro_Habitat"
+
 # Read in Macroinvertebrate data
-inv16 <- read_xlsx(here("other",
-                        "Macro_Habitat_data_dl_20220428",
+inv16 <- read_xlsx(here(mh_path,
                         "macro_habitat_data_2016_2017.xlsx"),
                    skip = 2, 
                    sheet = "macro_2016"
@@ -49,8 +51,7 @@ inv16 <- read_xlsx(here("other",
          rating = 11
          )
 
-inv17 <- read_xlsx(here("other",
-                        "Macro_Habitat_data_dl_20220428",
+inv17 <- read_xlsx(here(mh_path,
                         "macro_habitat_data_2016_2017.xlsx"),
                    skip = 3, 
                    sheet = "macro_2017"
@@ -69,8 +70,7 @@ inv17 <- read_xlsx(here("other",
          rating = 11
          )
  
-inv18 <- read_xlsx(here("other",
-                        "Macro_Habitat_data_dl_20220428",
+inv18 <- read_xlsx(here(mh_path,
                         "macro_habitat_data_2018_2019.xlsx"),
                    skip = 3, 
                    sheet = "macro_2018"
@@ -90,8 +90,7 @@ inv18 <- read_xlsx(here("other",
          ) %>%
   filter(is.na(tnc_code) == F)
 
-inv19 <- read_xlsx(here("other",
-                        "Macro_Habitat_data_dl_20220428",
+inv19 <- read_xlsx(here(mh_path,
                         "macro_habitat_data_2018_2019.xlsx"),
                    skip = 2, 
                    sheet = "macro_2019"
@@ -108,8 +107,7 @@ inv19 <- read_xlsx(here("other",
          rating = 11
          )
 
-inv20 <- read_xlsx(here("other",
-                        "Macro_Habitat_data_dl_20220428",
+inv20 <- read_xlsx(here(mh_path,
                         "macro_habitat_data_2020_2021.xlsx"),
                    skip = 3, 
                    sheet = "macro_2020"
@@ -129,8 +127,7 @@ inv20 <- read_xlsx(here("other",
          ) %>%
   filter(is.na(num_gen) != T)
 
-inv21 <- read_xlsx(here("other",
-                        "Macro_Habitat_data_dl_20220428",
+inv21 <- read_xlsx(here(mh_path,
                         "macro_habitat_data_2020_2021.xlsx"),
                    skip = 2, 
                    sheet = "macro_2021"
@@ -166,8 +163,7 @@ inv <- inv16 %>%
 rm(inv16, inv17, inv18, inv19, inv20, inv21)
 
 # Read in habitat data
-hab16 <- read_xlsx(here("other",
-                        "Macro_Habitat_data_dl_20220428",
+hab16 <- read_xlsx(here(mh_path,
                         "macro_habitat_data_2016_2017.xlsx"),
                    skip = 0, 
                    sheet = "Habitat_2016"
@@ -188,8 +184,7 @@ hab16 <- read_xlsx(here("other",
          rip_veg_r = 15)
 
 # Read in habitat data
-hab17 <- read_xlsx(here("other",
-                        "Macro_Habitat_data_dl_20220428",
+hab17 <- read_xlsx(here(mh_path,
                         "macro_habitat_data_2016_2017.xlsx"),
                    skip = 0, 
                    sheet = "Habitat_2017"
@@ -209,8 +204,7 @@ hab17 <- read_xlsx(here("other",
          rip_veg_l = 14,
          rip_veg_r = 15)
 
-hab18 <- read_xlsx(here("other",
-                        "Macro_Habitat_data_dl_20220428",
+hab18 <- read_xlsx(here(mh_path,
                         "macro_habitat_data_2018_2019.xlsx"),
                    skip = 0, 
                    sheet = "Habitat_2018"
@@ -232,8 +226,7 @@ hab18 <- read_xlsx(here("other",
 
 # note: I fixed a typo in Habitat_2019 tab manually:
 #         TNC_6	4/12/2019 was TNC_6	4/12/12019
-hab19 <- read_xlsx(here("other",
-                        "Macro_Habitat_data_dl_20220428",
+hab19 <- read_xlsx(here(mh_path,
                         "macro_habitat_data_2018_2019.xlsx"),
                    skip = 0, 
                    sheet = "Habitat_2019"
@@ -253,8 +246,7 @@ hab19 <- read_xlsx(here("other",
          rip_veg_l = 14,
          rip_veg_r = 15)
 
-hab20 <- read_xlsx(here("other",
-                        "Macro_Habitat_data_dl_20220428",
+hab20 <- read_xlsx(here(mh_path,
                         "macro_habitat_data_2020_2021.xlsx"),
                    skip = 0, 
                    sheet = "Habitat_2020"
@@ -275,8 +267,7 @@ hab20 <- read_xlsx(here("other",
          rip_veg_r = 15,
          habitat_score = 16)
 
-hab21 <- read_xlsx(here("other",
-                        "Macro_Habitat_data_dl_20220428",
+hab21 <- read_xlsx(here(mh_path,
                         "macro_habitat_data_2020_2021.xlsx"),
                    skip = 0, 
                    sheet = "Habitat_2021"
@@ -363,9 +354,9 @@ inv %>%
   geom_text(aes(x = 110, y = tnc_code, label = n2),
             color = "darkgray", hjust = 1)
 
-# ggsave(here(task_path,
-#             "PlotA_mean_macroinvertebrate_index_by_site3.png"),
-#        height = 4, width = 4.5, dpi = 400)
+ggsave(here(task_path,
+            "PlotA_mean_macroinvertebrate_index_by_site3.png"),
+       height = 4, width = 4.5, dpi = 400)
 ```
 # Macroinvertebrate index table1
 values by site & year

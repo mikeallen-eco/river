@@ -1,0 +1,1 @@
+The 2016-2021 logger data in these folders was downloaded on January 4, 2022 from the TNC Box drive. Only one small change was made to the files: in file "TNC_25_CLDHY_2_masterfile_2017.xlsx" a sheet name was renamed from "2021" to "2017".

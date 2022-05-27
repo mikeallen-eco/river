@@ -1,13 +1,23 @@
-# To do: errors discovereed
+---
+title: "Task 1. SWQ Standards"
+author: "Mike Allen"
+date: "2/4/2022"
+output:
+  html_document: default
+  pdf_document: default
+---
+# Task 0: Load and compile all logger data
+
+## Errors discovered in XLSX files 
+These were fixed in the code (in chunk 0.1) except error no. 2, which was fixed in the xlsx file (tab renamed).
+
 1. see 3 QC filter steps for hobo
 2. TNC_25_CLDHY_2_masterfile_2017.xlsx sheet name is "2021"
   note: I fixed this in temp copy to allow compile to run
 3. possible naming issue in HYDRO data: is CLDHY-2 the same as CLDHY_2? In file: TNC_81_CLDHY2_2020_masterfile.xlsx
 
-# To do: questions
-1. Some "troughs" in DO remain
-
-# load libraries
+# 0.0 Load libraries and set logger data path
+To load data from a new year, you will place the excel file into the folder linked to at the end of this code chunk (currently "data/Logger_Data"). It should be formatted exactly like the 2021 file. [Note: this functionality not yet implemented.]
 ```{r}
 library(dplyr)
 library(here)
@@ -21,10 +31,10 @@ source(here("scripts", "logger_compile_function.R"))
 source(here("scripts", "logger_plot_function.R"))
 
 # set path to folder where the latest logger data files are kept
-logger_path <- "D:/river/Logger_Data_dl_20220104/" 
+logger_path <- "data/Logger_Data/" 
 ```
-
-# Read and compile HOBO data using logger_compile function
+# 0.1 Read and compile HOBO data using logger_compile function
+This code section runs the "logger_compile" function on the HOBO logger data files from each year to compile data into one big data frame named "hobo". It has built in fixes for errors discovered in the data excel files from 2016-2021. So, any changes to those files will also require changes to this code. [Note: functionality to handle new years not yet implemented.]
 ```{r}
 hobo <- logger_compile("2016", type = "hobo") %>%
   bind_rows(logger_compile("2017", type = "hobo")) %>%
@@ -50,28 +60,49 @@ hobo <- logger_compile("2016", type = "hobo") %>%
   filter(temp != -9999.00,
          temp != -888.88)
 
-# to filter sites by site number if needed
- # %>% filter(as.numeric(gsub("TNC_", "", site)) < 30)
 ```
-# Various QC checks for HOBO data
+# 0.2 Various QC checks for HOBO data
+This code section allows you to perform basic checks on the imported HOBO logger data (the 'hobo' object). It will work best to run each line individually (e.g., using ctrl-Enter). The output will appear in the RStudio Console. You can also view the hobo object by clicking on it in the RStudio Environment section.
 ```{r}
+# examine the structure of the data frame
+# including the name, data type, and example values for each variable
 
 str(hobo)
+
+# check which years are included
 unique(hobo$year) # 2016:2021
+
+# check which sites are included
 unique(hobo$site)
-length(unique(hobo$site)) # 16
-unique(hobo$logger)
-length(unique(hobo$logger)) # 16
-table(hobo$FLAG_temp)
-table(hobo$FLAG_DO)
-table(hobo$FLAG_other)
-table(hobo$FLAG_cnt)
+
+# count how many sites are included
+length(unique(hobo$site)) 
+
+# check which logger ID's are included
 unique(hobo$logger)
 
-hobo_flag5 = hobo[hobo$FLAG_DO == 5,] #
+# count how many logger ID's are included
+length(unique(hobo$logger))
+
+# tally how many of each type of temperature flag there are
+table(hobo$FLAG_temp)
+
+# tally how many of each type of DO flag there are
+table(hobo$FLAG_DO)
+
+# tally how many of each type of 'other' flag there are
+table(hobo$FLAG_other)
+
+# tally how many of each type of 'cnt' flag there are
+table(hobo$FLAG_cnt)
+
+# make a data frame of all observations with DO flag 5
+hobo_flag5 = hobo[hobo$FLAG_DO == 5,] # view it in the environment
+rm(hobo_flag5) # remove that object when you are done
  
-# checks for things that were fixed above
+# checks for things that were fixed in section 0.1
 nrow(hobo[hobo$year != lubridate::year(hobo$datetime),]) # now 0
+
 nrow(hobo[hobo$site == "TNC",]) # now 0
 nrow(hobo[hobo$temp <= 0,]) # now 0
 

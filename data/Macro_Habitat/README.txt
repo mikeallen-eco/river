@@ -1,0 +1,1 @@
+The 2016-2021 macroinvertebrate and habitat data in this folder was downloaded on April 28, 2022 from the TNC Box drive. Only one small change was made to the files: in file "macro_habitat_data_2018_2019.xlsx" in the tab "Habitat_2019", I changed "4/12/12019" to "4/12/2019" for site TNC_6.

@@ -17,6 +17,13 @@ can't. Put TNC_80 on the Columbia Dam macroinvertebrate plot (E) (TNC_80 not in 
 * make new plot combining Plots D and Plots K (macro and habitat) into one graph 
 - Look into ways to plot changes over time in whole watershed
 - Make a model of that too
+- check habitat threshold values:
+	- optimal 160-200, sub 110-159, marginal 60-109, poor < 60
+- plot H: put lines and annotations showing quality categories
+- plot K: add poor category in legend
+- try plot H but coloring points to show mean (july?) temps 
+- try plot H but w/ DO
+
 
 Task 3
 - make hyperhumus-type figure for tree planting project sites
