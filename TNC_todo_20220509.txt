@@ -19,9 +19,9 @@ Task 4
 - Make models of that too
 * fix habitat threshold values
 * plot K: add poor category in legend
-- plot H: put lines and annotations showing quality categories
-- try plot H but coloring points to show mean (july?) temps 
-- try plot H but w/ coloring points to show mean DO
+* plot H: put lines and annotations showing quality categories
+- new version of plot H but coloring points to show mean (july?) temps 
+- new version of plot H but w/ coloring points to show mean DO
 
 
 Task 3
