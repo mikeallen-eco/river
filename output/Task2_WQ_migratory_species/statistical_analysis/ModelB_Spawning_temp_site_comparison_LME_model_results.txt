@@ -1,0 +1,45 @@
+Statistical comparison of temperatures across sites within the primary spawning period for migratory fish. These results are from a linear mixed-effect model with date nested within year as random effects, and site as a fixed effect. Dates for the migratory fish life stages are based on Rutgers data from the Raritan River and those described for American Shad in an extension report from Maryland (Klauda and Fischer, undated). Spring migration: 15 April - 15 May; Spawning: 16-31 May; Larvae: 1-30 June; Juvenile: 1 July - 15 Sept.; Fall migration: 16 Sept. - 30 Nov. Only sites accessible to migratory fish were included. See Task 2, Plot G for graphical representation of this model.
+
+Linear mixed model fit by REML ['lmerMod']
+Formula: temp ~ site + (1 | yearf/dayf)
+   Data: tdata_spawn
+
+REML criterion at convergence: 127612.1
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-3.2964 -0.6619 -0.0889  0.7126  3.6027 
+
+Random effects:
+ Groups     Name        Variance Std.Dev.
+ dayf:yearf (Intercept) 5.186    2.277   
+ yearf      (Intercept) 0.000    0.000   
+ Residual               1.416    1.190   
+Number of obs: 39876, groups:  dayf:yearf, 73; yearf, 5
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept) 19.23663    0.27115   70.95
+siteTNC_13  -1.10238    0.05450  -20.23
+siteTNC_16  -1.29908    0.05490  -23.66
+siteTNC_18  -1.07476    0.05174  -20.77
+siteTNC_19  -0.95123    0.05179  -18.37
+siteTNC_23  -1.38895    0.05486  -25.32
+siteTNC_24  -1.32236    0.06098  -21.68
+siteTNC_25  -1.26927    0.05553  -22.86
+siteTNC_80  -1.32301    0.06075  -21.78
+siteTNC_81  -1.49301    0.05450  -27.40
+
+Correlation of Fixed Effects:
+           (Intr) sTNC_13 sTNC_16 sTNC_18 sTNC_19 sTNC_23 sTNC_24 sTNC_25 sTNC_80
+siteTNC_13 -0.172                                                                
+siteTNC_16 -0.160  0.827                                                         
+siteTNC_18 -0.178  0.911   0.842                                                 
+siteTNC_19 -0.177  0.903   0.839   0.930                                         
+siteTNC_23 -0.172  0.893   0.809   0.911   0.899                                 
+siteTNC_24 -0.155  0.806   0.730   0.816   0.811   0.806                         
+siteTNC_25 -0.170  0.882   0.800   0.900   0.888   0.895   0.796                 
+siteTNC_80 -0.155  0.805   0.728   0.825   0.812   0.818   0.715   0.808         
+siteTNC_81 -0.172  0.897   0.827   0.911   0.903   0.893   0.806   0.882   0.805 
+optimizer (nloptwrap) convergence code: 0 (OK)
+boundary (singular) fit: see ?isSingular

@@ -28,12 +28,13 @@ library(GGally)
 library(fmsb)
 library(wesanderson)
 
+# set path to save plots and other output to
 task_path <- "output/Task4_inverts_and_habitat/"
 
 # path where the Macroinvertebrate and Habitat Quality data are stored
 mh_path <- "data/Macro_Habitat"
 
-# Read in Macroinvertebrate data
+# Read in Macroinvertebrate data - 2016
 inv16 <- read_xlsx(here(mh_path,
                         "macro_habitat_data_2016_2017.xlsx"),
                    skip = 2, 
@@ -51,6 +52,7 @@ inv16 <- read_xlsx(here(mh_path,
          rating = 11
          )
 
+# Read in Macroinvertebrate data - 2017
 inv17 <- read_xlsx(here(mh_path,
                         "macro_habitat_data_2016_2017.xlsx"),
                    skip = 3, 
@@ -69,7 +71,8 @@ inv17 <- read_xlsx(here(mh_path,
          index = 10,
          rating = 11
          )
- 
+
+# Read in Macroinvertebrate data - 2018
 inv18 <- read_xlsx(here(mh_path,
                         "macro_habitat_data_2018_2019.xlsx"),
                    skip = 3, 
@@ -90,6 +93,7 @@ inv18 <- read_xlsx(here(mh_path,
          ) %>%
   filter(is.na(tnc_code) == F)
 
+# Read in Macroinvertebrate data - 2019
 inv19 <- read_xlsx(here(mh_path,
                         "macro_habitat_data_2018_2019.xlsx"),
                    skip = 2, 
@@ -107,6 +111,7 @@ inv19 <- read_xlsx(here(mh_path,
          rating = 11
          )
 
+# Read in Macroinvertebrate data - 2020
 inv20 <- read_xlsx(here(mh_path,
                         "macro_habitat_data_2020_2021.xlsx"),
                    skip = 3, 
@@ -127,6 +132,7 @@ inv20 <- read_xlsx(here(mh_path,
          ) %>%
   filter(is.na(num_gen) != T)
 
+# Read in Macroinvertebrate data - 2021
 inv21 <- read_xlsx(here(mh_path,
                         "macro_habitat_data_2020_2021.xlsx"),
                    skip = 2, 
@@ -144,6 +150,7 @@ inv21 <- read_xlsx(here(mh_path,
          rating = 11
          )
 
+# Compile all Macroinvertebrate data into one data frame
 inv <- inv16 %>%
   bind_rows(inv17) %>%
   bind_rows(inv18) %>%
@@ -160,9 +167,10 @@ inv <- inv16 %>%
                             rating == "POOR" ~ "Poor",
                             TRUE ~ rating))
 
+# remove data frames of individual years
 rm(inv16, inv17, inv18, inv19, inv20, inv21)
 
-# Read in habitat data
+# Read in habitat data - 2016
 hab16 <- read_xlsx(here(mh_path,
                         "macro_habitat_data_2016_2017.xlsx"),
                    skip = 0, 
@@ -183,7 +191,7 @@ hab16 <- read_xlsx(here(mh_path,
          rip_veg_l = 14,
          rip_veg_r = 15)
 
-# Read in habitat data
+# Read in habitat data - 2017
 hab17 <- read_xlsx(here(mh_path,
                         "macro_habitat_data_2016_2017.xlsx"),
                    skip = 0, 
@@ -204,6 +212,7 @@ hab17 <- read_xlsx(here(mh_path,
          rip_veg_l = 14,
          rip_veg_r = 15)
 
+# Read in habitat data - 2018
 hab18 <- read_xlsx(here(mh_path,
                         "macro_habitat_data_2018_2019.xlsx"),
                    skip = 0, 
@@ -226,6 +235,7 @@ hab18 <- read_xlsx(here(mh_path,
 
 # note: I fixed a typo in Habitat_2019 tab manually:
 #         TNC_6	4/12/2019 was TNC_6	4/12/12019
+# Read in habitat data - 2019
 hab19 <- read_xlsx(here(mh_path,
                         "macro_habitat_data_2018_2019.xlsx"),
                    skip = 0, 
@@ -246,6 +256,7 @@ hab19 <- read_xlsx(here(mh_path,
          rip_veg_l = 14,
          rip_veg_r = 15)
 
+# Read in habitat data - 2020
 hab20 <- read_xlsx(here(mh_path,
                         "macro_habitat_data_2020_2021.xlsx"),
                    skip = 0, 
@@ -267,6 +278,7 @@ hab20 <- read_xlsx(here(mh_path,
          rip_veg_r = 15,
          habitat_score = 16)
 
+# Read in habitat data - 2021
 hab21 <- read_xlsx(here(mh_path,
                         "macro_habitat_data_2020_2021.xlsx"),
                    skip = 0, 
@@ -287,6 +299,7 @@ hab21 <- read_xlsx(here(mh_path,
          rip_veg_l = 14,
          rip_veg_r = 15)
 
+# Compile all Habitat data into one data frame
 hab <- hab16 %>%
   bind_rows(hab17) %>%
   bind_rows(hab18) %>%
@@ -311,8 +324,8 @@ hab <- hab16 %>%
                                       "Sub-Optimal",
                                     TRUE ~ habitat_rating))
 
+# remove data frames of individual years
 rm(hab16, hab17, hab18, hab19, hab20, hab21)
-
 ```
 # Plot A - dot plot of overall index average by site/year
 ```{r}
@@ -355,19 +368,8 @@ inv %>%
             color = "darkgray", hjust = 1)
 
 ggsave(here(task_path,
-            "PlotA_mean_macroinvertebrate_index_by_site3.png"),
+            "PlotA_mean_macroinvertebrate_index_by_site.png"),
        height = 4, width = 4.5, dpi = 400)
-```
-# Macroinvertebrate index table1
-values by site & year
-```{r}
-
-```
-
-# Macroinvertebrate index table2
-mean/sd/min/max/n values by site
-```{r}
-
 ```
 #PlotB - data visualization of index components
 Scatterplot matrix to inspect data
@@ -885,3 +887,38 @@ ggsave(here(task_path, "PlotL_habitat_and_invert_by_year",
          width = 6, height = 4, dpi = 400)
 }
 ```
+# Plot M - Change in macro index over time (all sites) 
+```{r}
+inv_mean <- inv %>%
+  group_by(tnc_code, year) %>%
+  summarise(index = mean(index), 
+            .groups = "drop") %>%
+  group_by(tnc_code) %>%
+  mutate(n_years = length(index)) %>%
+  ungroup() %>%
+  filter(n_years >= 1) %>%
+  group_by(year) %>%
+  summarise(index_mean = mean(index),
+            index_sd = sd(index),
+            n = length(index),
+            index_se = index_sd/sqrt(n))
+
+ggplot(inv_mean) +
+  geom_errorbar(aes(x = year, ymin = index_mean-2*index_se,
+                    ymax = index_mean+2*index_se),
+                width = 0, size = 1) +
+    geom_point(aes(x = year, y = index_mean), 
+             size = 4, shape = 21, fill = "steelblue") +
+  geom_text(aes(x = year, y = 1, label = n),
+            color = "darkgray") +
+  annotate(geom = "text", x = 2016, y = 7, 
+           label = "No. locations:",
+           color = "darkgray",
+           hjust = .1) +
+  labs(x = "", y = "Macroinvertebrate index\n(+/- 2 SE)") +
+  theme_bw() +
+  theme(text = element_text(size = 14))
+  
+
+```
+

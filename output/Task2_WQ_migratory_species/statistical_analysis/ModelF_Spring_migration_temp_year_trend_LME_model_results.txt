@@ -1,0 +1,31 @@
+See Task 2, Plot H and caption for more info.
+
+Linear mixed model fit by REML. t-tests use Satterthwaite's method ['lmerModLmerTest']
+Formula: temp ~ yearn + (1 | dayf) + (yearn | site)
+   Data: filter(tdata, is.na(temp) == F, season == "migrate", site %notin%      exclude)
+Control: lmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 2e+05))
+
+REML criterion at convergence: 209608.2
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-3.7723 -0.6318  0.0002  0.6576  3.8400 
+
+Random effects:
+ Groups   Name        Variance Std.Dev. Corr 
+ dayf     (Intercept) 1.6256   1.2750        
+ site     (Intercept) 3.7695   1.9415        
+          yearn       0.1533   0.3915   -1.00
+ Residual             3.2345   1.7985        
+Number of obs: 52178, groups:  dayf, 31; site, 9
+
+Fixed effects:
+            Estimate Std. Error      df t value Pr(>|t|)    
+(Intercept)  15.2287     0.7023  9.5411  21.685 1.94e-09 ***
+yearn        -0.1829     0.1343  7.6461  -1.362    0.212    
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Correlation of Fixed Effects:
+      (Intr)
+yearn -0.939

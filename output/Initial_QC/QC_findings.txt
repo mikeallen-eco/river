@@ -1,0 +1,23 @@
+Errors discovered in the data files
+a. hobo: TNC_24_CLDHO_1_2019_masterfile.xlsx has 10460 rows with wrong year, site, and logger values (numbers increase sequentially)
+b. hobo: TNC_16_PKHO_10_2017_masterfile.xlsx site name was TNC instead of TNC_16
+c. various hobo files: 17952 rows from various files with large negative data values (-9999.00 or -888.88)
+d. hydro: TNC_25_CLDHY_2_masterfile_2017.xlsx sheet name is "2021" instead of "2017"
+e. hydro: TNC_81_CLDHY2_2020_masterfile.xlsx site name "CLDHY-2" should be "CLDHY_2" for consistency 
+
+Data issues noticable from plots
+a. A few temperature data spikes on ends of timeseries.
+  # fixed by removing obvious outliers at start of time series in 3 cases (before calculating tmax)
+  	(site == "TNC_25" & year == 2018 & day == 122)
+  	(site == "TNC_23" & year == 2018 & day == 122)
+  	(site == "TNC_23" & year == 2021 & day == 118)
+b. Prolonged dips in DO to near 0 that aren't removed by flags (in unadjusted DO data)
+c. Whole years disappear when using adjusted vs. unadjusted DO
+
+Questions
+a. Why do some years disappear in DO adjusted?
+b. Represent DO data as proportion of days under threshold (due to variable amounts of missing data)?
+
+
+
+

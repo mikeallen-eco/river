@@ -1,0 +1,47 @@
+Statistical comparison of temperatures across sites within the primary fall migration period for migratory fish. These results are from a linear mixed-effect model with date nested within year as random effects, and site as a fixed effect. Dates for the migratory fish life stages are based on Rutgers data from the Raritan River and those described for American Shad in an extension report from Maryland (Klauda and Fischer, undated). Spring migration: 15 April - 15 May; Spawning: 16-31 May; Larvae: 1-30 June; Juvenile: 1 July - 15 Sept.; Fall migration: 16 Sept. - 30 Nov. Only sites accessible to migratory fish were included. See Task 2, Plot G for graphical representation of this model.
+
+Linear mixed model fit by REML ['lmerMod']
+Formula: temp ~ site + (1 | yearf/dayf)
+   Data: tdata_fall
+
+REML criterion at convergence: 365608.7
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-8.0858 -0.5251 -0.0014  0.5219 10.5963 
+
+Random effects:
+ Groups     Name        Variance Std.Dev.
+ dayf:yearf (Intercept) 18.1786  4.2636  
+ yearf      (Intercept)  6.2854  2.5071  
+ Residual                0.6812  0.8253  
+Number of obs: 147904, groups:  dayf:yearf, 275; yearf, 5
+
+Fixed effects:
+            Estimate Std. Error t value
+(Intercept) 17.10743    1.15598   14.80
+siteTNC_13  -2.03343    0.01521 -133.67
+siteTNC_16  -2.37655    0.01383 -171.78
+siteTNC_18  -2.13862    0.01291 -165.62
+siteTNC_19  -2.01142    0.01330 -151.26
+siteTNC_23  -2.44885    0.01272 -192.58
+siteTNC_24  -2.35956    0.01326 -177.92
+siteTNC_25  -2.21489    0.01284 -172.55
+siteTNC_26  -0.70053    0.01668  -41.99
+siteTNC_27  -1.25740    0.02119  -59.35
+siteTNC_80  -2.49238    0.01656 -150.53
+siteTNC_81  -2.47231    0.01493 -165.64
+
+Correlation of Fixed Effects:
+           (Intr) sTNC_13 sTNC_16 sTNC_18 sTNC_19 sTNC_23 sTNC_24 sTNC_25 sTNC_26 sTNC_27 sTNC_80
+siteTNC_13 -0.008                                                                                
+siteTNC_16 -0.008  0.659                                                                         
+siteTNC_18 -0.009  0.703   0.722                                                                 
+siteTNC_19 -0.009  0.694   0.713   0.765                                                         
+siteTNC_23 -0.009  0.716   0.735   0.796   0.778                                                 
+siteTNC_24 -0.008  0.631   0.668   0.735   0.713   0.755                                         
+siteTNC_25 -0.009  0.694   0.721   0.779   0.761   0.818   0.751                                 
+siteTNC_26 -0.006  0.462   0.516   0.540   0.534   0.549   0.521   0.543                         
+siteTNC_27 -0.005  0.364   0.407   0.427   0.422   0.433   0.412   0.428   0.346                 
+siteTNC_80 -0.007  0.619   0.606   0.651   0.643   0.659   0.575   0.632   0.424   0.335         
+siteTNC_81 -0.008  0.679   0.673   0.717   0.708   0.730   0.643   0.706   0.471   0.371   0.635 

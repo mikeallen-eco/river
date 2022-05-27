@@ -1,4 +1,4 @@
-To do
+To do (* = done; - = not done)
 
 Task 4
 * fix decimal years in Plot D
@@ -7,7 +7,7 @@ Task 4
 - put rating numerical ranges of in Plot D  (Excel. ≥63; Good 63-42; Fair 42-21; Poor <21)
 * read in and format 2020-2021 data
 * update plots with 2020-2021 data
-can't. Put TNC_80 on the Columbia Dam macroinvertebrate plot (E) (TNC_80 not in the data file?)
+* Put TNC_80 on the Columbia Dam macroinvertebrate plot (E)
 * Rename Plot J files (from "Plot C")
 * Plot J: Combine Left and right bank indices to one number (scale 0-20)
 * rename plot K files (from "Plot D")
@@ -16,13 +16,13 @@ can't. Put TNC_80 on the Columbia Dam macroinvertebrate plot (E) (TNC_80 not in 
 - put numerical ranges of hab score categories in plots
 * make new plot combining Plots D and Plots K (macro and habitat) into one graph 
 - Look into ways to plot changes over time in whole watershed
-- Make a model of that too
-- check habitat threshold values:
+- Make models of that too
+- fix habitat threshold values:
 	- optimal 160-200, sub 110-159, marginal 60-109, poor < 60
 - plot H: put lines and annotations showing quality categories
 - plot K: add poor category in legend
 - try plot H but coloring points to show mean (july?) temps 
-- try plot H but w/ DO
+- try plot H but w/ coloring points to show mean DO
 
 
 Task 3
