@@ -719,24 +719,25 @@ radarchart( data  , axistype=1 , maxmin = T,
 dev.off()
 }
 ```
-
 # Plot K - habitat score over time (separate plots by site)
 ```{r}
 for(i in unique(hab$tnc_code)){
 
 print(i)
  
-# color_vector <- c("olivedrab",
-#             wes_palettes$BottleRocket2[1:2])
-
-color_vector <- c("olivedrab",
+color_vector <- co <- c("olivedrab",
             "olivedrab2",
             wes_palettes$BottleRocket2[1:2])
 
 plot_data <- hab %>%
+  select(tnc_code, year, habitat_rating, habitat_score) %>%
+  bind_rows(data.frame(tnc_code = "filler",
+                       year = 2016, 
+                       habitat_rating = "Poor", 
+                       habitat_score = 0)) %>%
   mutate(habitat_rating = fct_reorder(habitat_rating, habitat_score, 
                               .desc = T)) %>%
-  filter(tnc_code == i) 
+  filter(tnc_code == i)
 
 hab %>%
   filter(tnc_code == i) %>%
@@ -744,11 +745,11 @@ hab %>%
   summarize(habitat_score = mean(habitat_score, na.rm = T),
             .groups = "drop") %>%
   ggplot() +
-  geom_hline(yintercept = 155, lty = 2, color = color_vector[1],
+  geom_hline(yintercept = 160, lty = 2, color = color_vector[1],
              alpha = 0.75) +
-  geom_hline(yintercept = 105, lty = 2, color = color_vector[2],
+  geom_hline(yintercept = 110, lty = 2, color = color_vector[2],
              alpha = 0.75) +
-  geom_hline(yintercept = 55, lty = 2, color = color_vector[3],
+  geom_hline(yintercept = 60, lty = 2, color = color_vector[3],
              alpha = 0.75) +
   geom_hline(yintercept = 0, lty = 2, color = color_vector[4],
              alpha = 0.75) +
@@ -756,16 +757,17 @@ hab %>%
             color = "darkgray",
             size = 1) +
   geom_point(aes(x = year, y = habitat_score, 
-                 color = habitat_rating), 
+                 fill = habitat_rating), 
+             shape = 21,
             size = 4, data = plot_data) +
   scale_y_continuous(limits = c(0, 200)) +
   scale_x_continuous(breaks = 2016:2021) +
-  scale_color_manual(values = color_vector,
+  scale_fill_manual(values = color_vector,
                      drop = F) +
     theme_classic() +
     theme(text = element_text(size = 14)) +
     labs(y = "Habitat Score", x = "",
-         color = "Rating",
+         fill = "Rating",
          title = i)
 
   ggsave(here(task_path, "PlotK_habitat_score_by_year",
@@ -820,61 +822,100 @@ line_data <- line_data_inv %>%
 plot_data <- plot_data_inv %>%
   bind_rows(plot_data_hab)
   
-topline <- data.frame(type = c("Habitat","Habitat", 
-                              "Macroinvertebrates","Macroinvertebrates"),
-                     year = rep(c(min(plot_data$year),
-                                  max(plot_data$year)),2),
-                     index = c(155/2,155/2, 63, 63)
+topline <- data.frame(type = c("Habitat","Habitat",                               "Macroinvertebrates","Macroinvertebrates"),
+                      year = rep(c(2016, 2021), 2),
+                     # year = rep(c(min(plot_data$year),
+                     #              max(plot_data$year)),2),
+                     index = c(160/2,160/2, 63, 63),
+                     rating = c("Optimal", "Optimal", 
+                                "Excellent", "Excellent")
   )
 
 midline <- data.frame(type = c("Habitat","Habitat", 
-                              "Macroinvertebrates","Macroinvertebrates"),
-                     year = rep(c(min(plot_data$year),
-                                  max(plot_data$year)),2),
-                     index = c(105/2,105/2, 42, 42)
+                              "Macroinvertebrates",
+                              "Macroinvertebrates"),
+                      year = rep(c(2016, 2021), 2),
+                     # year = rep(c(min(plot_data$year),
+                     #              max(plot_data$year)),2),
+                     index = c(110/2,110/2, 42, 42),
+                     rating = c("Sub-optimal", "Sub-optimal", 
+                                "Good", "Good")
   )
 
 botline <- data.frame(type = c("Habitat","Habitat", 
-                              "Macroinvertebrates","Macroinvertebrates"),
-                     year = rep(c(min(plot_data$year),
-                                  max(plot_data$year)),2),
-                     index = c(55/2,55/2, 21, 21)
+                               "Macroinvertebrates",
+                               "Macroinvertebrates"),
+                      year = rep(c(2016, 2021), 2),
+                     # year = rep(c(min(plot_data$year),
+                     #              max(plot_data$year)),2),
+                     index = c(60/2,60/2, 21, 21),
+                     rating = c("Marginal", "Marginal", 
+                                "Fair", "Fair")
+  )
+
+zeroline <- data.frame(type = c("Habitat","Habitat", 
+                               "Macroinvertebrates",
+                               "Macroinvertebrates"),
+                      year = rep(c(2016, 2021), 2),
+                     # year = rep(c(min(plot_data$year),
+                     #              max(plot_data$year)),2),
+                     index = c(0, 0, 0, 0),
+                     rating = rep("Poor", 4)
   )
 
 ggplot() +
   # top threshold line
   geom_line(aes(x = year, y = index), lty = 2, 
-            color = color_vector_inv[1],
+            color = color_vector[1],
              alpha = 0.75,
             data = topline) +
+  geom_text(aes(x = 2020.5, y = index+2.5, label = rating),
+            data = topline, size = 2,
+            color = co[1], hjust = .5,
+            alpha = .75) +
   # mid threshold line
   geom_line(aes(x = year, y = index), lty = 2, 
-            color = c(color_vector_inv[2], 
-                      color_vector_inv[2],
-                      color_vector_inv[2],
-                      color_vector_inv[2]),
+            color = c(color_vector[2], 
+                      color_vector[2],
+                      color_vector[2],
+                      color_vector[2]),
              alpha = 0.75,
             data = midline) +
+  geom_text(aes(x = 2020.5, y = index+2.5, label = rating),
+            data = midline, size = 2,
+            color = co[2], hjust = .5,
+            alpha = .75) +
   # bottom threshold line
   geom_line(aes(x = year, y = index), lty = 2, 
-            color = c(color_vector_inv[3]),
+            color = c(color_vector[3]),
              alpha = 0.75,
             data = botline) +
-  geom_hline(yintercept = 0, color = color_vector_inv[4], 
-             lty = 2, alpha = 0.75) +
+  geom_text(aes(x = 2020.5, y = index+2.5, label = rating),
+            data = botline, size = 2,
+            color = co[3], hjust = .5,
+            alpha = .75) +
+    # zero threshold line
+  geom_line(aes(x = year, y = index), lty = 2, 
+            color = c(color_vector[4]),
+             alpha = 0.75,
+            data = zeroline) +
+  geom_text(aes(x = 2020.5, y = index+2.5, label = rating),
+            data = zeroline, size = 2,
+            color = co[4], hjust = .5,
+            alpha = .75) +
   geom_line(aes(x = year, y = index), 
             color = "darkgray",
             size = 1,
             data = line_data) +
-  geom_point(aes(x = year, y = index, color = rating), 
-            size = 4, data = plot_data) +
+  geom_point(aes(x = year, y = index, fill = rating), 
+            size = 4, shape = 21, data = plot_data) +
   scale_y_continuous(limits = c(0,100)) +
   scale_x_continuous(breaks = 2016:2021) +
   facet_wrap(~type) +
   theme_bw() +
-  guides(color = "none") +
+  guides(fill = "none") +
   # note: this color order works because factor levels are in this order
-  scale_color_manual(values = c(color_vector_inv, color_vector_inv),
+  scale_fill_manual(values = c(color_vector_inv, color_vector_inv),
                      drop = F) +
   theme(text = element_text(size = 14),
         strip.background = element_rect(fill = "white"),
@@ -887,38 +928,193 @@ ggsave(here(task_path, "PlotL_habitat_and_invert_by_year",
          width = 6, height = 4, dpi = 400)
 }
 ```
-# Plot M - Change in macro index over time (all sites) 
+# Plot M - mean habitat & macroinvertebrate index over time (all sites)
+One plot showing mean +/- 2SE for all sites
 ```{r}
-inv_mean <- inv %>%
+
+co <- color_vector <- c("olivedrab",
+            "olivedrab2",
+            wes_palettes$BottleRocket2[1:2])
+
+plot_data_inv <- inv %>%
   group_by(tnc_code, year) %>%
   summarise(index = mean(index), 
             .groups = "drop") %>%
   group_by(tnc_code) %>%
   mutate(n_years = length(index)) %>%
   ungroup() %>%
-  filter(n_years >= 1) %>%
+  # use this filter command to remove certain years
+  # or remove sites with less than some number of years of data
+  filter(n_years >= 1,
+         year != 2029) %>%
   group_by(year) %>%
   summarise(index_mean = mean(index),
             index_sd = sd(index),
             n = length(index),
-            index_se = index_sd/sqrt(n))
+            index_se = index_sd/sqrt(n), 
+            .groups = "drop") %>%
+  mutate(rating = case_when(index_mean >= 63 ~ "Excellent",
+                            index_mean < 63 & 
+                              index_mean >= 42 ~ "Good",
+                            index_mean < 42 &
+                              index_mean >= 21 ~ "Fair",
+                            index_mean < 21 ~ "Poor")) %>%
+  mutate(col = case_when(index_mean >= 63 ~ co[1],
+                            index_mean < 63 & 
+                              index_mean >= 42 ~ co[2],
+                            index_mean < 42 &
+                              index_mean >= 21 ~ co[3],
+                            index_mean < 21 ~ co[4])) %>%
+  mutate(rating = fct_reorder(rating, index_mean, .desc = T)) %>%
+  select(year, rating, index_mean, index_se, n, col) %>%
+  mutate(type = "Macroinvertebrates")
 
-ggplot(inv_mean) +
-  geom_errorbar(aes(x = year, ymin = index_mean-2*index_se,
-                    ymax = index_mean+2*index_se),
-                width = 0, size = 1) +
-    geom_point(aes(x = year, y = index_mean), 
-             size = 4, shape = 21, fill = "steelblue") +
-  geom_text(aes(x = year, y = 1, label = n),
-            color = "darkgray") +
-  annotate(geom = "text", x = 2016, y = 7, 
+plot_data_hab <- hab %>%
+  rename(index = habitat_score) %>%
+  mutate(index = index/2) %>%
+  group_by(tnc_code, year) %>%
+  summarise(index = mean(index), 
+            .groups = "drop") %>%
+  group_by(tnc_code) %>%
+  mutate(n_years = length(index)) %>%
+  ungroup() %>%
+  # use this filter command to remove certain years
+  # or remove sites with less than some number of years of data
+  filter(n_years >= 1,
+         year != 2029) %>%
+  group_by(year) %>%
+  summarise(index_mean = mean(index),
+            index_sd = sd(index),
+            n = length(index),
+            index_se = index_sd/sqrt(n), 
+            .groups = "drop") %>%
+  mutate(rating = case_when(index_mean >= 160/2 ~ "Optimal",
+                            index_mean < 160/2 & 
+                              index_mean >= 110/2 ~ "Sub-optimal",
+                            index_mean < 110/2 &
+                              index_mean >= 60/2 ~ "Marginal",
+                            index_mean < 60/2 ~ "Poor")) %>%
+  mutate(col = case_when(index_mean >= 160/2 ~ co[1],
+                            index_mean < 160/2 & 
+                              index_mean >= 110/2 ~ co[2],
+                            index_mean < 60/2 &
+                              index_mean >= 60/2 ~ co[3],
+                            index_mean < 60/2 ~ co[4])) %>%
+  mutate(rating = fct_reorder(rating, .x = index_mean, .desc = F)) %>%
+  select(year, rating, index_mean, index_se, n, col) %>%
+  mutate(type = "Habitat")
+
+plot_data <- plot_data_inv %>%
+  bind_rows(plot_data_hab) %>%
+  rename(index = index_mean)
+  
+topline <- data.frame(type = c("Habitat","Habitat",                               "Macroinvertebrates","Macroinvertebrates"),
+                     year = rep(c(min(plot_data$year),
+                                  max(plot_data$year)),2),
+                     index = c(160/2,160/2, 63, 63),
+                     rating = c("Optimal", "Optimal", 
+                                "Excellent", "Excellent")
+  )
+
+midline <- data.frame(type = c("Habitat","Habitat", 
+                              "Macroinvertebrates",
+                              "Macroinvertebrates"),
+                     year = rep(c(min(plot_data$year),
+                                  max(plot_data$year)),2),
+                     index = c(110/2,110/2, 42, 42),
+                     rating = c("Sub-optimal", "Sub-optimal", 
+                                "Good", "Good")
+  )
+
+botline <- data.frame(type = c("Habitat","Habitat", 
+                               "Macroinvertebrates",
+                               "Macroinvertebrates"),
+                     year = rep(c(min(plot_data$year),
+                                  max(plot_data$year)),2),
+                     index = c(60/2,60/2, 21, 21),
+                     rating = c("Marginal", "Marginal", 
+                                "Fair", "Fair")
+  )
+
+zeroline <- data.frame(type = c("Habitat","Habitat", 
+                               "Macroinvertebrates",
+                               "Macroinvertebrates"),
+                     year = rep(c(min(plot_data$year),
+                                  max(plot_data$year)),2),
+                     index = c(0, 0, 0, 0),
+                     rating = rep("Poor", 4)
+  )
+
+ggplot() +
+  # top threshold line
+  geom_line(aes(x = year, y = index), lty = 2, 
+            color = color_vector[1],
+             alpha = 0.75,
+            data = topline) +
+  geom_text(aes(x = 2020.5, y = index+2.5, label = rating),
+            data = topline, size = 2,
+            color = co[1], hjust = .5,
+            alpha = .75) +
+  # mid threshold line
+  geom_line(aes(x = year, y = index), lty = 2, 
+            color = c(color_vector[2], 
+                      color_vector[2],
+                      color_vector[2],
+                      color_vector[2]),
+             alpha = 0.75,
+            data = midline) +
+  geom_text(aes(x = 2020.5, y = index+2.5, label = rating),
+            data = midline, size = 2,
+            color = co[2], hjust = .5,
+            alpha = .75) +
+  # bottom threshold line
+  geom_line(aes(x = year, y = index), lty = 2, 
+            color = c(color_vector[3]),
+             alpha = 0.75,
+            data = botline) +
+  geom_text(aes(x = 2020.5, y = index+2.5, label = rating),
+            data = botline, size = 2,
+            color = co[3], hjust = .5,
+            alpha = .75) +
+    # zero threshold line
+  geom_line(aes(x = year, y = index), lty = 2, 
+            color = c(color_vector[4]),
+             alpha = 0.75,
+            data = zeroline) +
+  geom_text(aes(x = 2020.5, y = index+2.5, label = rating),
+            data = zeroline, size = 2,
+            color = co[4], hjust = .5,
+            alpha = .75) +
+  geom_line(aes(x = year, y = index), 
+            color = "darkgray",
+            size = 1,
+            data = plot_data) +
+  geom_errorbar(aes(x = year, ymin = index-2*index_se,
+                    ymax = index+2*index_se),
+                width = 0, size = 1, data = plot_data) +
+  geom_point(aes(x = year, y = index, fill = rating), 
+            size = 4, data = plot_data, fill = plot_data$col,
+            shape = 21) +
+  scale_y_continuous(limits = c(0,100)) +
+  scale_x_continuous(breaks = 2016:2021) +
+  facet_wrap(~type) +
+  guides(fill = "none") +
+  geom_text(aes(x = year, y = 5, label = n),
+            color = "darkgray",
+            data = plot_data,
+            size = 3.5) +
+  annotate(geom = "text", x = 2016, y = 11, 
            label = "No. locations:",
            color = "darkgray",
            hjust = .1) +
-  labs(x = "", y = "Macroinvertebrate index\n(+/- 2 SE)") +
   theme_bw() +
-  theme(text = element_text(size = 14))
-  
+  theme(text = element_text(size = 14),
+        strip.background = element_rect(fill = "white"),
+        axis.text.x = element_text(size = 9)) +
+  labs(x = "", y = "Mean index value\n(+/- 2 SE)")
 
+ggsave(here(task_path, 
+              paste0("PlotM_mean_macro_and_hab_by_year",
+                     "_all_sites.png")),
+         width = 6, height = 4, dpi = 400)
 ```
-

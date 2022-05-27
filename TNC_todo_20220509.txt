@@ -15,12 +15,11 @@ Task 4
 * mark boundaries of hab score categories on plot with lines
 - put numerical ranges of hab score categories in plots
 * make new plot combining Plots D and Plots K (macro and habitat) into one graph 
-- Look into ways to plot changes over time in whole watershed
+* plot changes in mean habitat and macro index over time (all sites)
 - Make models of that too
-- fix habitat threshold values:
-	- optimal 160-200, sub 110-159, marginal 60-109, poor < 60
+* fix habitat threshold values
+* plot K: add poor category in legend
 - plot H: put lines and annotations showing quality categories
-- plot K: add poor category in legend
 - try plot H but coloring points to show mean (july?) temps 
 - try plot H but w/ coloring points to show mean DO
 
