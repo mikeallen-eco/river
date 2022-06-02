@@ -27,6 +27,7 @@ library(forcats)
 library(GGally)
 library(fmsb)
 library(wesanderson)
+library(lme4)
 source("scripts/load_monthly_logger_data.R")
 
 # set path to save plots and other output to
@@ -327,8 +328,43 @@ hab <- hab16 %>%
 
 # remove data frames of individual years
 rm(hab16, hab17, hab18, hab19, hab20, hab21)
+
+# Create data frame of mean July temperatures for each site
+tsum_july <- tsum_month %>%
+  filter(Month == "July") %>%
+  group_by(site) %>%
+  summarise(mean_july_temp = mean(mean_mean),
+            .groups = "drop") %>%
+  rename(tnc_code = site)
+
+# Create data frame of mean July DO for each site
+dosum_july <- dosum_month %>%
+  filter(month == 7) %>%
+  group_by(site) %>%
+  summarise(mean_july_do = mean(mean_mean),
+            .groups = "drop") %>%
+  rename(tnc_code = site)
+
+# combine habitat, macroinvertebrate, mean July temp & DO data
+hab.inv <- hab %>%
+  left_join(inv, by = c("tnc_code", "year", "yearf")) %>%
+  group_by(tnc_code) %>%
+  summarize(index_mean = mean(index, na.rm = T),
+            index_min = min(index, na.rm = T),
+            index_max = max(index, na.rm = T),
+            index_n = sum(is.na(index)==F),
+            hab_mean = mean(habitat_score, na.rm = T),
+            hab_min = min(habitat_score, na.rm = T),
+            hab_max = max(habitat_score, na.rm = T),
+            hab_n = sum(is.na(habitat_score)==F)) %>%
+  mutate(index_n2 = paste0(c(rep("",20),"n = "), index_n),
+         hab_n2 = paste0(c(rep("",20),"n = "), hab_n),
+         num = gsub(tnc_code, pattern = "TNC_", 
+                    replacement = "")) %>%
+  left_join(tsum_july, by = "tnc_code") %>%
+  left_join(dosum_july, by = "tnc_code")
 ```
-# Plot A - dot plot of overall index average by site/year
+# Plot A - average macroinvertebrate index by site/year
 ```{r}
 color_vector <- c("olivedrab",
             "olivedrab2",
@@ -1225,30 +1261,6 @@ color_vector <- c("olivedrab",
             "olivedrab2",
             wes_palettes$BottleRocket2[1:2])
 
-tsum_july <- tsum_month %>%
-  filter(Month == "July") %>%
-  group_by(site) %>%
-  summarise(mean_july_temp = mean(mean_mean),
-            .groups = "drop") %>%
-  rename(tnc_code = site)
-
-hab.inv <- hab %>%
-  left_join(inv, by = c("tnc_code", "year", "yearf")) %>%
-  group_by(tnc_code) %>%
-  summarize(index_mean = mean(index, na.rm = T),
-            index_min = min(index, na.rm = T),
-            index_max = max(index, na.rm = T),
-            index_n = sum(is.na(index)==F),
-            hab_mean = mean(habitat_score, na.rm = T),
-            hab_min = min(habitat_score, na.rm = T),
-            hab_max = max(habitat_score, na.rm = T),
-            hab_n = sum(is.na(habitat_score)==F)) %>%
-  mutate(index_n2 = paste0(c(rep("",20),"n = "), index_n),
-         hab_n2 = paste0(c(rep("",20),"n = "), hab_n),
-         num = gsub(tnc_code, pattern = "TNC_", 
-                    replacement = "")) %>%
-  left_join(tsum_july, by = "tnc_code")
-
 hab.inv %>%
   ggplot() +
   geom_vline(xintercept = 160, lty = 2, color = color_vector[1],
@@ -1322,6 +1334,7 @@ hab.inv %>%
   labs(x = "Habitat score",
        y = "Macroinvertebrate index",
        fill = "Mean\nJuly\ntemp.") +
+  theme(text = element_text(size = 14)) +
   geom_text(aes(y = index_mean, x = hab_mean, label = num),
             color = "white", hjust = .5, size = 2.5)
 
@@ -1335,30 +1348,6 @@ Based on Plot H, but color coding points based on mean monthly July DO
 color_vector <- c("olivedrab",
             "olivedrab2",
             wes_palettes$BottleRocket2[1:2])
-
-dosum_july <- dosum_month %>%
-  filter(month == 7) %>%
-  group_by(site) %>%
-  summarise(mean_july_temp = mean(mean_mean),
-            .groups = "drop") %>%
-  rename(tnc_code = site)
-
-hab.inv <- hab %>%
-  left_join(inv, by = c("tnc_code", "year", "yearf")) %>%
-  group_by(tnc_code) %>%
-  summarize(index_mean = mean(index, na.rm = T),
-            index_min = min(index, na.rm = T),
-            index_max = max(index, na.rm = T),
-            index_n = sum(is.na(index)==F),
-            hab_mean = mean(habitat_score, na.rm = T),
-            hab_min = min(habitat_score, na.rm = T),
-            hab_max = max(habitat_score, na.rm = T),
-            hab_n = sum(is.na(habitat_score)==F)) %>%
-  mutate(index_n2 = paste0(c(rep("",20),"n = "), index_n),
-         hab_n2 = paste0(c(rep("",20),"n = "), hab_n),
-         num = gsub(tnc_code, pattern = "TNC_", 
-                    replacement = "")) %>%
-  left_join(dosum_july, by = "tnc_code")
 
 hab.inv %>%
   ggplot() +
@@ -1425,7 +1414,7 @@ hab.inv %>%
                     ymax = index_max, x = hab_mean),
                 width = 0, color = "darkgray",
                 size = .75, alpha = .5) +  
-  geom_point(aes(y = index_mean, x = hab_mean, fill = mean_july_temp),
+  geom_point(aes(y = index_mean, x = hab_mean, fill = mean_july_do),
              size = 5, 
              shape = 21) +
   scale_fill_viridis_c(option = "viridis") +
@@ -1433,6 +1422,7 @@ hab.inv %>%
   labs(x = "Habitat score",
        y = "Macroinvertebrate index",
        fill = "Mean\nJuly\nDO") +
+  theme(text = element_text(size = 14)) +
   geom_text(aes(y = index_mean, x = hab_mean, label = num),
             color = "white", hjust = .5, size = 2.5)
 
@@ -1440,3 +1430,114 @@ ggsave(here(task_path,
             "PlotO_habitat_score_vs_macro_by_site_with_July_DO.png"),
        height = 4, width = 5, dpi = 400)
 ```
+# Model A - change in average habitat quality score over time
+```{r}
+# format habitat data, averaging within site/year 
+# and keeping only sites with >= 4 years of data
+hab_data <- hab %>%
+  group_by(tnc_code, year) %>%
+  summarize(index = mean(habitat_score),
+            .groups = "drop") %>%
+  group_by(tnc_code) %>%
+  mutate(n = length(index)) %>%
+  filter(n >= 4)
+
+hab.trend.mod <- lmerTest::lmer(index ~ year + (1 | tnc_code), 
+                      data = hab_data)
+
+summary(hab.trend.mod)
+```
+# Model B - change in average macroinvertebrate score over time
+```{r}
+# format habitat data, averaging within site/year 
+# and keeping only sites with >= 4 years of data
+inv_data <- inv %>%
+  group_by(tnc_code, year) %>%
+  summarize(index = mean(index),
+            .groups = "drop") %>%
+  group_by(tnc_code) %>%
+  mutate(n = length(index)) %>%
+  filter(n >= 4)
+
+inv.trend.mod <- lmerTest::lmer(index ~ year + (1 | tnc_code), 
+                      data = inv_data)
+
+summary(inv.trend.mod)
+```
+# Model C - GLM of mean invertebrate index vs. mean July temp & DO
+```{r}
+inv.temp.mod <- lm(index_mean ~ mean_july_temp,
+                       data = hab.inv)
+inv.do.mod <- lm(index_mean ~ mean_july_do,
+                       data = hab.inv)
+inv.temp.do.mod <- lm(index_mean ~ mean_july_temp + mean_july_do,
+                       data = hab.inv)
+inv.temp.do.hab.mod <- lm(index_mean ~ mean_july_temp + mean_july_do + 
+                            hab_mean,
+                       data = hab.inv)
+
+AIC(inv.temp.mod, inv.do.mod, inv.temp.do.mod, inv.temp.do.hab.mod)
+
+anova(inv.do.mod, inv.temp.do.mod)
+
+summary(inv.temp.do.mod)
+
+```
+# Plot P mean invertebrate index vs. mean July DO
+```{r}
+color_vector <- c("olivedrab",
+            "olivedrab2",
+            wes_palettes$BottleRocket2[1:2])
+
+hab.inv %>%
+  ggplot() +
+  geom_hline(yintercept = 63, lty = 2, color = color_vector[1],
+             alpha = 0.75) +
+  annotate("text", x = 3, y = 63+2, vjust = 0, hjust = 0,
+           label = "Excellent",
+           angle = 0, color = color_vector[1],
+           size = 2.5,
+             alpha = 0.75) +
+  geom_hline(yintercept = 42, lty = 2, color = color_vector[2],
+             alpha = 0.75) +
+  annotate("text", x = 3, y = 42+2, vjust = 0, hjust = 0,
+           label = "Good",
+           angle = 0, color = color_vector[2],
+           size = 2.5,
+             alpha = 0.75) +
+  geom_hline(yintercept = 21, lty = 2, color = color_vector[3],
+             alpha = 0.75) +
+  annotate("text", x = 3, y = 21+2, vjust = 0, hjust = 0,
+           label = "Fair",
+           angle = 0, color = color_vector[3],
+           size = 2.5,
+             alpha = 0.75) +
+  geom_hline(yintercept = 0, lty = 2, color = color_vector[4],
+             alpha = 0.75) +
+  annotate("text", x = 3, y = 2, vjust = 0, hjust = 0,
+           label = "Poor",
+           angle = 0, color = color_vector[4],
+           size = 2.5,
+             alpha = 0.75) +
+  geom_smooth(aes(x = mean_july_do, y = index_mean),
+              method = "lm", color = "black") +
+  geom_point(aes(x = mean_july_do, y = index_mean,
+                 fill = mean_july_temp),
+             size = 5, shape = 21) +
+  geom_text(aes(y = index_mean, x = mean_july_do, label = num),
+            color = "white", hjust = .5, size = 2.5) +
+  scale_fill_viridis_c(option = "inferno") +  
+  theme_bw() +
+  theme(text = element_text(size = 15)) +
+  labs(x = "Mean July dissolved oxygen (mg/L)",
+       y = "Mean macroinvertebrate index",
+       fill = "Mean\nJuly\ntemp.")
+
+ggsave(here(task_path,
+            "PlotP_macroindex_vs_JulyDO_by_site_with_July_temp.png"),
+       height = 4, width = 5.5, dpi = 400)
+  
+
+```
+
+

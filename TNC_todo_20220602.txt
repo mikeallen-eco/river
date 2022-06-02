@@ -18,21 +18,22 @@ Task 4
 * put numerical ranges of hab score categories in plots (lines & labels instead) 
 * make new plot combining Plots D and Plots K (macro and habitat) into one graph 
 * plot changes in mean habitat and macro index over time (all sites)
-- Make models of that too
+* Make statistical models of that too
 * fix habitat threshold values
 * plot K: add poor category in legend
 * plot H: put lines and annotations showing quality categories
 * new version of plot H but coloring points to show mean (july?) temps 
 * new version of plot H but w/ coloring points to show mean DO
-- update Task 4 README
+* update Task 4 README
 
 Task 3
 - make hyperhumus-type figure for tree planting project sites
 - rename County Line to Paulinkill (naming error)
 - Make same fig for County Line Dam
-- Remove 26 and 27 from all plots (even for Task 2? ask Michelle)
+- Remove 26 and 27 from all plots
 
 Task 2
+- Remove 26 and 27 from all plots (even for Task 2? ask Michelle)
 - Plot D: remove lines connected points spanning missing data
 - Plot E: add annotation for date range
 IMPORTANT: - Plot F: add "larvae" stage to graphs
@@ -43,5 +44,4 @@ IMPORTANT: - Plot F: add "larvae" stage to graphs
 
 Task 1: 
 - Plots K & L: if time, break up these plots into individual plots by site
-- TNC_23: plot B, check on (remove?) the outlier high temp in November 2019
 - improve label visibitility in Plot I, K, and L

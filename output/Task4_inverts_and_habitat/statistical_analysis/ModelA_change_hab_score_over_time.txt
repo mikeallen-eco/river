@@ -1,0 +1,27 @@
+This model tested whether there is a negative or positive temporal trend in habitat scores on average across sites. 3 sites with < 4 years of data were excluded, but results were very similar when they were included. While the trend slope was slightly positive (+ 0.93 index points per year), the result was not statistically significant (p = 0.398).
+
+Linear mixed model fit by REML. t-tests use Satterthwaite's method [
+lmerModLmerTest]
+Formula: index ~ year + (1 | tnc_code)
+   Data: hab_data
+
+REML criterion at convergence: 799.9
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-2.4502 -0.5238 -0.0088  0.5556  1.9865 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ tnc_code (Intercept) 506.8    22.51   
+ Residual             229.2    15.14   
+Number of obs: 92, groups:  tnc_code, 20
+
+Fixed effects:
+              Estimate Std. Error         df t value Pr(>|t|)
+(Intercept) -1728.9154  2212.1092    71.8500  -0.782    0.437
+year            0.9312     1.0963    71.8500   0.849    0.398
+
+Correlation of Fixed Effects:
+     (Intr)
+year -1.000

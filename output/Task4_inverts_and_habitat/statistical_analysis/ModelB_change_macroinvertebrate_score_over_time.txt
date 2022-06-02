@@ -1,0 +1,27 @@
+This model tested whether there is a negative or positive temporal trend in macroinvertebrate scores on average across sites. 5 sites with < 4 years of data were excluded, but results were very similar when they were included. While the trend slope was slightly negative (-0.30 index points per year), the result was not statistically significant (p = 0.636).
+
+Linear mixed model fit by REML. t-tests use Satterthwaite's method [
+lmerModLmerTest]
+Formula: index ~ year + (1 | tnc_code)
+   Data: inv_data
+
+REML criterion at convergence: 615.3
+
+Scaled residuals: 
+     Min       1Q   Median       3Q      Max 
+-2.61123 -0.53390  0.00106  0.65499  1.96674 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ tnc_code (Intercept) 235.54   15.347  
+ Residual              68.77    8.293  
+Number of obs: 81, groups:  tnc_code, 18
+
+Fixed effects:
+             Estimate Std. Error        df t value Pr(>|t|)
+(Intercept)  649.1898  1255.4578   62.4648   0.517    0.607
+year          -0.2958     0.6222   62.4642  -0.475    0.636
+
+Correlation of Fixed Effects:
+     (Intr)
+year -1.000
