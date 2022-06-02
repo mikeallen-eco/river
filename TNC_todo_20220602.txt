@@ -4,7 +4,7 @@ Task 4
 * fix decimal years in Plot D
 * put entire Rating legend on each plot in Plot D (and make in correct order)
 * mark the boundaries of the assessment score ratings on Plot D
-- put rating numerical ranges of in Plot D  (Excel. ≥63; Good 63-42; Fair 42-21; Poor <21)
+* put rating numerical ranges of in Plot D (lines & labels instead) 
 * read in and format 2020-2021 data
 * update plots with 2020-2021 data
 * Put TNC_80 on the Columbia Dam macroinvertebrate plot (E)
@@ -13,16 +13,16 @@ Task 4
 * rename plot K files (from "Plot D")
 * put entire hab score legend on each plot in Plot K (and make in correct order)
 * mark boundaries of hab score categories on plot with lines
-- put numerical ranges of hab score categories in plots
+* put numerical ranges of hab score categories in plots (lines & labels instead) 
 * make new plot combining Plots D and Plots K (macro and habitat) into one graph 
 * plot changes in mean habitat and macro index over time (all sites)
 - Make models of that too
 * fix habitat threshold values
 * plot K: add poor category in legend
 * plot H: put lines and annotations showing quality categories
-- new version of plot H but coloring points to show mean (july?) temps 
-- new version of plot H but w/ coloring points to show mean DO
-
+* new version of plot H but coloring points to show mean (july?) temps 
+* new version of plot H but w/ coloring points to show mean DO
+- update Task 4 README
 
 Task 3
 - make hyperhumus-type figure for tree planting project sites
@@ -43,5 +43,3 @@ Task 1:
 - Plots K & L: if time, break up these plots into individual plots by site
 - TNC_23: plot B, check on (remove?) the outlier high temp in November 2019
 - improve label visibitility in Plot I, K, and L
-
-
