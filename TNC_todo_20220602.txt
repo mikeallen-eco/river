@@ -27,21 +27,33 @@ Task 4
 * update Task 4 README
 
 Task 3
-- make hyperhumus-type figure for tree planting project sites
-- rename County Line to Paulinkill (naming error)
-- Make same fig for County Line Dam
-- Remove 26 and 27 from all plots
+- Plots T & U: add labels for temp and DO
+- make new Plot T-type figure for tree sites (TNC_4, 5, 8)
+- make new Plot T-type figure for Columbia (with 80 & 81 too?)
+- make 2 new Plot N-type figs for Columbia but with temp & DO (add sites 80 and 81 too; maybe as a 2nd version?)
+- make Plot R-type fig for Columbia (add 80 & 81?)
+- make Plot S-type fig for Columbia
+- Plot U: add TNC_13 to this graph; keep name as County Line Dam
 
 Task 2
-- Remove 26 and 27 from all plots (even for Task 2? ask Michelle)
 - Plot D: remove lines connected points spanning missing data
-- Plot E: add annotation for date range
-IMPORTANT: - Plot F: add "larvae" stage to graphs
+- Plot E: add annotation for date range and optimal values (literature)
+- exclude the 6 "no fish" sites from anything involving fish stages (not monthly avg. stuff)
+- Plot F: add "larvae" stage to graphs
+- Plot G: fix the x-axis ticks (missing on some panels)
 - Model A: repaste output into ModelA text file (fixed effects were missing for some reason)
 - Plots H-M: make all the y-axes the same range
 - Plots N-T: same
 - Plot S: make "DO" uppercase in y-axis legend
 
 Task 1: 
+- why is TNC_4 missing temp/DO data in 2016? (fix tables/figs if needed)
+- why is TNC_5 missing temp/DO data in 2017 (fix tables/figs if needed)
+- same for TNC_80 in 2018
 - Plots K & L: if time, break up these plots into individual plots by site
 - improve label visibitility in Plot I, K, and L
+- Plot I: clarify figure caption (is it a straight-up average)?
+
+General to all tasks:
+- make sure 26 & 27 don't figure into any "river-wide" analyses
+- can tables be exported as PDFs?
