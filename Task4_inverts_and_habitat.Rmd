@@ -334,7 +334,10 @@ color_vector <- c("olivedrab",
             "olivedrab2",
             wes_palettes$BottleRocket2[1:2])
 
-inv %>%
+inv.plot <- inv %>%
+  group_by(tnc_code, year) %>%
+  summarize(index = mean(index),
+            .groups = "drop") %>%
   group_by(tnc_code) %>%
   summarize(index_mean = mean(index),
             min = min(index),
@@ -347,7 +350,9 @@ inv %>%
                             index_mean < 42 &
                               index_mean >= 21 ~ "Fair",
                             index_mean < 21 ~ "Poor")) %>%
-  mutate(Rating = fct_reorder(Rating, index_mean, .desc = T)) %>%
+  mutate(Rating = fct_reorder(Rating, index_mean, .desc = T)) 
+
+inv.plot %>%
   ggplot() +
   geom_vline(xintercept = 63, lty = 2, color = color_vector[1],
              alpha = 0.75) +
@@ -371,6 +376,8 @@ inv %>%
 ggsave(here(task_path,
             "PlotA_mean_macroinvertebrate_index_by_site.png"),
        height = 4, width = 4.5, dpi = 400)
+
+rm(inv.plot)
 ```
 #PlotB - data visualization of index components
 Scatterplot matrix to inspect data
@@ -561,28 +568,61 @@ inv %>%
 # Plot G - dot plot of overall index average habitat score by site/year
 ```{r}
 
-hab %>%
+color_vector <- c("olivedrab",
+            "olivedrab2",
+            wes_palettes$BottleRocket2[1:2])
+
+hab.plot <- hab %>%
   group_by(tnc_code) %>%
   summarize(index_mean = mean(habitat_score),
             min = min(habitat_score),
             max = max(habitat_score),
             n = length(habitat_score)) %>%
-  mutate(n2 = paste0(c(rep("",22),"n = "), n)) %>%
+  # this part allows "Poor" to be included in legend
+  bind_rows(data.frame(tnc_code="temp", 
+                       index_mean=0,
+                       min=0,
+                       max=0,
+                       n=0)) %>%
+  mutate(n2 = paste0(c(rep("",22),"n = "), n),
+         Rating = case_when(index_mean >= 160 ~ "Optimal",
+                            index_mean < 160 & 
+                              index_mean >= 110 ~ "Sub-optimal",
+                            index_mean < 110 &
+                              index_mean >= 60 ~ "Marginal",
+                            index_mean < 60 ~ "Poor")) %>%
+  mutate(Rating = fct_reorder(Rating, index_mean, .desc = T),
+         tnc_code = fct_reorder(tnc_code, index_mean, .desc = F)) %>%
+  filter(tnc_code != "temp")
+
+hab.plot %>%
   ggplot() +
+  geom_vline(xintercept = 160, lty = 2, color = color_vector[1],
+             alpha = 0.75) +
+  geom_vline(xintercept = 110, lty = 2, color = color_vector[2],
+             alpha = 0.75) +
+  geom_vline(xintercept = 60, lty = 2, color = color_vector[3],
+             alpha = 0.75) +
+  geom_vline(xintercept = 0, lty = 2, color = color_vector[4],
+             alpha = 0.75) +  
   geom_errorbar(aes(xmin = min, xmax = max, y = tnc_code),
                 width = 0, color = "black",
                 size = .75) +  
-  geom_point(aes(x = index_mean, y = tnc_code),
-             size = 3, fill = wes_palettes$BottleRocket2[1], 
+  geom_point(aes(x = index_mean, y = tnc_code, fill = Rating),
+             size = 3, 
              shape = 21) +
-  theme_bw() +
+  scale_fill_manual(values = color_vector,
+                    drop = F) +
+  scale_x_continuous(breaks = c(0,50,100,150,200),
+                     labels = c(0,50,100,150,200)) +
+  theme_classic() +
   labs(y = "", x = "Habitat Score") +
-  geom_text(aes(x = 245, y = tnc_code, label = n2),
+  geom_text(aes(x = 255, y = tnc_code, label = n2),
             color = "darkgray", hjust = 1)
 
 ggsave(here(task_path,
-            "PlotG_mean_habitat_score_by_site2.png"),
-       height = 4, width = 3, dpi = 400)
+            "PlotG_mean_habitat_score_by_site.png"),
+       height = 4, width = 4.5, dpi = 400)
 ```
 # Plot H - macroinvertebrate index vs. habitat score
 ```{r}

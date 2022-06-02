@@ -1,6 +1,8 @@
 To do (* = done; - = not done)
 
 Task 4
+* fix counting of sites in Plot A & G (n = XX)
+* Plot G: make color coded like in plot A
 * fix decimal years in Plot D
 * put entire Rating legend on each plot in Plot D (and make in correct order)
 * mark the boundaries of the assessment score ratings on Plot D

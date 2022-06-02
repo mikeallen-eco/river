@@ -1,4 +1,4 @@
-Plot A: Mean macroinvertebrate index by monitoring location (points) along with lines showing the maximum and minimum index values for each site across all years. The number of monitoring years for each site is shown on the right margin of the plot.
+Plot A: Mean macroinvertebrate index by monitoring location (points) with lines showing the range (maximum and minimum) of index values for each site across all years. The number of monitoring years for each site is shown on the right margin of the plot.
 
 Plot B: A scatterplot matrix showing the relationships among the seven component indices comprising the final macroinvertebrate index. Data from all sites and years are combined. The panels below the diagonal show bivariate scatter plots of pairs of variables with a loess smoothing line illustrating trend. The panels above the diagnonal show the Spearman's Rank Correlations among variables. The panels along the diagonal show histograms of each variable.
 
