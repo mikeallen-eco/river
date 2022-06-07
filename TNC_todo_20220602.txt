@@ -25,6 +25,9 @@ Task 4
 * new version of plot H but coloring points to show mean (july?) temps 
 * new version of plot H but w/ coloring points to show mean DO
 * update Task 4 README
+* Plot P - can't see number clearly in yellow circle - change color scheme so number (9) is visible.
+* new plot for the tree project (sites 4, 5, 8) like Plots E&F? 
+* new plot for hyper (2) that look like Plots E&F? 
 
 Task 3
 - Plots T & U: add labels for temp and DO

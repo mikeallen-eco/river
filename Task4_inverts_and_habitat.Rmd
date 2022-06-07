@@ -556,21 +556,64 @@ ggsave(here(task_path, "PlotD_macro_by_year",
 # Plot E - macroinvertebrate index over time at Columbia Dam sites
 ```{r}
 sites <- c("TNC_25", "TNC_23", "TNC_80")
-inv %>%
+
+color_vector <- c("olivedrab",
+            "olivedrab2",
+            wes_palettes$BottleRocket2[1:2])
+
+columbia_macro_data <- inv %>%
   filter(tnc_code %in% sites) %>%
   group_by(tnc_code, year) %>%
   summarize(index = mean(index)) %>%
+  mutate(col = case_when(index >= 63 ~ color_vector[1],
+                            index < 63 & 
+                              index >= 42 ~ color_vector[2],
+                            index < 42 &
+                              index >= 21 ~ color_vector[3],
+                            index < 21 ~ color_vector[4]))
+  
+columbia_macro_data %>%
   ggplot() +
-  geom_line(aes(x = year, y = index, color = tnc_code), 
-            size = 1) +
-  geom_point(aes(x = year, y = index, color = tnc_code), 
-            size = 4) +
+  geom_hline(yintercept = 63, lty = 3, color = color_vector[1],
+             alpha = 0.75) +
+  annotate("text", x = 2015.9, y = 63+2, vjust = 0, hjust = 0.4,
+           label = "Excellent",
+           angle = 0, color = color_vector[1],
+           size = 2.5,
+             alpha = 0.75) +
+  geom_hline(yintercept = 42, lty = 3, color = color_vector[2],
+             alpha = 0.75) +
+  annotate("text", x = 2015.9, y = 42+2, vjust = 0, hjust = 0.5,
+           label = "Good",
+           angle = 0, color = color_vector[2],
+           size = 2.5,
+             alpha = 0.75) +
+  geom_hline(yintercept = 21, lty = 3, color = color_vector[3],
+             alpha = 0.75) +
+  annotate("text", x = 2015.9, y = 21+2, vjust = 0, hjust = 0.5,
+           label = "Fair",
+           angle = 0, color = color_vector[3],
+           size = 2.5,
+             alpha = 0.75) +
+  geom_hline(yintercept = 0, lty = 3, color = color_vector[4],
+             alpha = 0.75) +
+  annotate("text", x = 2015.9, y = 2, vjust = 0, hjust = 0.5,
+           label = "Poor",
+           angle = 0, color = color_vector[4],
+           size = 2.5,
+             alpha = 0.75) +
+  geom_line(aes(x = year, y = index, lty = tnc_code), 
+            size = .75, alpha = 1, color = "darkgray") +
+  geom_point(aes(x = year, y = index, fill = tnc_code), 
+            size = 4, shape = 21) +
   scale_y_continuous(limits = c(0, 100)) +
-  scale_color_manual(values = c("olivedrab", "orange", "dodgerblue")) +
+  scale_fill_manual(values = c("white", 
+                                "darkgray", 
+                                "black")) +
     theme_bw() +
     theme(text = element_text(size = 14)) +
     labs(y = "Macroinvertebrate Index", x = "",
-         title = "Columbia Dam", color = "")
+         title = "Columbia Dam", fill = "", lty = "")
 
   ggsave(here(task_path, 
               "PlotE_macro_by_year_Columbia_Dam.png"),
@@ -580,21 +623,64 @@ inv %>%
 # Plot F - macroinvertebrate index over time at Paulina Dam sites
 ```{r}
 sites <- c("TNC_18", "TNC_19")
-inv %>%
+
+color_vector <- c("olivedrab",
+            "olivedrab2",
+            wes_palettes$BottleRocket2[1:2])
+
+paulina_macro_data <- inv %>%
   filter(tnc_code %in% sites) %>%
   group_by(tnc_code, year) %>%
   summarize(index = mean(index)) %>%
+  mutate(col = case_when(index >= 63 ~ color_vector[1],
+                            index < 63 & 
+                              index >= 42 ~ color_vector[2],
+                            index < 42 &
+                              index >= 21 ~ color_vector[3],
+                            index < 21 ~ color_vector[4]))
+  
+paulina_macro_data %>%
   ggplot() +
-  geom_line(aes(x = year, y = index, color = tnc_code), 
-            size = 1) +
-  geom_point(aes(x = year, y = index, color = tnc_code), 
-            size = 4) +
+  geom_hline(yintercept = 63, lty = 3, color = color_vector[1],
+             alpha = 0.75) +
+  annotate("text", x = 2015.9, y = 63+2, vjust = 0, hjust = 0.4,
+           label = "Excellent",
+           angle = 0, color = color_vector[1],
+           size = 2.5,
+             alpha = 0.75) +
+  geom_hline(yintercept = 42, lty = 3, color = color_vector[2],
+             alpha = 0.75) +
+  annotate("text", x = 2015.9, y = 42+2, vjust = 0, hjust = 0.5,
+           label = "Good",
+           angle = 0, color = color_vector[2],
+           size = 2.5,
+             alpha = 0.75) +
+  geom_hline(yintercept = 21, lty = 3, color = color_vector[3],
+             alpha = 0.75) +
+  annotate("text", x = 2015.9, y = 21+2, vjust = 0, hjust = 0.5,
+           label = "Fair",
+           angle = 0, color = color_vector[3],
+           size = 2.5,
+             alpha = 0.75) +
+  geom_hline(yintercept = 0, lty = 3, color = color_vector[4],
+             alpha = 0.75) +
+  annotate("text", x = 2015.9, y = 2, vjust = 0, hjust = 0.5,
+           label = "Poor",
+           angle = 0, color = color_vector[4],
+           size = 2.5,
+             alpha = 0.75) +
+  geom_line(aes(x = year, y = index, lty = tnc_code), 
+            size = .75, alpha = 1, color = "darkgray") +
+  geom_point(aes(x = year, y = index, fill = tnc_code), 
+            size = 4, shape = 21) +
   scale_y_continuous(limits = c(0, 100)) +
-  scale_color_manual(values = c("olivedrab", "orange")) +
+  scale_fill_manual(values = c("white", 
+                                "darkgray", 
+                                "black")) +
     theme_bw() +
     theme(text = element_text(size = 14)) +
     labs(y = "Macroinvertebrate Index", x = "",
-         title = "Paulina Dam", color = "")
+         title = "Paulina Dam", fill = "", lty = "")
 
   ggsave(here(task_path, 
               "PlotF_macro_by_year_Paulina_Dam.png"),
@@ -1489,6 +1575,8 @@ color_vector <- c("olivedrab",
             "olivedrab2",
             wes_palettes$BottleRocket2[1:2])
 
+num_col <- ifelse(hab.inv$num==9,"black", "white")
+
 hab.inv %>%
   ggplot() +
   geom_hline(yintercept = 63, lty = 2, color = color_vector[1],
@@ -1525,7 +1613,7 @@ hab.inv %>%
                  fill = mean_july_temp),
              size = 5, shape = 21) +
   geom_text(aes(y = index_mean, x = mean_july_do, label = num),
-            color = "white", hjust = .5, size = 2.5) +
+            color = num_col, hjust = .5, size = 2.5) +
   scale_fill_viridis_c(option = "inferno") +  
   theme_bw() +
   theme(text = element_text(size = 15)) +
@@ -1539,5 +1627,139 @@ ggsave(here(task_path,
   
 
 ```
+# Plot Q - macroinvertebrate index over time at tree planting site
+sites 4, 5, and 8
+```{r}
+sites <- c("TNC_4", "TNC_5", "TNC_8")
 
+color_vector <- c("olivedrab",
+            "olivedrab2",
+            wes_palettes$BottleRocket2[1:2])
 
+tree_macro_data <- inv %>%
+  filter(tnc_code %in% sites) %>%
+  group_by(tnc_code, year) %>%
+  summarize(index = mean(index)) %>%
+  mutate(col = case_when(index >= 63 ~ color_vector[1],
+                            index < 63 & 
+                              index >= 42 ~ color_vector[2],
+                            index < 42 &
+                              index >= 21 ~ color_vector[3],
+                            index < 21 ~ color_vector[4]))
+  
+tree_macro_data %>%
+  ggplot() +
+  geom_hline(yintercept = 63, lty = 3, color = color_vector[1],
+             alpha = 0.75) +
+  annotate("text", x = 2015.9, y = 63+2, vjust = 0, hjust = 0.4,
+           label = "Excellent",
+           angle = 0, color = color_vector[1],
+           size = 2.5,
+             alpha = 0.75) +
+  geom_hline(yintercept = 42, lty = 3, color = color_vector[2],
+             alpha = 0.75) +
+  annotate("text", x = 2015.9, y = 42+2, vjust = 0, hjust = 0.5,
+           label = "Good",
+           angle = 0, color = color_vector[2],
+           size = 2.5,
+             alpha = 0.75) +
+  geom_hline(yintercept = 21, lty = 3, color = color_vector[3],
+             alpha = 0.75) +
+  annotate("text", x = 2015.9, y = 21+2, vjust = 0, hjust = 0.5,
+           label = "Fair",
+           angle = 0, color = color_vector[3],
+           size = 2.5,
+             alpha = 0.75) +
+  geom_hline(yintercept = 0, lty = 3, color = color_vector[4],
+             alpha = 0.75) +
+  annotate("text", x = 2015.9, y = 2, vjust = 0, hjust = 0.5,
+           label = "Poor",
+           angle = 0, color = color_vector[4],
+           size = 2.5,
+             alpha = 0.75) +
+  geom_line(aes(x = year, y = index, lty = tnc_code), 
+            size = .75, alpha = 1, color = "darkgray") +
+  geom_point(aes(x = year, y = index, fill = tnc_code), 
+            size = 4, shape = 21) +
+  scale_y_continuous(limits = c(0, 100)) +
+  scale_fill_manual(values = c("white", 
+                                "darkgray", 
+                                "black")) +
+    theme_bw() +
+    theme(text = element_text(size = 14)) +
+    labs(y = "Macroinvertebrate Index", x = "",
+         title = "Tree planting area", fill = "", lty = "")
+
+  ggsave(here(task_path, 
+              "PlotQ_macro_by_year_tree_planting_site.png"),
+         width = 6, height = 4, dpi = 400)
+
+```
+# Plot R - macroinvertebrate index over time at hyper humus
+site 2
+```{r}
+sites <- c("TNC_2")
+
+color_vector <- c("olivedrab",
+            "olivedrab2",
+            wes_palettes$BottleRocket2[1:2])
+
+hyper_macro_data <- inv %>%
+  filter(tnc_code %in% sites) %>%
+  group_by(tnc_code, year) %>%
+  summarize(index = mean(index)) %>%
+  mutate(col = case_when(index >= 63 ~ color_vector[1],
+                            index < 63 & 
+                              index >= 42 ~ color_vector[2],
+                            index < 42 &
+                              index >= 21 ~ color_vector[3],
+                            index < 21 ~ color_vector[4]))
+  
+hyper_macro_data %>%
+  ggplot() +
+  geom_hline(yintercept = 63, lty = 3, color = color_vector[1],
+             alpha = 0.75) +
+  annotate("text", x = 2015.9, y = 63+2, vjust = 0, hjust = 0.4,
+           label = "Excellent",
+           angle = 0, color = color_vector[1],
+           size = 2.5,
+             alpha = 0.75) +
+  geom_hline(yintercept = 42, lty = 3, color = color_vector[2],
+             alpha = 0.75) +
+  annotate("text", x = 2015.9, y = 42+2, vjust = 0, hjust = 0.5,
+           label = "Good",
+           angle = 0, color = color_vector[2],
+           size = 2.5,
+             alpha = 0.75) +
+  geom_hline(yintercept = 21, lty = 3, color = color_vector[3],
+             alpha = 0.75) +
+  annotate("text", x = 2015.9, y = 21+2, vjust = 0, hjust = 0.5,
+           label = "Fair",
+           angle = 0, color = color_vector[3],
+           size = 2.5,
+             alpha = 0.75) +
+  geom_hline(yintercept = 0, lty = 3, color = color_vector[4],
+             alpha = 0.75) +
+  annotate("text", x = 2015.9, y = 2, vjust = 0, hjust = 0.5,
+           label = "Poor",
+           angle = 0, color = color_vector[4],
+           size = 2.5,
+             alpha = 0.75) +
+  geom_line(aes(x = year, y = index, lty = tnc_code), 
+            size = .75, alpha = 1, color = "darkgray") +
+  geom_point(aes(x = year, y = index, fill = tnc_code), 
+            size = 4, shape = 21) +
+  scale_y_continuous(limits = c(0, 100)) +
+  scale_fill_manual(values = c("darkgray", 
+                                "white", 
+                                "black")) +
+    theme_bw() +
+    theme(text = element_text(size = 14)) +
+    labs(y = "Macroinvertebrate Index", x = "",
+         title = "Hyper Humus", fill = "", lty = "")
+
+  ggsave(here(task_path, 
+              "PlotR_macro_by_year_hyper_humus.png"),
+         width = 6, height = 4, dpi = 400)
+
+```
