@@ -6,7 +6,7 @@ Plot(s) C: Radar plots for each monitoring site showing the values of the seven 
 
 Plot(s) D: Time series plots of the overall macroinvertebrate index by monitoring site.
 
-Plot(s) E & F: Time series plots of the overall macroinvertebrate index for the two monitoring sites upstream/downstream of Columbia Dam (Plot E) and Paulina Dam (Plot F).
+Plot(s) E & F: Time series plots of the overall macroinvertebrate index for the two monitoring sites upstream/downstream of Columbia Dam (Plot E) and Paulina Dam (Plot F). Dashed lines show the lower threshold boundaries of index quality categories (see legends for Plots A and G above).
 
 Plot G: Points represent the mean habitat score by monitoring location. Lines shows the maximum and minimum score values for each site across all years. The dashed vertical lines show the lower threshold boundaries of each habitat quality score category (Optimal: > 160; Sub-optimal: 110-159; Marginal: 60-109; Poor: < 60). Points are also colored according to habitat quality score category. The number of monitoring years for each site is shown on the right margin of the plot.
 
@@ -27,6 +27,8 @@ Plot N: Points show the mean habitat score (x-axis) and mean macroinvertebrate s
 Plot O: Points show the mean habitat score (x-axis) and mean macroinvertebrate score (y-axis) by monitoring location. Points are colored according to their mean July dissolved oxygen concentration (mg/L) across all years of monitoring based on logger data (points lacking DO data are colored gray). The error bars show the minimum and maximum score and index values for each site across all years. Dashed lines show the lower threshold boundaries of index quality categories (see legends for Plots A and G above).
 
 Plot P: Points show the mean July DO readings in mg/L (x-axis) and mean macroinvertebrate index score (y-axis) by monitoring location. Points are colored according to their mean July temperature (C). Temperature and DO data are averaged across all years of monitoring based on  logger data Invertebrate monitoring stations lacking logger data are ommitted. The line shows the best-fit linear relationship between July DO and the invertebrate index (slope: 8.4, p = 0.005, see Model C in the Task 4 "statistical_analysis" folder). Shaded area represents the 95% confidence interval for the prediction line. Dashed lines show the lower threshold boundaries of macroinvertebrate index quality categories (see legends for Plots A and G above). The labels on each dot display the monitoring station number.
+
+Plot(s) Q & R: Time series plots of the overall macroinvertebrate index for the two monitoring sites upstream/downstream of the tree planting restoration area (Plot Q) and Hyper Humus (Plot R). Dashed lines show the lower threshold boundaries of index quality categories (see legends for Plots A and G above).
 
 Model A: This model tested whether there is a negative or positive temporal trend in habitat scores on average across sites. 3 sites with < 4 years of data were excluded, but results were very similar when they were included. While the trend slope was slightly positive (+ 0.93 index points per year), the result was not statistically significant (p = 0.398).
 

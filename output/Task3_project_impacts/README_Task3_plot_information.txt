@@ -42,6 +42,20 @@ Plot S: The difference in dissolved oxygen (left), temperature (middle), and tur
 
 Plot T: Monthly average temperature (red points) and dissolved oxygen (blue points) downstream of the Hyper Humus site by year (May-October). Points represent the means of daily average values by month. The lighter colored lines show the same data for all the other sites monitored that year.
 
-Plot U: Monthly average temperature (red points) and dissolved oxygen (blue points) downstream of the County Line Dam site in 2016 and 2017 (May-October). Points represent the means of daily average values by month. The lighter colored lines show the same data for all of the other sites monitored that year. Limited monitoring occurred downstream of County Line Dam in 2016.
+Plot U: Monthly average temperature (red points) and dissolved oxygen (blue points) near the County Line Dam site in 2016-2021 (May-October). Points represent the means of daily average values by month. The lighter colored lines show the same data for all of the other sites monitored that year. Limited monitoring occurred near County Line Dam in 2016.
 
+Plot V: Monthly average temperature (red points) and dissolved oxygen (blue points) near the tree planting restoration area in 2016-2021 (May-October). Points represent the means of daily average values by month. The lighter colored lines show the same data for all of the other sites monitored that year.
 
+Plot W: Monthly average temperature (red points) and dissolved oxygen (blue points) near the Columbia Dam in 2016-2021 (May-October). Points represent the means of daily average values by month. The lighter colored lines show the same data for all of the other sites monitored that year.
+
+Plot X: Temperature measurements at logger stations upstream, downstream, and within the impoundment of Columbia Dam over time (2016-2021). Data are the daily mean temperature measurements. Boxplots show the median (central line), 1st and 3rd quartiles (the box), and data 1.5 interquartile ranges from the median (the 'whiskers'). Values greater than 1.5 interquartile ranges from the median are shown as points. 
+
+Plot Y: Identical to plot X except the data are restricted to only July (the hottest month). This facilitates comparisons as it represents a consistent monitoring time frame across all years.
+
+Plot Z: Dissolved oxygen measurements at logger stations upstream, downstream, and within the impoundment of Columbia Dam over time (2016-2021). Data are the daily mean DO measurements (mg/L). Boxplots show the median (central line), 1st and 3rd quartiles (the box), and data 1.5 interquartile ranges from the median (the 'whiskers'). Values greater than 1.5 interquartile ranges from the median are shown as points. 
+
+Plot ZA: Identical to plot Z except the data are restricted to only July (the hottest month). This facilitates comparisons as it represents a consistent monitoring time frame across all years.
+
+Plot ZB: Monthly average temperature upstream, downstream, and within the former impoundment of Columbia Dam is shown for each year. Points represent the means of daily average temperature by month. The gray shaded area represents the daily minimum and maximum temperature value recorded for each day across all years of monitoring. The monthly means at the downstream station averaged 0.4 C warmer than the upstream station in 2016-2017, before dam removal. After dam removal (in 2019-2021), monthly means were more similar, with an average of 0.1 C warmer at downstream vs. upstream stations.
+
+Plot ZC: The difference in dissolved oxygen (left), temperature (middle), and turbidity (right) downstream vs. upstream of Columbia Dam by year. The underlying data are the downstream-upstream difference in daily average DO, temperature, or turbidity (log-transformed). Boxplots show the median (central line), 1st and 3rd quartiles (the box), and data 1.5 interquartile ranges from the median (the 'whiskers'). Values greater than 1.5 interquartile ranges from the median are shown as points.

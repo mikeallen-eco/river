@@ -26,17 +26,18 @@ Task 4
 * new version of plot H but w/ coloring points to show mean DO
 * update Task 4 README
 * Plot P - can't see number clearly in yellow circle - change color scheme so number (9) is visible.
+* update formatting on Plots E&F
 * new plot for the tree project (sites 4, 5, 8) like Plots E&F? 
 * new plot for hyper (2) that look like Plots E&F? 
 
 Task 3
-- Plots T & U: add labels for temp and DO
-- make new Plot T-type figure for tree sites (TNC_4, 5, 8)
-- make new Plot T-type figure for Columbia (with 80 & 81 too?)
-- make 2 new Plot N-type figs for Columbia but with temp & DO (add sites 80 and 81 too; maybe as a 2nd version?)
-- make Plot R-type fig for Columbia (add 80 & 81?)
-- make Plot S-type fig for Columbia
-- Plot U: add TNC_13 to this graph; keep name as County Line Dam
+* Plots T & U: add labels for temp and DO
+* Plot U: add TNC_13 to this graph; keep name as County Line Dam
+* make new Plot T-type figure for tree sites (TNC_4, 5, 8)
+* make new Plot T-type figure for Columbia (with 80 & 81 too?)
+* make 2 new Plot N-type figs for Columbia but with temp & DO (add sites 80 and 81 too; maybe as a 2nd version?)
+* make Plot R-type fig for Columbia (add 80 & 81?)
+* make Plot S-type fig for Columbia
 
 Task 2
 - Plot D: remove lines connected points spanning missing data

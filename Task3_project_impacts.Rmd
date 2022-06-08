@@ -6,18 +6,6 @@ output:
   html_document: default
   pdf_document: default
 ---
-# To Do
-1. Columbia Dam: 
-  * boxplots:  downstream: TNC_25 vs. upstream TNC_23
-  * BACI statistical analysis 25 vs. 23 before/after 2018
-  - plot & compare: downstream 25 vs. inside 80/81? (only 'after' 2018+ data)
-  - address autocorrelation in residuals
-  
-2. Tree planting:
-  * Plot TNC_4 (up), 5 (in), and 8 (down)
-  * Analysis: does 4/5 or 4/8 difference increase over time? (2015-2018)
-3. 
-
 # Task 3: Project Specific Analyses
 a. What are water quality conditions upstream/downstream/within project area(s) pre and post dam removal (assessing turbidity, conductivity, dissolved oxygen and temperature)?
 
@@ -29,8 +17,7 @@ c. What are baseline water quality conditions downstream Hyper Humus (assessing 
 Task and Product 3 Due: April 10, 2022
 
 # Product 3:
-• Evaluate project specific questions via statistical analysis and data visualization (figures, maps,
-plots).
+• Evaluate project specific questions via statistical analysis and data visualization (figures, maps, plots).
 • Meetings as needed to refine objectives and desired outputs.
 • Assess spatial and temporal changes in water quality metrics with respect to dam removal (before/after, upstream/downstream), restoration projects, and other sites of interest (Hyper Humus). Provide associated interpretative text.
 
@@ -1619,6 +1606,12 @@ tsum_hyper %>%
   geom_point(aes(x = mid, y = mean_mean), size = 2,
              shape = 21, fill = wes_palettes$Royal1[1],
              data = filter(dosum_hyper, site == "TNC_2")) +
+  annotate("text", x = 123, y = 24, hjust = 0, 
+           label = "Temp.", size = 2.5,
+           color = wes_palettes$Royal1[2]) +
+  annotate("text", x = 123, y = 2, hjust = 0, 
+           label = "DO", size = 2.5,
+           color = wes_palettes$Royal1[1]) +
   theme_minimal() +
   labs(x = "", y = "Mean monthly temperature (C)\n or dissolved oxygen (mg/L)",
        title = "Hyper Humus", color = "") +
@@ -1635,14 +1628,14 @@ tsum_hyper %>%
   facet_wrap(~yearf) +
   guides(fill = "none", color = "none")
 
-# ggsave(here::here(task_path,
-#               "PlotT_hyperhumus_downstream_temp_do.png"),
-#                   height = 4, width = 6.5, dpi = 400)
+ggsave(here::here(task_path,
+              "PlotT_hyperhumus_downstream_temp_do.png"),
+                  height = 4, width = 6.5, dpi = 400)
 
 rm(tsum_hyper, dosum_hyper)
 ```
 # Plot U - County Line Dam - Temperature & DO
-TNC_9 (compared with other site means)
+TNC_9 and TNC_13 (compared with other site means)
 ```{r}
 # summarize daily temp data by month
 tsum_county <-  tdata %>%
@@ -1677,8 +1670,7 @@ tsum_county <-  tdata %>%
                            month == 10 ~ "October",
                            month == 11 ~ "November",
                            month == 12 ~ "December")) %>%
-  filter(month %notin% c(4,11),
-         as.numeric(as.character(yearf)) < 2018)
+  filter(month %notin% c(4,11))
 
 # summarize daily temp data by month
 dosum_county <-  dodata %>%
@@ -1713,14 +1705,10 @@ dosum_county <-  dodata %>%
                            month == 10 ~ "October",
                            month == 11 ~ "November",
                            month == 12 ~ "December")) %>%
-  filter(month %notin% c(4,11),
-         as.numeric(as.character(yearf)) < 2018)
+  filter(month %notin% c(4,11))
 
-tsum_county %>%
-  filter(site == "TNC_9") %>%
-  ggplot() +
-  geom_line(aes(x = mid, y = mean_mean, #, color = yearf, 
-                group = site),
+ggplot() +
+  geom_line(aes(x = mid, y = mean_mean, group = site),
               data = tsum_county,
             color = wes_palettes$Royal1[2],
               alpha = 0.5) +
@@ -1729,18 +1717,31 @@ tsum_county %>%
               data = dosum_county,
             color = wes_palettes$Royal1[1],
               alpha = 0.5) +
-  geom_line(aes(x = mid, y = mean_mean), size = .5,
-            color = "black") +      
-  geom_point(aes(x = mid, y = mean_mean), size = 2,
-             shape = 21, fill = wes_palettes$Royal1[2]) +
-  geom_line(aes(x = mid, y = mean_mean), size = .5,
+  geom_line(aes(x = mid, y = mean_mean, group = site,
+                lty = site), size = .5,
             color = "black",
-            data = filter(dosum_county, site == "TNC_9")) +      
-  geom_point(aes(x = mid, y = mean_mean), size = 2,
-             shape = 21, fill = wes_palettes$Royal1[1],
-             data = filter(dosum_county, site == "TNC_9")) +
+            data = filter(tsum_county,site %in% c("TNC_9","TNC_13"))) + 
+  geom_point(aes(x = mid, y = mean_mean, shape = site), size = 2,
+             fill = wes_palettes$Royal1[2],
+             filter(tsum_county,site %in% c("TNC_9","TNC_13"))) +
+  scale_shape_manual(values = c(21, 22)) +
+  geom_line(aes(x = mid, y = mean_mean, group = site,
+                lty = site), size = .5,
+            color = "black",
+            data = filter(dosum_county, site %in% c("TNC_9",
+                                                    "TNC_13"))) +      
+  geom_point(aes(x = mid, y = mean_mean, shape = site), size = 2,
+             fill = wes_palettes$Royal1[1],
+             data = filter(dosum_county, site %in% c("TNC_9",
+                                                     "TNC_13"))) +
+  annotate("text", x = 122.5, y = 24, hjust = 0, 
+           label = "Temp.", size = 2,
+           color = wes_palettes$Royal1[2]) +
+  annotate("text", x = 123, y = 2.75, hjust = 0, 
+           label = "DO", size = 2,
+           color = wes_palettes$Royal1[1]) +
   theme_minimal() +
-  labs(x = "", y = "Mean monthly temperature (C)\n or dissolved oxygen (mg/L)",
+  labs(x = "", y = "Mean monthly temperature (C)\n or dissolved oxygen (mg/L)", shape = "Site", lty = "Site",
        title = "County Line Dam", color = "") +
   theme(text = element_text(size = 14),
         axis.title.y = element_text(size = 12)) +
@@ -1757,7 +1758,521 @@ tsum_county %>%
 
 ggsave(here::here(task_path,
               "PlotU_countyline_dam_downstream_temp_do.png"),
-                  height = 3.5, width = 4.5, dpi = 400)
+                  height = 3.5, width = 6, dpi = 400)
 
 rm(tsum_county, dosum_county)
+```
+# Plot V - Tree planting area - Temperature & DO
+Monthly averages each year for TNC_4, 5, and 8 (compared with other site means)
+```{r}
+
+tree.sites <- c("TNC_4", "TNC_5", "TNC_8")
+# summarize daily temp data by month
+tsum_tree <-  tdata %>%
+    group_by(site, yearf, month, day, dayf) %>%
+  summarise(min_temp = min(temp, na.rm = T),
+            max_temp = max(temp, na.rm = T),
+            mean_temp = mean(temp, na.rm = T),
+            .groups = "drop")  %>%
+  group_by(site, yearf, month) %>%
+  summarize(mean_mean = mean(mean_temp),
+            mean_max = mean(max_temp),
+            mean_min = mean(min_temp),
+            n = length(mean_temp),
+            .groups = "drop") %>%
+  filter(n >= 2) %>%
+  mutate(mid = case_when(month == 3 ~ yday("2021-03-15"),
+                         month == 4 ~ yday("2021-04-15"),
+                         month == 5 ~ yday("2021-05-15"),
+                         month == 6 ~ yday("2021-06-15"),
+                         month == 7 ~ yday("2021-07-15"),
+                         month == 8 ~ yday("2021-08-15"),
+                         month == 9 ~ yday("2021-09-15"),
+                         month == 10 ~ yday("2021-10-15"),
+                         month == 11 ~ yday("2021-11-15")
+                         )) %>%
+  mutate(Month = case_when(month == 4 ~ "April",
+                           month == 5 ~ "May",
+                           month == 6 ~ "June",
+                           month == 7 ~ "July",
+                           month == 8 ~ "August",
+                           month == 9 ~ "September",
+                           month == 10 ~ "October",
+                           month == 11 ~ "November",
+                           month == 12 ~ "December")) %>%
+  filter(month %notin% c(4,11))
+
+# summarize daily temp data by month
+dosum_tree <-  dodata %>%
+    group_by(site, yearf, month, day, dayf) %>%
+  summarise(min_do = min(do, na.rm = T),
+            max_do = max(do, na.rm = T),
+            mean_do = mean(do, na.rm = T),
+            .groups = "drop")  %>%
+  group_by(site, yearf, month) %>%
+  summarize(mean_mean = mean(mean_do),
+            mean_max = mean(max_do),
+            mean_min = mean(min_do),
+            n = length(mean_do),
+            .groups = "drop") %>%
+  filter(n >= 2) %>%
+  mutate(mid = case_when(month == 3 ~ yday("2021-03-15"),
+                         month == 4 ~ yday("2021-04-15"),
+                         month == 5 ~ yday("2021-05-15"),
+                         month == 6 ~ yday("2021-06-15"),
+                         month == 7 ~ yday("2021-07-15"),
+                         month == 8 ~ yday("2021-08-15"),
+                         month == 9 ~ yday("2021-09-15"),
+                         month == 10 ~ yday("2021-10-15"),
+                         month == 11 ~ yday("2021-11-15")
+                         )) %>%
+  mutate(Month = case_when(month == 4 ~ "April",
+                           month == 5 ~ "May",
+                           month == 6 ~ "June",
+                           month == 7 ~ "July",
+                           month == 8 ~ "August",
+                           month == 9 ~ "September",
+                           month == 10 ~ "October",
+                           month == 11 ~ "November",
+                           month == 12 ~ "December")) %>%
+  filter(month %notin% c(4,11))
+
+ggplot() +
+  geom_line(aes(x = mid, y = mean_mean, group = site),
+              data = tsum_tree,
+            color = wes_palettes$Royal1[2],
+              alpha = 0.5) +
+  geom_line(aes(x = mid, y = mean_mean, #, color = yearf, 
+                group = site),
+              data = dosum_tree,
+            color = wes_palettes$Royal1[1],
+              alpha = 0.5) +
+  geom_line(aes(x = mid, y = mean_mean, group = site,
+                lty = site), size = .5,
+            color = "black",
+            data = filter(tsum_tree,site %in% tree.sites)) + 
+  geom_point(aes(x = mid, y = mean_mean, shape = site), size = 1.5,
+             fill = wes_palettes$Royal1[2],
+             filter(tsum_tree,site %in% tree.sites)) +
+  scale_shape_manual(values = c(21, 22, 23)) +
+  geom_line(aes(x = mid, y = mean_mean, group = site,
+                lty = site), size = .5,
+            color = "black",
+            data = filter(dosum_tree, site %in% tree.sites)) +      
+  geom_point(aes(x = mid, y = mean_mean, shape = site), size = 1.5,
+             fill = wes_palettes$Royal1[1],
+             data = filter(dosum_tree, site %in% tree.sites)) +
+  annotate("text", x = 122.5, y = 24, hjust = 0, 
+           label = "Temp.", size = 2,
+           color = wes_palettes$Royal1[2]) +
+  annotate("text", x = 123, y = 2.75, hjust = 0, 
+           label = "DO", size = 2,
+           color = wes_palettes$Royal1[1]) +
+  theme_minimal() +
+  labs(x = "", y = "Mean monthly temperature (C)\n or dissolved oxygen (mg/L)", shape = "Site", lty = "Site",
+       title = "Tree planting sites", color = "") +
+  theme(text = element_text(size = 14),
+        axis.title.y = element_text(size = 12)) +
+    scale_y_continuous(breaks = seq(0,30, by = 10),
+                     limits = c(0,26)) +
+    scale_x_continuous(
+    breaks = c(91, 152, 213, 274, 335),
+    limits = c(112, 309),
+    labels = c("Apr", "Jun", "Aug",
+               "Oct", "Dec")
+  ) +
+  facet_wrap(~yearf) +
+  guides(fill = "none", color = "none")
+
+ggsave(here::here(task_path,
+              "PlotV_tree_planting_sites_temp_do.png"),
+                  height = 3.5, width = 6, dpi = 400)
+
+rm(tsum_tree, dosum_tree)
+```
+# Plot W - Columbia Dam - Temperature & DO
+Monthly averages each year for TNC_4, 5, and 8 (compared with other site means)
+```{r}
+
+the.sites <- c("TNC_23", "TNC_25", "TNC_80", "TNC_81")
+
+# summarize daily temp data by month
+tsum_col <-  tdata %>%
+    group_by(site, yearf, month, day, dayf) %>%
+  summarise(min_temp = min(temp, na.rm = T),
+            max_temp = max(temp, na.rm = T),
+            mean_temp = mean(temp, na.rm = T),
+            .groups = "drop")  %>%
+  group_by(site, yearf, month) %>%
+  summarize(mean_mean = mean(mean_temp),
+            mean_max = mean(max_temp),
+            mean_min = mean(min_temp),
+            n = length(mean_temp),
+            .groups = "drop") %>%
+  filter(n >= 2) %>%
+  mutate(mid = case_when(month == 3 ~ yday("2021-03-15"),
+                         month == 4 ~ yday("2021-04-15"),
+                         month == 5 ~ yday("2021-05-15"),
+                         month == 6 ~ yday("2021-06-15"),
+                         month == 7 ~ yday("2021-07-15"),
+                         month == 8 ~ yday("2021-08-15"),
+                         month == 9 ~ yday("2021-09-15"),
+                         month == 10 ~ yday("2021-10-15"),
+                         month == 11 ~ yday("2021-11-15")
+                         )) %>%
+  mutate(Month = case_when(month == 4 ~ "April",
+                           month == 5 ~ "May",
+                           month == 6 ~ "June",
+                           month == 7 ~ "July",
+                           month == 8 ~ "August",
+                           month == 9 ~ "September",
+                           month == 10 ~ "October",
+                           month == 11 ~ "November",
+                           month == 12 ~ "December")) %>%
+  filter(month %notin% c(4,11))
+
+# summarize daily temp data by month
+dosum_col <-  dodata %>%
+    group_by(site, yearf, month, day, dayf) %>%
+  summarise(min_do = min(do, na.rm = T),
+            max_do = max(do, na.rm = T),
+            mean_do = mean(do, na.rm = T),
+            .groups = "drop")  %>%
+  group_by(site, yearf, month) %>%
+  summarize(mean_mean = mean(mean_do),
+            mean_max = mean(max_do),
+            mean_min = mean(min_do),
+            n = length(mean_do),
+            .groups = "drop") %>%
+  filter(n >= 2) %>%
+  mutate(mid = case_when(month == 3 ~ yday("2021-03-15"),
+                         month == 4 ~ yday("2021-04-15"),
+                         month == 5 ~ yday("2021-05-15"),
+                         month == 6 ~ yday("2021-06-15"),
+                         month == 7 ~ yday("2021-07-15"),
+                         month == 8 ~ yday("2021-08-15"),
+                         month == 9 ~ yday("2021-09-15"),
+                         month == 10 ~ yday("2021-10-15"),
+                         month == 11 ~ yday("2021-11-15")
+                         )) %>%
+  mutate(Month = case_when(month == 4 ~ "April",
+                           month == 5 ~ "May",
+                           month == 6 ~ "June",
+                           month == 7 ~ "July",
+                           month == 8 ~ "August",
+                           month == 9 ~ "September",
+                           month == 10 ~ "October",
+                           month == 11 ~ "November",
+                           month == 12 ~ "December")) %>%
+  filter(month %notin% c(4,11))
+
+ggplot() +
+  geom_line(aes(x = mid, y = mean_mean, group = site),
+              data = tsum_col,
+            color = wes_palettes$Royal1[2],
+              alpha = 0.5) +
+  geom_line(aes(x = mid, y = mean_mean, #, color = yearf, 
+                group = site),
+              data = dosum_col,
+            color = wes_palettes$Royal1[1],
+              alpha = 0.5) +
+  geom_line(aes(x = mid, y = mean_mean, group = site,
+                lty = site), size = .5,
+            color = "black",
+            data = filter(tsum_col,site %in% the.sites)) + 
+  geom_point(aes(x = mid, y = mean_mean, shape = site), size = 1.5,
+             fill = wes_palettes$Royal1[2],
+             filter(tsum_col,site %in% the.sites)) +
+  scale_shape_manual(values = c(21, 22, 23, 24)) +
+  geom_line(aes(x = mid, y = mean_mean, group = site,
+                lty = site), size = .5,
+            color = "black",
+            data = filter(dosum_col, site %in% the.sites)) +      
+  geom_point(aes(x = mid, y = mean_mean, shape = site), size = 1.5,
+             fill = wes_palettes$Royal1[1],
+             data = filter(dosum_col, site %in% the.sites)) +
+  annotate("text", x = 122.5, y = 24, hjust = 0, 
+           label = "Temp.", size = 2,
+           color = wes_palettes$Royal1[2]) +
+  annotate("text", x = 123, y = 2.75, hjust = 0, 
+           label = "DO", size = 2,
+           color = wes_palettes$Royal1[1]) +
+  theme_minimal() +
+  labs(x = "", y = "Mean monthly temperature (C)\n or dissolved oxygen (mg/L)", shape = "Site", lty = "Site",
+       title = "Columbia Dam", color = "") +
+  theme(text = element_text(size = 14),
+        axis.title.y = element_text(size = 12)) +
+    scale_y_continuous(breaks = seq(0,30, by = 10),
+                     limits = c(0,26)) +
+    scale_x_continuous(
+    breaks = c(91, 152, 213, 274, 335),
+    limits = c(112, 309),
+    labels = c("Apr", "Jun", "Aug",
+               "Oct", "Dec")
+  ) +
+  facet_wrap(~yearf) +
+  guides(fill = "none", color = "none")
+
+ggsave(here::here(task_path,
+              "PlotW_Columbia_Dam_sites_temp_do.png"),
+                  height = 3.5, width = 6, dpi = 400)
+
+rm(tsum_col, dosum_col)
+```
+# Plot X - Columbia Dam - Temp. upstream vs. downstream - raw data by year
+upstream: TNC_23, downstream: TNC_25 (& 24), in: 80 & 81
+first notch July 2018, completed April 2019
+```{r}
+col %>%
+  select(yearf, value = TNC_25, monthf) %>%
+  mutate(site = "Downstream") %>%
+  bind_rows(mutate(select(rename(col, value = TNC_23), yearf, value, monthf), site = "Upstream")) %>%
+  bind_rows(mutate(select(rename(col, value = TNC_80), yearf, value, monthf), site = "Inside (80)")) %>%
+  bind_rows(mutate(select(rename(col, value = TNC_81), yearf, value, monthf), site = "Inside (81)")) %>%
+  ggplot() +
+  geom_boxplot(aes(y = value, x = yearf, fill = site, color = site), 
+               alpha = 0.5
+              ) +
+  theme_bw() +
+  scale_fill_manual(values =
+                    c("firebrick","olivedrab",
+                      "olivedrab","steelblue")) +
+  scale_color_manual(values = c("firebrick","olivedrab",
+                      "olivedrab","steelblue")) +
+  theme(text = element_text(size = 14)) +
+  labs(x = "", y = "Daily mean temperature (C)",
+       title = "Columbia Dam", fill = "", color = "") 
+
+
+ggsave(here::here("output/Task3_project_impacts/",
+                  "PlotX_columbia_temperature_up_downstream_by_year.png"),
+                  height = 4, width = 6, dpi = 400)
+
+```
+# Plot Y - Columbia Dam - July Temp. upstream vs. downstream - raw data by year
+upstream: TNC_23, downstream: TNC_25 (& 24), in: 80 & 81
+first notch July 2018, completed April 2019
+```{r}
+col %>%
+  select(yearf, value = TNC_25, monthf) %>%
+  mutate(site = "Downstream") %>%
+  bind_rows(mutate(select(rename(col, value = TNC_23), yearf, value, monthf), site = "Upstream")) %>%
+  bind_rows(mutate(select(rename(col, value = TNC_80), yearf, value, monthf), site = "Inside (80)")) %>%
+  bind_rows(mutate(select(rename(col, value = TNC_81), yearf, value, monthf), site = "Inside (81)")) %>%
+  filter(monthf==7) %>%
+  ggplot() +
+  geom_boxplot(aes(y = value, x = yearf, fill = site, color = site), 
+               alpha = 0.5
+              ) +
+  theme_bw() +
+  scale_fill_manual(values =
+                    c("firebrick","olivedrab",
+                      "olivedrab","steelblue")) +
+  scale_color_manual(values = c("firebrick","olivedrab",
+                      "olivedrab","steelblue")) +
+  theme(text = element_text(size = 14)) +
+  labs(x = "", y = "Daily mean temperature (C)\nin July",
+       title = "Columbia Dam", fill = "", color = "") 
+
+
+ggsave(here::here("output/Task3_project_impacts/",
+                  "Ploty_columbia_July_temperature_up_downstream_by_year.png"),
+                  height = 4, width = 6, dpi = 400)
+
+```
+# Plot Z - Columbia Dam - DO upstream vs. downstream - daily data by year
+upstream: TNC_23, downstream: TNC_25 (& 24), in: 80 & 81
+first notch July 2018, completed April 2019
+```{r}
+coldo %>%
+  select(yearf, value = TNC_25, monthf) %>%
+  mutate(site = "Downstream") %>%
+  bind_rows(mutate(select(rename(coldo, value = TNC_23), yearf, value, monthf), site = "Upstream")) %>%
+  bind_rows(mutate(select(rename(coldo, value = TNC_80), yearf, value, monthf), site = "Inside (80)")) %>%
+  bind_rows(mutate(select(rename(coldo, value = TNC_81), yearf, value, monthf), site = "Inside (81)")) %>%
+  ggplot() +
+  geom_boxplot(aes(y = value, x = yearf, fill = site, color = site), 
+               alpha = 0.5
+              ) +
+  theme_bw() +
+  scale_fill_manual(values =
+                    c("firebrick","olivedrab",
+                      "olivedrab","steelblue")) +
+  scale_color_manual(values = c("firebrick","olivedrab",
+                      "olivedrab","steelblue")) +
+  theme(text = element_text(size = 14)) +
+  labs(x = "", y = "Daily mean DO (mg/L)",
+       title = "Columbia Dam", fill = "", color = "") 
+
+
+ggsave(here::here("output/Task3_project_impacts/",
+                  "PlotZ_columbia_DO_up_downstream_by_year.png"),
+                  height = 4, width = 6, dpi = 400)
+
+```
+# Plot ZA - Columbia Dam - DO upstream vs. downstream - daily data by year - JULY data only
+upstream: TNC_23, downstream: TNC_25 (& 24), in: 80 & 81
+first notch July 2018, completed April 2019
+```{r}
+coldo %>%
+  select(yearf, value = TNC_25, monthf) %>%
+  mutate(site = "Downstream") %>%
+  bind_rows(mutate(select(rename(coldo, value = TNC_23), yearf, value, monthf), site = "Upstream")) %>%
+  bind_rows(mutate(select(rename(coldo, value = TNC_80), yearf, value, monthf), site = "Inside (80)")) %>%
+  bind_rows(mutate(select(rename(coldo, value = TNC_81), yearf, value, monthf), site = "Inside (81)")) %>%
+  filter(monthf == 7) %>%
+  ggplot() +
+  geom_boxplot(aes(y = value, x = yearf, fill = site, color = site), 
+               alpha = 0.5
+              ) +
+  theme_bw() +
+  scale_fill_manual(values =
+                    c("firebrick","olivedrab",
+                      "olivedrab","steelblue")) +
+  scale_color_manual(values = c("firebrick","olivedrab",
+                      "olivedrab","steelblue")) +
+  theme(text = element_text(size = 14)) +
+  labs(x = "", y = "Daily mean DO (mg/L) in July",
+       title = "Columbia Dam", fill = "", color = "") 
+
+
+ggsave(here::here("output/Task3_project_impacts/",
+                  "PlotZA_columbia_July_DO_up_downstream_by_year.png"),
+                  height = 4, width = 6, dpi = 400)
+
+```
+# Plot ZB - Columbia Dam - monthly mean temperature w/ envelope
+TNC_25, 23, 80, 81
+```{r}
+# summarize daily temp data by month
+tsum_col <-  tdata %>%
+    group_by(site, yearf, month, day, dayf) %>%
+  summarise(min_temp = min(temp, na.rm = T),
+            max_temp = max(temp, na.rm = T),
+            mean_temp = mean(temp, na.rm = T),
+            .groups = "drop")  %>%
+  group_by(site, yearf, month) %>%
+  summarize(mean_mean = mean(mean_temp),
+            mean_max = mean(max_temp),
+            mean_min = mean(min_temp),
+            n = length(mean_temp),
+            .groups = "drop") %>%
+  mutate(mid = case_when(month == 3 ~ yday("2021-03-15"),
+                         month == 4 ~ yday("2021-04-15"),
+                         month == 5 ~ yday("2021-05-15"),
+                         month == 6 ~ yday("2021-06-15"),
+                         month == 7 ~ yday("2021-07-15"),
+                         month == 8 ~ yday("2021-08-15"),
+                         month == 9 ~ yday("2021-09-15"),
+                         month == 10 ~ yday("2021-10-15"),
+                         month == 11 ~ yday("2021-11-15")
+                         )) %>%
+  mutate(Month = case_when(month == 4 ~ "April",
+                           month == 5 ~ "May",
+                           month == 6 ~ "June",
+                           month == 7 ~ "July",
+                           month == 8 ~ "August",
+                           month == 9 ~ "September",
+                           month == 10 ~ "October",
+                           month == 11 ~ "November",
+                           month == 12 ~ "December")) %>%
+  filter(site %in% c("TNC_25", "TNC_23", "TNC_80", "TNC_81")) %>%
+  mutate(site = case_when(site == "TNC_23" ~ "Upstream",
+                          site == "TNC_25" ~ "Downstream",
+                          site == "TNC_80" ~ "Inside (80)",
+                          site == "TNC_81" ~ "Inside (81)")) %>%
+  filter(as.logical(yearf == "2019" & 
+                      month == 11 &
+                      site == "Upstream") == F)
+
+tsum_envelope <- tdata %>%
+  group_by(site, day) %>%
+  summarize(multi_min = min(temp),
+            multi_max = max(temp),
+            .groups = "drop") %>%
+  filter(site %in% c("TNC_25", "TNC_23", "TNC_80", "TNC_81")) %>%
+  mutate(site = case_when(site == "TNC_23" ~ "Upstream",
+                          site == "TNC_25" ~ "Downstream",
+                          site == "TNC_80" ~ "Inside (80)",
+                          site == "TNC_81" ~ "Inside (81)"))
+
+tsum_col %>%
+  ggplot() +
+  geom_ribbon(aes(x = day, ymax = multi_max,
+                  ymin = multi_min), 
+              data = filter(tsum_envelope),
+              fill = "gray", alpha = 0.5) +
+  geom_line(aes(x = mid, y = mean_mean, color = yearf), size = .5,
+             shape = 16,
+             position = position_dodge(width = 10)) +      
+  geom_point(aes(x = mid, y = mean_mean, color = yearf), size = 2,
+             shape = 16,
+             position = position_dodge(width = 10)) +
+  theme_minimal() +
+  labs(x = "", y = "Mean monthly temperature",
+       title = "Columbia Dam", color = "") +
+  theme(text = element_text(size = 14),
+        axis.title.y = element_text(size = 12)) +
+    scale_y_continuous(breaks = seq(0,30, by = 10),
+                     limits = c(0,32)) +
+    scale_x_continuous(
+    breaks = c(91, 152, 213, 274, 335),
+    limits = c(82, 339),
+    labels = c("Apr", "Jun", "Aug",
+               "Oct", "Dec")
+  ) +
+  scale_color_manual(values = c(wes_palettes$Royal1,
+                                wes_palettes$Royal2)) +
+  facet_wrap(~site) +
+  geom_text(aes(x = mid, y = mean_mean, label = mes),
+            hjust = 0, size = 2, vjust = 0,
+            color = "darkgray",
+                       data = data.frame(mid = c(100,100),
+                                         mean_mean = c(0.5,0.5),
+                          mes = c("Montly mean\n2016-17: 0.4 C warmer than upstream\n2019-21: 0.1 C warmer than upstream", ""),
+                                         site = c("Downstream",
+                                                  "Upstream")))
+
+monthly_diff <- 
+  filter(tsum_col, site == "Downstream") %>%
+  left_join(filter(tsum_col, site == "Upstream"),
+            by = c("yearf", "month", "mid", "Month")) %>%
+  mutate(diff = mean_mean.x - mean_mean.y) %>% 
+  filter(n.x >=10,
+         n.y >=10)
+
+summary(filter(monthly_diff, yearf %in% 2016:2017)$diff)
+summary(filter(monthly_diff, yearf %in% 2019:2021)$diff)
+
+ggsave(here::here("output/Task3_project_impacts/",
+                  "PlotZB_columbia_dam_upstream_ds_temp5.png"),
+                  height = 4, width = 6.5, dpi = 400)
+```
+# Plot ZC - Columbia downstream (TNC_25) - upstream (TNC_23)
+Temp, DO, & Turbidity
+```{r}
+
+colall = mutate(col, meas = "Temperature") %>%
+  bind_rows(mutate(coldo, meas = "DO")) %>%
+  bind_rows(mutate(colturb, meas = "Turbidity"))
+
+colall %>%
+  group_by(yearf, meas) %>%
+  ggplot() +
+  geom_boxplot(aes(x = yearf, y = d25.23), 
+               color = "steelblue", 
+               fill = "skyblue", alpha = 0.5) +
+  geom_hline(yintercept = 0, lty = 2, color = "darkgray") +
+  facet_wrap(~meas, scales = "free") +
+  theme_bw() +
+  theme(text = element_text(size = 14),
+        axis.text.x = element_text(size = 8),
+        strip.background = element_rect(fill = "white")) +
+  labs(x = "", y = "Difference\n(downstream - upstream)",
+       title = "Columbia Dam")
+
+ggsave(here::here("output/Task3_project_impacts/",
+                  "PlotZC_columbia_dam_upstream_ds_all.png"),
+                  height = 4, width = 6.5, dpi = 400)
+
 ```
