@@ -100,14 +100,9 @@ table(hobo$FLAG_cnt)
 hobo_flag5 = hobo[hobo$FLAG_DO == 5,] # view it in the environment
 rm(hobo_flag5) # remove that object when you are done
  
-# checks for things that were fixed in section 0.1
-nrow(hobo[hobo$year != lubridate::year(hobo$datetime),]) # now 0
-
-nrow(hobo[hobo$site == "TNC",]) # now 0
-nrow(hobo[hobo$temp <= 0,]) # now 0
-
 ```
 # Plotting HOBO data by site for QC
+Plots raw HOBO data by year (with and without flagged data)
 ```{r}
 # make all HOBO temperature data by site & year for QC
 for(i in as.character(unique(hobo$year))){
@@ -185,11 +180,6 @@ length(unique(hydro$logger)) # 7
 # file: TNC_81_CLDHY2_2020_masterfile.xlsx
 hydro[hydro$logger == "CLDHY-2",]
 
-# checks for things that were fixed above
-nrow(hydro[is.na(hydro$temp),]) # 0
-nrow(hydro[hydro$year != lubridate::year(hydro$datetime),]) # 0
-nrow(hydro[hydro$temp <= 0,]) # 0
-nrow(hydro[is.na(hydro$temp) == TRUE,]) # 0
 ```
 # Plotting HYDRO data by site for QC
 ```{r}
@@ -248,7 +238,7 @@ p <- hobo %>%
   bind_rows(mutate(hydro, logger_type = "hydro")) %>%
   select(site:logger_type)
 
-# saveRDS(p, "output/compiled_logger_data.rds")
+saveRDS(p, "output/compiled_logger_data.rds")
 ```
 # plot temperature time series for each site/year vs. thresholds (showing loggers)
 ```{r}

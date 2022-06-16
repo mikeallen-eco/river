@@ -12,7 +12,6 @@ a. Analyze logger data to determine if select monitoring reaches are impaired fo
 b. How often do sites exceed SWQS for temperature (how many days per year)?
 c. How often do sites exceed SWQS for dissolved oxygen (how many days per year)?
 
-
 # Product 1:
 • Data visualization (figures, maps, plots) of seasonal, monthly, and diel fluctuations in flow, physiochemical conditions to address the items in Task 1 with respect to state water quality criteria.
 
@@ -20,9 +19,20 @@ c. How often do sites exceed SWQS for dissolved oxygen (how many days per year)?
 
 • Summary statistics and statistical analysis of same along with associated interpretative text.
 
-To do:
-5. research statistically controlling for air temp (water temp ~ air temp)
-6. research methods to statistically QC / censor DO data using water temp data
+# Temperature SWQS
+b. How often do sites exceed SWQS for temperature (how many days per year)?
+
+From the QAPP:
+	1. FW2-TP - Temperature	Shall not exceed a daily maximum of 22 degrees Celsius or rolling seven-day average of the daily maximum of 19 degrees Celsius, unless due to natural conditions
+	  - How many days exceed 22 C
+	  - How many days 7-d rolling average of daily max exceed 19 C
+	
+	2. FW2-TM - Shall not exceed a daily maximum of 25 degrees Celsius or rolling seven-day average of the daily maximum of 23 degrees Celsius, unless due to natural conditions	
+    - How many days exceed 25 C
+    - How many days 7-d rolling average of daily max exceed 23 C
+
+	3. FW2-NT - Shall not exceed a daily maximum of 31 degrees Celsius or rolling seven-day average of the daily maximum of 28 degrees Celsius, unless due to natural conditions	
+
 # Load libraries, format data, etc.
 ```{r}
 library(dplyr)
@@ -231,22 +241,7 @@ either_count <- either %>%
                           replacement = "-")) %>%
   filter(!(summer_days_temp==0 & summer_days_DO==0))
 ```
-
-# Temperature SWQS
-b. How often do sites exceed SWQS for temperature (how many days per year)?
-
-From the QAPP:
-	1. FW2-TP - Temperature	Shall not exceed a daily maximum of 22 degrees Celsius or rolling seven-day average of the daily maximum of 19 degrees Celsius, unless due to natural conditions
-	  - How many days exceed 22 C
-	  - How many days 7-d rolling average of daily max exceed 19 C
-	
-	2. FW2-TM - Shall not exceed a daily maximum of 25 degrees Celsius or rolling seven-day average of the daily maximum of 23 degrees Celsius, unless due to natural conditions	
-    - How many days exceed 25 C
-    - How many days 7-d rolling average of daily max exceed 23 C
-
-	3. FW2-NT - Shall not exceed a daily maximum of 31 degrees Celsius or rolling seven-day average of the daily maximum of 28 degrees Celsius, unless due to natural conditions	
-	
-## Temperature SWQS: plot daily max temp for each site/year vs. thresholds
+# Plot A: Temperature SWQS: plot daily max temp for each site/year vs. thresholds
 ```{r}
 # plot daily max vs. thresholds
 #x11(height = 7, width = 9)
@@ -295,10 +290,10 @@ tmax %>%
   annotate("text", x = 335, y = 21, label = "TP", 
            color = "darkgray", size = 2)
 
-# ggsave("output/Task1_SWQS_loggers/PlotA_tmax_by_day_year_site3.png",
-#        height = 7, width = 9, dpi = 400)
+ggsave("output/Task1_SWQS_loggers/PlotA_tmax_by_day_year_site.png",
+        height = 7, width = 9, dpi = 400)
 ```
-## Temperature SWQS: plot rolling-average daily max temp for each site/year vs. thresholds
+#Plot B: Temperature SWQS: plot rolling-average daily max temp for each site/year vs. thresholds
 ```{r}
 # plot rolling average daily max vs. thresholds
 tmax %>%
@@ -378,7 +373,7 @@ days_over_table
 
 rm(day_table, days_over_table)
 ```
-## Plot number of days exceeding temperature thresholds
+# Plot C: number of days exceeding temperature thresholds
 ```{r}
 temp_count_bad <- temp_count %>%
   left_join(temp_cov) %>%
@@ -406,13 +401,13 @@ ggplot() +
   labs(x = "", y = "Days above temp. threshold") +
   guides(shape = "none")
 
-# ggsave(
-#   "output/Task1_SWQS_loggers/PlotC_days_above_temp_threshold_timeseries.png",
-#        height = 7, width = 9, dpi = 400)
+ggsave(
+  "output/Task1_SWQS_loggers/PlotC_days_above_temp_threshold_timeseries.png",
+       height = 7, width = 9, dpi = 400)
 
 rm(temp_count_bad)
 ```
-## Plot no. days exceeding temp. thresholds - individually by site
+## Plot C (individual): no. days exceeding temp. thresholds - individually by site
 I.e., Plot C but as one plot per site
 ```{r}
 sites <- unique(temp_count$site)
@@ -650,7 +645,8 @@ days_below_table
 
 rm(dmin_table, days_below_table)
 ```
-## Plot number of days below DO thresholds (time series)
+## Plot G: number of days below DO thresholds (time series)
+To change font size of years, change the number in this line of code: "axis.text.x = element_text(size = 8),"
 ```{r}
 # create a separate data frame of years with < 80% Jun-Aug coverage
 DO_count_bad <- DO_count %>%
@@ -1734,7 +1730,6 @@ ggsave(
   "output/Task1_SWQS_loggers/PlotO_DO_GAM_standardized_site_comparisons.png",
          width = 7, height = 7, dpi = 400)
 ```
-
 # Bivariate GAM temp vs. DO
 Predict DO and max temperature on July 15, 2018
 ```{r}

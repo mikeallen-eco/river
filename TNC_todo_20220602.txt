@@ -59,6 +59,13 @@ Task 1:
 - improve label visibitility in Plot I, K, and L
 - Plot I: clarify figure caption (is it a straight-up average)?
 
+Task 5: 
+- make sure logger compile will work with new data in 2021 format
+- (make it so compile_logger ignores if can't find new year)
+- make sure macro/habitat compile will work with new data in 2021 format
+- adapt "compile_logger" function to new logger format (michelle will provide)
+- ensure new sites won't break code
+
 General to all tasks:
 - make sure 26 & 27 don't figure into any "river-wide" analyses
 - can tables be exported as PDFs?
