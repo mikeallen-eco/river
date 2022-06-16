@@ -40,15 +40,16 @@ Task 3
 * make Plot S-type fig for Columbia
 
 Task 2
-- Plot D: remove lines connected points spanning missing data
-- Plot E: add annotation for date range and optimal values (literature)
-- exclude the 6 "no fish" sites from anything involving fish stages (not monthly avg. stuff)
-- Plot F: add "larvae" stage to graphs
-- Plot G: fix the x-axis ticks (missing on some panels)
-- Model A: repaste output into ModelA text file (fixed effects were missing for some reason)
+* Plot E & F: add text for date range and optimal values (literature)
+* Model A: repaste output into ModelA text file (fixed effects were missing for some reason)- exclude the 6 "no fish" sites from anything involving fish stages (not monthly avg. stuff)
+* Plot F: add "larvae" stage to graphs
+* Plot G: fix the x-axis ticks (missing on some panels)
 - Plots H-M: make all the y-axes the same range
 - Plots N-T: same
 - Plot S: make "DO" uppercase in y-axis legend
+- separate each plot/analysis into its own chunk
+- make each plot runnable (after running first chunk; save model objects)
+- Plot D: remove lines connected points spanning missing data
 
 Task 1: 
 - why is TNC_4 missing temp/DO data in 2016? (fix tables/figs if needed)

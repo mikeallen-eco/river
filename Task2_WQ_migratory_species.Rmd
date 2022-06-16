@@ -6,11 +6,6 @@ output:
   html_document: default
   pdf_document: default
 ---
-# To Do
-1. lmer check about making year random effect too
-2. lmer for dissolved oxygen
-3. redo plot F with larvae stage
-
 #Task 2: Site specific water quality conditions important to us other than SWQS
 a. Determine which sites are more supportive of migrating species during key lifecycle periods over time
 spring adult migration (~ 15 Apr - 15 May) 
@@ -95,16 +90,18 @@ tdata <- p %>%
          season = as.factor(season))
 
 # summarize data by day
-tsum_exclude <- tdata %>%
-  filter(site %notin% exclude) %>%
+tsum <- tdata %>%
     group_by(site, yearf, month, day, dayf) %>%
   summarise(min_temp = min(temp, na.rm = T),
             max_temp = max(temp, na.rm = T),
             mean_temp = mean(temp, na.rm = T),
             .groups = "drop") 
 
+tsum_exclude <- tsum %>%
+    filter(site %notin% exclude)
+
 # summarize daily temp data by month
-tsum_month_exclude <- tsum_exclude %>%
+tsum_month <- tsum %>%
   group_by(site, yearf, month) %>%
   summarize(mean_mean = mean(mean_temp),
             mean_max = mean(max_temp),
@@ -131,9 +128,11 @@ tsum_month_exclude <- tsum_exclude %>%
                            month == 11 ~ "November",
                            month == 12 ~ "December"))
 
+tsum_month_exclude <- tsum_month %>%  
+  filter(site %notin% exclude)
+
 # summarize daily temp data by fish life history season
 tsum_season <- tdata %>%
-  filter(site %notin% exclude) %>%
     group_by(site, yearf, season, day, dayf) %>%
   summarise(min_temp = min(temp, na.rm = T),
             max_temp = max(temp, na.rm = T),
@@ -159,10 +158,12 @@ tsum_season <- tdata %>%
                            season == "fall_mig" ~ "Migrate (F)"),
          season2 = fct_reorder(season2, order))
 
+tsum_season_exclude <- tsum_season %>%
+  filter(site %notin% exclude)
+
 # format final compiled DO data
 dodata <- p %>%
-  filter(FLAG_DO == 0,
-         site %notin% exclude) %>%
+  filter(FLAG_DO == 0) %>%
   mutate(day = yday(datetime),
          month = month(datetime),
          hour = hour(datetime),
@@ -197,6 +198,9 @@ dosum <- dodata %>%
             .groups = "drop") %>%
   arrange(site, yearf, day)
 
+dosum_exclude <- dosum %>%
+  filter(site %notin% exclude)
+
 # summarize daily DO data by month
 dosum_month <- dosum %>%
   group_by(site, yearf, month) %>%
@@ -216,9 +220,11 @@ dosum_month <- dosum %>%
                          month == 11 ~ yday("2021-11-15")
                          ))
 
+dosum_month_exclude <- dosum_month %>%
+  filter(site %notin% exclude)
+
 # summarize daily DO data by fish life history season
 dosum_season <- dodata %>%
-  filter(site %notin% exclude) %>%
     group_by(site, yearf, season, day, dayf) %>%
   summarise(min_do = min(do, na.rm = T),
             max_do = max(do, na.rm = T),
@@ -242,8 +248,13 @@ dosum_season <- dodata %>%
                            season == "fall_mig" ~ "Migrate (F)"),
          season2 = fct_reorder(season2, order))
 
+dosum_season_exclude <- dosum_season %>%
+    filter(site %notin% exclude)
+
 rm(p)
 ```
+# Plot A: Daily mean temperature with monthly averages by year (separate plots by site)
+Error bars are the daily min/max. Black circles represent monthly averages of the daily mean.
 i. What is the daily min, max, mean temperature and dissolved oxygen?
 ```{r}
 sites <- unique(tdata$site)
@@ -285,7 +296,7 @@ ggsave(paste0("output/Task2_WQ_migratory_species/PlotA/PlotA_",i,"_daily_monthly
 }
 
 ```
-# Plot monthy mean temperatures for each site
+# Plot B: monthy mean temperatures by year (separate plots for each site)
 ```{r}
 sites <- unique(tdata$site)
 
@@ -331,7 +342,7 @@ tsum_month %>%
 ggsave(paste0("output/Task2_WQ_migratory_species/PlotB/PlotB_",i,"_monthly_temps.png"), height = 5, width = 7, dpi = 400)
 }
 ```
-# do monthly and daily
+# Plot C: DO monthly and daily
 ```{r}
 sites <- unique(dodata$site)
 
@@ -372,8 +383,8 @@ dosum %>%
 ggsave(paste0("output/Task2_WQ_migratory_species/PlotC/PlotC_",i,"_daily_monthly_DO.png"), height = 5, width = 8, dpi = 400)
 }
 ```
-
-# Plot monthy mean DO for each site
+# Plot D: Daily mean DO with monthly averages by year (separate plots by site)
+Error bars are the daily min/max. Black circles represent monthly averages of the daily mean. 
 ```{r}
 sites <- unique(tdata$site)
 
@@ -419,24 +430,66 @@ dosum_month %>%
 ggsave(paste0("output/Task2_WQ_migratory_species/PlotD/PlotD_",i,"_monthly_DO.png"), height = 5, width = 7, dpi = 400)
 }
 ```
-# mean/min/max temperature during migratory fish periods
+# Plot E: mean/min/max temperature during migratory fish periods
+Only for sites accessible by migratory fish.
 ```{r}
+# Create list of sites (excluding those not accessible)
 sites <- unique(tdata$site)
+sites <- sites[sites %notin% exclude]
 
-i = sites[2]
+i = sites[1] # for testing
 
 for(i in sites){
   print(i)
-tsum_season %>%
+
+# set up colors
+color_vector_df <- data.frame(order = 1:10,
+                              col = c(wes_palettes$Zissou1, 
+                                      wes_palettes$Royal2))
+
+# subset the data for the plot
+plot_data <- tsum_season_exclude %>%
   filter(site == i,
          is.na(season)==F,
          n > 10) %>%
-  ggplot() +
+  left_join(color_vector_df, by = "order")
+
+# get the max year
+max_y <- max(as.numeric(as.character(plot_data$yearf)))
+
+# create a dataframe to map the text annotations
+annotate_df <- data.frame(yearf = as.factor(c(rep(max_y,5),2016:2020)),
+                          mean_mean = 6,
+                          season2 = as.factor(c("Migrate (S)",
+                                      "Spawn",
+                                      "Larvae",
+                                      "Juvenile",
+                                      "Migrate (F)")),
+      ann = c("Migration (15 April - 15 May)",
+              "Spawning (16-31 May)\nOptimal egg dev.: 17 C",
+              "Larvae (1-30 June)\nRequire: 16-26 C",
+              "Juvenile (1 July - 15 Sept.)\nRequire: 16-26 C",
+              "Migration (16 Sept. - 30 Nov.)")
+      ) %>%
+  filter(yearf == max_y) %>%
+    mutate(order = case_when(season2 == "Migrate (S)" ~ 1,
+                           season2 == "Spawn" ~ 2,
+                           season2 == "Larvae" ~ 3,
+                           season2 == "Juvenile" ~ 4,
+                           season2 == "Migrate (F)" ~ 5),
+         season2 = fct_reorder(season2, order)) %>%
+  left_join(color_vector_df, by = "order")
+
+# make the plot
+ggplot(plot_data) +
   geom_errorbar(aes(y = yearf, 
                     xmin = mean_min, xmax = mean_max),
                 width = 0) +
   geom_point(aes(y = yearf, x = mean_mean, color = season2),
-             size = 3) +
+             size = 3, color = plot_data$col) +
+  geom_text(aes(y = yearf, x = mean_mean, color = season2, 
+                label = ann), data = annotate_df, size = 3,
+            hjust = .05, vjust = .8, color = annotate_df$col) +
   facet_grid(season2~.) +
     theme_bw() +
   labs(x = "Mean daily temperature\n(+/- average min and max)", y = "",
@@ -449,49 +502,93 @@ tsum_season %>%
         strip.text = element_blank(),
         strip.background = element_blank(),
         legend.position = "right") +
-  scale_color_manual(values = c(wes_palettes$Zissou1,
-                                wes_palettes$Royal2))
+  guides(color = "none")
 
-ggsave(paste0("output/Task2_WQ_migratory_species/PlotE/PlotE_",i,"_fish_seasons_temp.png"), height = 5, width = 7, dpi = 400)
+ggsave(paste0("output/Task2_WQ_migratory_species/PlotE/PlotE_",i,"_fish_seasons_temp.png"), height = 5, width = 6, dpi = 400)
 }
-```
-# mean/min/max DO during migratory fish periods
-```{r}
-sites <- unique(dodata$site)
 
-i = sites[1]
+rm(plot_data, annotate_df, max_y)
+```
+# Plot F: mean/min/max DO during migratory fish periods
+Only for sites accessible by migratory fish.
+```{r}
+# Create list of sites (excluding those not accessible)
+sites <- unique(dodata$site)
+sites <- sites[sites %notin% exclude]
+
+i = sites[1] # for testing
 
 for(i in sites){
   print(i)
-dosum_season %>%
+# set up colors
+color_vector_df <- data.frame(order = 1:10,
+                              col = c(wes_palettes$Zissou1, 
+                                      wes_palettes$Royal2))
+
+# subset the data for the plot
+plot_data <- dosum_season_exclude %>%
   filter(site == i,
          is.na(season)==F,
          n > 10) %>%
-  ggplot() +
-  geom_errorbar(aes(y = yearf, 
+  left_join(color_vector_df, by = "order")
+
+# get the max year
+max_y <- max(as.numeric(as.character(plot_data$yearf)))
+
+# create a dataframe to map the text annotations
+annotate_df <- data.frame(yearf = as.factor(c(rep(max_y,5),2016:2020)),
+                          mean_mean = 0,
+                          season2 = as.factor(c("Migrate (S)",
+                                      "Spawn",
+                                      "Larvae",
+                                      "Juvenile",
+                                      "Migrate (F)")),
+      ann = c("Migration (15 April - 15 May)",
+              "Spawning (16-31 May)\nRequire: > 5 mg/L",
+              "Larvae (1-30 June)\nRequire: > 5 mg/L",
+              "Juvenile (1 July - 15 Sept.)\nRequire: > 5 mg/L",
+              "Migration (16 Sept. - 30 Nov.)")
+      ) %>%
+  filter(yearf == max_y) %>%
+    mutate(order = case_when(season2 == "Migrate (S)" ~ 1,
+                           season2 == "Spawn" ~ 2,
+                           season2 == "Larvae" ~ 3,
+                           season2 == "Juvenile" ~ 4,
+                           season2 == "Migrate (F)" ~ 5),
+         season2 = fct_reorder(season2, order)) %>%
+  left_join(color_vector_df, by = "order")
+
+# make the plot
+ggplot(plot_data) +
+    geom_errorbar(aes(y = yearf, 
                     xmin = mean_min, xmax = mean_max),
                 width = 0) +
   geom_point(aes(y = yearf, x = mean_mean, color = season2),
-             size = 3) +
+             size = 3, color = plot_data$col) +
+  geom_text(aes(y = yearf, x = mean_mean, color = season2, 
+                label = ann), data = annotate_df, size = 3,
+            hjust = .05, vjust = .8, color = annotate_df$col) +
   facet_grid(season2~.) +
     theme_bw() +
+  labs(x = "Mean daily dissolved oxygen\n(+/- average min and max)", 
+       y = "",
+       title = i, color = "") +
     scale_x_continuous(limits = c(0,14),
                      breaks = seq(0,14, by = 2)) +
-  labs(x = "Mean daily dissolved oxygen\n(+/- average min and max)", y = "",
-       title = i, color = "") +
   theme(text = element_text(size = 14),
         axis.title.y = element_text(size = 12),
         axis.text.y = element_text(size = 10),
         strip.text = element_blank(),
         strip.background = element_blank(),
         legend.position = "right") +
-  scale_color_manual(values = c(wes_palettes$Zissou1,
-                                wes_palettes$Royal2))
+  guides(color = "none")
 
-ggsave(paste0("output/Task2_WQ_migratory_species/PlotF/PlotF_",i,"_fish_seasons_DO.png"), height = 5, width = 7, dpi = 400)
+ggsave(paste0("output/Task2_WQ_migratory_species/PlotF/PlotF_",i,"_fish_seasons_DO.png"), height = 5, width = 6, dpi = 400)
 }
+
+rm(plot_data, annotate_df, max_y)
 ```
-# Tables of average daily temperatures by month
+# Table A: average daily temperatures by month
 - What is the monthly mean mean/min/max temperature?
 ```{r}
 sites <- unique(tdata$site)
@@ -525,7 +622,7 @@ save_kable(tmonth_table,
 }
 
 ```
-# Tables of average daily temperatures for 1 Jul - 15 Sept
+# Table B: average daily temperatures for 1 Jul - 15 Sept
 - For July 1- Sept 15, What’s the mean daily max?
 ```{r}
 
@@ -563,19 +660,19 @@ save_kable(t_hotseason_table,
                   "TableB_", i, 
                   "_average_temps_1Jul_15Sep.html"))
 }
-
 ```
-# Tables of average daily temperatures for migratory fish seasons
+# Table C: average daily temperatures for migratory fish seasons
 - What is mean mean/min/max by fish season?
 ```{r}
-
+# Create list of sites (excluding those not accessible)
 sites <- unique(tdata$site)
+sites <- sites[sites %notin% exclude]
 
 i = sites[1]
 
 for(i in sites){
   print(i)
-(t_fishseason_table <- tsum_season %>%
+(t_fishseason_table <- tsum_season_exclude %>%
   filter(n >= 10,
          site == i,
          is.na(season) == F) %>%
@@ -601,7 +698,7 @@ save_kable(t_fishseason_table,
            paste0("output/",
                   "Task2_WQ_migratory_species/TableC/",
                   "TableC_", i, 
-                  "_average_temps_mig_fish_seasons.html"))
+                  "_average_temps_mig_fish_seasons2.html"))
 }
 
 ```
@@ -609,7 +706,7 @@ save_kable(t_fishseason_table,
 ```{r}
 # intercept varying among years and among days within years (nested random effects)
 
-# fit model during migration period
+# fit model during spring migration period
 tdata_migrate <- filter(tdata, is.na(temp)==F,
                            season == "migrate",
                         site %notin% exclude)
@@ -744,7 +841,7 @@ bootCI_migrate = bootMer(temp_mod_migrate, pred_fun_migrate,
 
 saveRDS(bootCI_migrate, "output/Task2_WQ_migratory_species/statistical_analysis/temp_mod_migrate_bootstraps.rds")
 ```
-# Plot modeled mean temp by fish stage w/ CIs
+# Plot G: modeled mean temp by fish stage w/ CIs
 ```{r}
 bootCI_migrate <- readRDS("output/Task2_WQ_migratory_species/statistical_analysis/temp_mod_migrate_bootstraps.rds")
 
@@ -762,11 +859,12 @@ tplot_df <- apply(boot$t, 2,
                function(x) quantile(x, c(0.025,0.975))) %>% 
   t() %>%
   as.data.frame() %>%
-  bind_cols(predict(mod, 
+  mutate(site = unique(boot$data$site)) %>%
+  filter(site %in% unique(newdat$site))%>%
+  mutate(fit = predict(mod, 
                     data.frame(site = unique(newdat$site)), 
                     re.form = NA)) %>%
-  rename(q2.5 = 1, q97.5 = 2, fit = 3) %>%
-  mutate(site = unique(newdat$site)) %>%
+  rename(q2.5 = 1, q97.5 = 2) %>%
   select(site, fit, q2.5, q97.5) %>%
   mutate(site = fct_reorder(site, fit),
          per = label)
@@ -777,7 +875,8 @@ return(tplot_df)
 
 tplots <- rbind.data.frame(
   boot_compile(bootCI_juv, temp_mod_juv, 
-               newdat_juv, "Juvenile"),  boot_compile(bootCI_migrate, temp_mod_migrate, 
+               newdat_juv, "Juvenile"),  
+  boot_compile(bootCI_migrate, temp_mod_migrate, 
                newdat_migrate, "Spring Migration"),
   boot_compile(bootCI_spawn, temp_mod_spawn, 
                newdat_spawn, "Spawning"),
@@ -793,15 +892,14 @@ tplots %>%
   ggplot() +
   geom_point(aes(y = site, x = fit,
                  ),
-             size = 2) +
+             size = 1) +
   geom_errorbar(aes(y = site, xmin = q2.5, 
                     xmax = q97.5),
                 width = 0) +
-  facet_wrap(~ per, ncol = 5, scale = "free_x") +
+  facet_wrap(~ per, ncol = 5) +
   theme_bw() +
   labs(y = "", x = "Mean temperature (C; +/- 95% CI)") +
-  theme(strip.background = element_rect(fill = "white")) +
-  scale_x_continuous(breaks = seq(1,28, by = 2))
+  theme(strip.background = element_rect(fill = "white"))
                       
 ggsave("output/Task2_WQ_migratory_species/PlotG_modeled_mean_temp_by_fish_stage.png", width = 6, height = 4, dpi = 400)
 ```
@@ -809,11 +907,6 @@ ggsave("output/Task2_WQ_migratory_species/PlotG_modeled_mean_temp_by_fish_stage.
 Note: tried model with correlated random slope & intercept of year by site, uncorrelated, and just intercept. Correlated slope & intercept fit best for all seasons.
 ```{r}
 tdata$yearn <- tdata$year - 2015
-# tried quadratic day as continuous 
-# very similar results (for spawn anyway)
-# tdata <- tdata %>%
-#   group_by(season) %>%
-#   mutate(dayz = (day - mean(day))/sd(day))
 
 # fit model during migration period
 # correlated random slope & intercept of year by site
@@ -1535,7 +1628,7 @@ ggsave("output/Task2_WQ_migratory_species/PlotQ_mean_do_trends_juvenile.png",
     scale_x_continuous(breaks = 1:6,
                        labels = 2016:2021) +
     labs(x = "", 
-         y = "Mean do trend",
+         y = "Mean DO trend",
          title = "Sep 16 - Nov 30 (fall migration)") +
     theme(text = element_text(size = 14)) +
     annotate(geom = "text", x = 1, y = 4, 
