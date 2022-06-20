@@ -25,7 +25,7 @@ Products:
 
 • Summary statistics and statistical analysis of same along with associated interpretative text.
 
-Temperature information from the QAPP document:
+Temperature SWQS information:
 	1. FW2-TP - Temperature	Shall not exceed a daily maximum of 22 degrees Celsius or rolling seven-day average of the daily maximum of 19 degrees Celsius, unless due to natural conditions
 	  - How many days exceed 22 C
 	  - How many days 7-d rolling average of daily max exceed 19 C
@@ -35,6 +35,20 @@ Temperature information from the QAPP document:
     - How many days 7-d rolling average of daily max exceed 23 C
 
 	3. FW2-NT - Shall not exceed a daily maximum of 31 degrees Celsius or rolling seven-day average of the daily maximum of 28 degrees Celsius, unless due to natural conditions	
+	
+Dissolved Oxygen SWQS information:
+
+FW2-TP
+Not less than 7.0 at any time 
+
+FW2-TM
+24-hour average not less than 6.0. Not less than 5.0 at any time
+
+FW2-NT
+24-hour average not less than 5.0, but not less than 4.0 at any time 
+
+FW2-TM, FW2-NT
+Supersaturated dissolved oxygen values shall be expressed as their corresponding 100 percent saturation values for purposes of calculating 24 hour averages
 
 # 1.0. Load libraries, format data, etc.
 ```{r}
@@ -409,14 +423,14 @@ ggplot() +
   labs(x = "", y = "Days above temp. threshold") +
   guides(shape = "none")
 
-ggsave(
-  "output/Task1_SWQS_loggers/PlotC_days_above_temp_threshold_timeseries.png",
+ggsave(here(plotsave,
+  "PlotC_days_above_temp_threshold_timeseries.png"),
        height = 7, width = 9, dpi = 400)
 
 rm(temp_count_bad)
 ```
-# Plot C (individual): no. days exceeding temp. thresholds - individually by site
-Same as Plot C but separated into one plot per site
+# 1.6. Plot C (individual): no. days exceeding temp. thresholds - individually by site
+Same as Plot C but separated out into one plot per site
 ```{r}
 sites <- unique(temp_count$site)
 i <- sites[1]
@@ -469,14 +483,14 @@ ggplot() +
   guides(shape = "none")
 
 ggsave(
-  paste0("output/Task1_SWQS_loggers/PlotC_individual/",
+  paste0(plotsave, "PlotC_individual/",
   "PlotC_", i, "_days_above_temp_threshold_timeseries.png"),
        height = 4, width = 6, dpi = 400)
 
 rm(temp_count_bad)
 }
 ```
-## "days over temp threshold" boxplots by site
+# 1.7. Plot D: "days over temperature threshold" boxplots by site
 ```{r}
 # x11(width = 8, height = 6)
 temp_count %>%
@@ -510,26 +524,12 @@ temp_count %>%
        color = "Year") +
     facet_wrap(~Threshold)
 
-# ggsave(
-#   "output/Task1_SWQS_loggers/PlotD_days_above_temp_threshold_boxplot2.png",
-#        width = 8,
-#        height = 6, dpi = 400)
+ggsave(here(plotsave,
+  "PlotD_days_above_temp_threshold_boxplot.png"),
+       width = 8,
+       height = 6, dpi = 400)
 ```
-# Dissolved Oxygen SWQS
-c. How often do sites exceed SWQS for dissolved oxygen (how many days per year)?
-
-FW2-TP
-Not less than 7.0 at any time 
-
-FW2-TM
-24-hour average not less than 6.0. Not less than 5.0 at any time
-
-FW2-NT
-24-hour average not less than 5.0, but not less than 4.0 at any time 
-FW2-TM, FW2-NT
-Supersaturated dissolved oxygen values shall be expressed as their corresponding 100 percent saturation values for purposes of calculating 24 hour averages
-
-## DO SWQS: plot daily min for each site/year vs. thresholds
+# 1.8. Plot E: DO SWQS, plot daily min for each site/year vs. thresholds
 ```{r}
 # plot daily min DO vs. thresholds
 # x11(width = 9, heigh = 7)
@@ -558,11 +558,11 @@ dmin %>%
   annotate("text", x = 335, y = 8, label = "TP", 
            color = "darkgray", size = 2)
 
-# ggsave(
-#   "output/Task1_SWQS_loggers/PlotE_dmin_adj_by_day_year_site2.png",
-#        height = 7, width = 9, dpi = 400)
+ggsave(here(plotsave,
+  "PlotE_dmin_adj_by_day_year_site.png"),
+       height = 7, width = 9, dpi = 400)
 ```
-## DO SWQS: plot 24-h average daily DO for each site/year vs. thresholds
+# 1.9. Plot F: DO SWQS, plot 24-h average daily DO for each site/year vs. thresholds
 ```{r}
 # plot 24-h average DO vs. thresholds
 # x11(width = 9, heigh = 7)
@@ -589,13 +589,12 @@ dmin %>%
   annotate("text", x = 335, y = 7, label = "TM", 
            color = "darkgray", size = 2) 
 
-# ggsave(
-#   "output/Task1_SWQS_loggers/PlotF_dmin_by_day_year_24h_avg2.png",
-#   height = 7, width = 9, dpi = 400)
+ggsave(here(plotsave,
+  "PlotF_dmin_by_day_year_24h_avg2.png"),
+  height = 7, width = 9, dpi = 400)
 ```
-## create table of number of DO measurement days per year per site
+# 1.10. Table C: create table of number of DO measurement days per year per site
 ```{r}
-
 day_table <- tmax %>%
   droplevels() %>%
   filter(is.na(max_temp) != T) %>%
@@ -628,10 +627,13 @@ day_table_DO <- dmin %>%
 day_table_DO
 
 # save the table to HTML file
-# save_kable(day_table_DO,
-#            "output/Task1_SWQS_loggers/TableC_dmin_n_table2.html")
+save_kable(day_table_DO,
+           here(plotsave, "TableC_dmin_n_table.html"))
 
-# Table of "Days below DO threshold"
+rm(day_table_DO, day_table)
+```
+# 1.11. Table D: Table of "Days below DO threshold"
+```{r}
 days_below_table <- DO_count %>%
   filter(Threshold == "Trout Maintenance") %>%
   select(site, year, days_under, summer_days) %>%
@@ -648,12 +650,12 @@ days_below_table <- DO_count %>%
 days_below_table
 
 # save the table to HTML file
-# save_kable(days_below_table,
-#   "output/Task1_SWQS_loggers/TableD_dmin_days_under_TM_table2.html")
+save_kable(days_below_table,
+           here(plotsave, "TableD_dmin_days_under_TM_table.html"))
 
-rm(dmin_table, days_below_table)
+rm(days_below_table)
 ```
-## Plot G: number of days below DO thresholds (time series)
+# 1.12. Plot G: number of days below DO thresholds (time series)
 To change font size of years, change the number in this line of code: "axis.text.x = element_text(size = 8),"
 ```{r}
 # create a separate data frame of years with < 80% Jun-Aug coverage
@@ -685,12 +687,11 @@ ggplot() +
   labs(x = "", y = "Days below dissolved oxygen threshold") +
   guides(shape = "none")
 
-# ggsave(
-#   "output/Task1_SWQS_loggers/PlotG_days_below_DO_threshold2.png",
-#        height = 7, width = 9, dpi = 400)
+ggsave(here(plotsave, "PlotG_days_below_DO_threshold2.png"),
+       height = 7, width = 9, dpi = 400)
 ```
-## Plot no. days below DO thresholds - individually by site
-I.e., Plot G but as one plot per site
+# 1.13. Plot G (individual): No. days below DO thresholds - individually by site
+Same as Plot G but separated into one plot per site.
 ```{r}
 sites <- unique(DO_count$site)
 i <- sites[1]
@@ -743,14 +744,14 @@ ggplot() +
   guides(shape = "none")
 
 ggsave(
-  paste0("output/Task1_SWQS_loggers/PlotG_individual/",
+  paste0(plotsave, "PlotG_individual/",
   "PlotG_", i, "_days_below_DO_threshold_timeseries.png"),
        height = 4, width = 6, dpi = 400)
 
 rm(DO_count_bad)
 }
 ```
-## "days below DO threshold" boxplots by site
+# 1.14. Plot H: "days below DO threshold" boxplots by site
 ```{r}
 # x11(width = 8, height = 6)
 DO_count %>%
@@ -785,234 +786,14 @@ DO_count %>%
        color = "Year") +
     facet_wrap(~Threshold)
 
-ggsave(
-  "output/Task1_SWQS_loggers/PlotH_days_below_DO_threshold_boxplot2.png",
+ggsave(here(plotsave, 
+  "PlotH_days_below_DO_threshold_boxplot2.png"),
        width = 8,
        height = 6, dpi = 400)
 ```
-# Plots of temperature over time for each site (panels by year)
+# 1.15. Plot I: Biplot of DO and temp thresholds
 ```{r}
-site_name_vector = unique(tmax$site)
-# plot daily max vs. thresholds
-
-for(site_name in site_name_vector){
-
-print(paste0("Making site ", site_name))
-# for testing
-#x11(height = 7, width = 9)
-  
-max_col = "dodgerblue"
-roll_col = "red"
-
-tmax %>%
-  filter(site == site_name) %>%
-  # # this commented code removes empty plots
-  # group_by(year) %>%
-  # mutate(test = mean(max_temp, na.rm = T)) %>%
-  # filter(is.na(test) == F) %>%
-  ggplot() +
-  geom_hline(
-    yintercept = 22,
-    color = max_col,
-    lty = 3,
-    size = .5,
-    alpha = 0.5
-  ) +
-  geom_hline(
-    yintercept = 25,
-    color = max_col,
-    lty = 2,
-    size = .5,
-    alpha = 0.5
-  ) +
-  geom_hline(
-    yintercept = 31,
-    color = max_col,
-    lty = 1,
-    size = .5,
-    alpha = 0.5
-  ) +
-  geom_hline(
-    yintercept = 19,
-    color = roll_col,
-    lty = 3,
-    size = .5,
-    alpha = 0.5
-  ) +
-  geom_hline(
-    yintercept = 23,
-    color = roll_col,
-    lty = 2,
-    size = .5,
-    alpha = 0.5
-  ) +
-  geom_hline(
-    yintercept = 28,
-    color = roll_col,
-    lty = 1,
-    size = .5,
-    alpha = 0.5
-  ) +
-  geom_line(aes(x = day, y = max_temp),
-            size = 1, alpha = 0.75, color = max_col) +
-  geom_line(aes(x = day, y = roll_temp),
-            size = 0.5, alpha = 0.75, color = roll_col) +
-  facet_wrap( ~ year) +
-  scale_x_continuous(
-    breaks = c(91, 152, 213, 274, 335),
-    labels = c("Apr", "Jun", "Aug",
-               "Oct", "Dec")
-  ) +
-  scale_y_continuous(limits = c(0,32)) +
-  cowplot::theme_cowplot() +
-  theme(
-    strip.background = element_rect(fill = "white")
-  ) +
-  labs(y = "Daily maximum temperature (C)", x = "",
-       color = "Year", title = paste0("Site: ",site_name)) +
-  annotate("text", x = 335, y = 30, label = "NT", 
-           color = "darkgray", size = 2) +
-  annotate("text", x = 335, y = 24, label = "TM", 
-           color = "darkgray", size = 2) +
-  annotate("text", x = 335, y = 21, label = "TP", 
-           color = "darkgray", size = 2)
-
-num_panels <- length(unique((tmax %>% 
-                               filter(site == site_name))$year))
-if(num_panels %in% 4:6){
-ggsave(paste0("output/Task1_SWQS_loggers/individual_sites_temperature/", site_name, "_tmax_by_day_year.png"),
-       height = 6, width = 9, dpi = 400)
-  }
-
-# # use this if saving graphs with different numbers of year panels
-# if(num_panels %in% 3){
-# ggsave(paste0("output/Task1_SWQS_loggers/individual_sites_temperature/", site_name, "_tmax_by_day_year.png"),
-#        height = 3, width = 9, dpi = 400)
-# }
-# 
-# if(num_panels %in% 2){
-# ggsave(paste0("output/Task1_SWQS_loggers/individual_sites_temperature/", site_name, "_tmax_by_day_year.png"),
-#        height = 3, width = 6, dpi = 400)
-# }
-# 
-# if(num_panels %in% 1){
-# ggsave(paste0("output/Task1_SWQS_loggers/individual_sites_temperature/", site_name, "_tmax_by_day_year.png"),
-#        height = 3, width = 3, dpi = 400)
-#   }
-
-}
-
-```
-# Plots of DO over time for each site (panels by year)
-```{r}
-
-site_name_vector = unique(dmin$site)
-# plot daily max vs. thresholds
-
-for(site_name in site_name_vector){
-
-print(paste0("Making site ", site_name))
-# for testing
-#x11(height = 7, width = 9)
-  
-max_col = "dodgerblue"
-roll_col = "red"
-
-dmin %>%
-  filter(site == site_name) %>%
-  # # this commented code removes empty plots
-  # group_by(year) %>%
-  # mutate(test = mean(min_DO, na.rm = T)) %>%
-  # filter(is.na(test) == F) %>%
-  ggplot() +
-    geom_hline(
-    yintercept = 7,
-    color = max_col,
-    lty = 3,
-    size = .5,
-    alpha = 0.5
-  ) +
-  geom_hline(
-    yintercept = 5,
-    color = max_col,
-    lty = 2,
-    size = .5,
-    alpha = 0.5
-  ) +
-  geom_hline(
-    yintercept = 4,
-    color = max_col,
-    lty = 1,
-    size = .5,
-    alpha = 0.5
-  ) +
-  geom_hline(
-    yintercept = 6,
-    color = roll_col,
-    lty = 2,
-    size = .5,
-    alpha = 0.5
-  ) +
-  geom_hline(
-    yintercept = 5,
-    color = roll_col,
-    lty = 1,
-    size = .5,
-    alpha = 0.5
-  ) +
-  geom_line(aes(x = day, y = min_DO),
-            size = 1, alpha = 0.75, color = max_col) +
-  geom_line(aes(x = day, y = mean24_DO),
-            size = 0.5, alpha = 0.75, color = roll_col) +
-  facet_wrap( ~ year) +
-  scale_x_continuous(
-    breaks = c(91, 152, 213, 274, 335),
-    labels = c("Apr", "Jun", "Aug",
-               "Oct", "Dec")
-  ) +
-  scale_y_continuous(limits = c(0,14.5)) +
-  cowplot::theme_cowplot() +
-  theme(
-    strip.background = element_rect(fill = "white")
-  ) +
-  labs(y = "Dissolved oxygen", x = "",
-       color = "Year", title = paste0("Site: ",site_name)) +
-  annotate("text", x = 335, y = 4.5, label = "NT", 
-           color = "darkgray", size = 2) +
-  annotate("text", x = 335, y = 5.5, label = "TM", 
-           color = "darkgray", size = 2) +
-  annotate("text", x = 335, y = 7.5, label = "TP", 
-           color = "darkgray", size = 2)
-
-num_panels <- length(unique((tmax %>% 
-                               filter(site == site_name))$year))
-if(num_panels %in% 4:6){
-ggsave(paste0("output/Task1_SWQS_loggers/individual_sites_DO/", site_name, "_DO_by_day_year.png"),
-       height = 5, width = 8, dpi = 400)
-  }
-
-# # use this if saving graphs with different numbers of year panels
-# if(num_panels %in% 3){
-# ggsave(paste0("output/Task1_SWQS_loggers/individual_sites_DO/", site_name, "_DO_by_day_year.png"),
-#        height = 3, width = 9, dpi = 400)
-# }
-# 
-# if(num_panels %in% 2){
-# ggsave(paste0("output/Task1_SWQS_loggers/individual_sites_DO/", site_name, "_DO_by_day_year.png"),
-#        height = 3, width = 6, dpi = 400)
-# }
-# 
-# if(num_panels %in% 1){
-# ggsave(paste0("output/Task1_SWQS_loggers/individual_sites_DO/", site_name, "_DO_by_day_year.png"),
-#        height = 3, width = 3, dpi = 400)
-#   }
-
-}
-
-```
-# Biplot of DO and temp thresholds
-```{r}
-# X11(7,5)
+X11(7,5)
 both_count %>%
   filter(summer_days.x >= 0.8, summer_days.y >= 0.8) %>%
   filter(Threshold == "Trout Maintenance") %>%
@@ -1020,16 +801,20 @@ both_count %>%
   summarise(days_over = mean(days_over),
             days_under = mean(days_under),
             .groups = "drop") %>%
-  mutate(mean_days = (days_under+days_over)/2) %>%
+  mutate(mean_days = (days_under+days_over)/2,
+         num = gsub(site, pattern = "TNC_", 
+                    replacement = "")) %>%
   ungroup() %>%
   ggplot() +
-  geom_point(aes(y = days_under, x = days_over, 
-                color = mean_days), size = 2) +
-  geom_text(aes(y = days_under+4, x = days_over, 
-                color = mean_days, label = site)) +
+  geom_point(aes(y = days_under, x = days_over, fill = mean_days), 
+               shape = 21, size = 5) +
+  scale_fill_viridis_c() +
+  geom_text(aes(y = days_under, x = days_over, label = num),
+            color = "white", hjust = .5, size = 2.5) +
   labs(y = "Days exceeding dissolved oxygen",
        x = "Days exceeding temperature",
        title = "Mean days exceeding 'Trout Maintenance' threshold") +
+  guides(fill = "none") +
   scale_x_continuous(limits = c(0,110)) +
   scale_y_continuous(limits = c(0,110)) +
   scale_color_gradient(high = "firebrick",space = "Lab") +
@@ -1037,12 +822,12 @@ both_count %>%
   theme(text = element_text(size = 14)) +
   guides(color = "none")
 
-# ggsave(
-#   "output/Task1_SWQS_loggers/PlotI_days_exceeding_any_thresholds_scatterplot.png",
-#        width = 7,
-#        height = 5, dpi = 400)
+ggsave(here(plotsave,
+  "PlotI_days_exceeding_any_thresholds_scatterplot.png"),
+       width = 6,
+       height = 5, dpi = 400)
 ```
-## "days exceeding either threshold" boxplots by site
+# 1.16. Plot J: "days exceeding either threshold" boxplots by site
 ```{r}
 # x11(width = 8, height = 6)
 either_count %>%
@@ -1074,16 +859,18 @@ either_count %>%
        color = "Year") +
     facet_wrap(~Threshold)
 
-# ggsave(
-#   "output/Task1_SWQS_loggers/PlotJ_days_exceeding_any_threshold_boxplot.png",
-#        width = 8,
-#        height = 6, dpi = 400)
+ggsave(
+  "output/Task1_SWQS_loggers/PlotJ_days_exceeding_any_threshold_boxplot.png",
+       width = 8,
+       height = 6, dpi = 400)
 ```
-# Model estimating proportion of summer days exceeding TM temperature standards
-Random effects binomial model from Kery & Royle AHM book. Site x Year random effects
+# Model A: estimating proportion of summer days exceeding TM temperature standards
+Bayesian hierarchical model. Code adapted from the random effects binomial model described in Kery & Royle (2015) book: Applied Hierarchical Modeling. Includes Site x Year random effects.
 ```{r}
 
 tstat <- tmax %>%
+  filter(site != "TNC_26",
+         site != "TNC_27") %>%
   mutate(MAresid = max_temp - roll_temp,
          TMex = case_when(max_temp > 25 ~ 1,
                           roll_temp > 23 ~ 1,
@@ -1200,26 +987,27 @@ logit(river.mean[j]) <- mu.alpha0.site + mu.beta[j]
 
 }")
 
-# jags_mod4 <- jagsUI::jags(data = jags_data4,
-#              model.file = "scripts/AHM_mod2.txt",
-#              n.iter = 80000, n.burnin = 20000,
-#              parameters.to.save = c("theta", "alpha0.site",
-#                                     "mu.alpha0.site",
-#                                     "sd.alpha0.site",
-#                                     "beta1", "beta2",
-#                                     "beta3", "beta4", 
-#                                     "beta5", "beta6",
-#                                     "mu.beta", "sd.beta",
-#                                     "mu.year.effect",
-#                                     "tau.year.effect",
-#                                     "river.mean"),
-#              n.chains = 3, parallel = T, n.thin = 120
-#              )
+jags_mod4 <- jagsUI::jags(data = jags_data4,
+             model.file = "scripts/AHM_mod2.txt",
+             n.iter = 80000, n.burnin = 20000,
+             parameters.to.save = c("theta", "alpha0.site",
+                                    "mu.alpha0.site",
+                                    "sd.alpha0.site",
+                                    "beta1", "beta2",
+                                    "beta3", "beta4",
+                                    "beta5", "beta6",
+                                    "mu.beta", "sd.beta",
+                                    "mu.year.effect",
+                                    "tau.year.effect",
+                                    "river.mean"),
+             n.chains = 3, parallel = T, n.thin = 120
+             )
 
-# saveRDS(
-#   jags_mod4,
-#         "output/Task1_SWQS_loggers/statistical_analysis/model_output/JAGS_TMtemp_model.rds"
-#   )
+saveRDS(
+  jags_mod4,
+        here(plotsave,
+             "statistical_analysis/model_output/JAGS_TMtemp_model.rds")
+  )
 
 # to read in the model results instead of running it
 jags_mod4 <- 
@@ -1763,4 +1551,182 @@ ggsave(
          width = 5, height = 5, dpi = 400)
 
 ```
+# Plot Q: Plots of temperature over time for each site (panels by year)
+```{r}
+site_name_vector = unique(tmax$site)
+# plot daily max vs. thresholds
 
+for(site_name in site_name_vector){
+
+print(paste0("Making site ", site_name))
+# for testing
+#x11(height = 7, width = 9)
+  
+max_col = "dodgerblue"
+roll_col = "red"
+
+tmax %>%
+  filter(site == site_name) %>%
+  ggplot() +
+  geom_hline(
+    yintercept = 22,
+    color = max_col,
+    lty = 3,
+    size = .5,
+    alpha = 0.5
+  ) +
+  geom_hline(
+    yintercept = 25,
+    color = max_col,
+    lty = 2,
+    size = .5,
+    alpha = 0.5
+  ) +
+  geom_hline(
+    yintercept = 31,
+    color = max_col,
+    lty = 1,
+    size = .5,
+    alpha = 0.5
+  ) +
+  geom_hline(
+    yintercept = 19,
+    color = roll_col,
+    lty = 3,
+    size = .5,
+    alpha = 0.5
+  ) +
+  geom_hline(
+    yintercept = 23,
+    color = roll_col,
+    lty = 2,
+    size = .5,
+    alpha = 0.5
+  ) +
+  geom_hline(
+    yintercept = 28,
+    color = roll_col,
+    lty = 1,
+    size = .5,
+    alpha = 0.5
+  ) +
+  geom_line(aes(x = day, y = max_temp),
+            size = 1, alpha = 0.75, color = max_col) +
+  geom_line(aes(x = day, y = roll_temp),
+            size = 0.5, alpha = 0.75, color = roll_col) +
+  facet_wrap( ~ year) +
+  scale_x_continuous(
+    breaks = c(91, 152, 213, 274, 335),
+    labels = c("Apr", "Jun", "Aug",
+               "Oct", "Dec")
+  ) +
+  scale_y_continuous(limits = c(0,32)) +
+  cowplot::theme_cowplot() +
+  theme(
+    strip.background = element_rect(fill = "white")
+  ) +
+  labs(y = "Daily maximum temperature (C)", x = "",
+       color = "Year", title = paste0("Site: ",site_name)) +
+  annotate("text", x = 335, y = 30, label = "NT", 
+           color = "darkgray", size = 2) +
+  annotate("text", x = 335, y = 24, label = "TM", 
+           color = "darkgray", size = 2) +
+  annotate("text", x = 335, y = 21, label = "TP", 
+           color = "darkgray", size = 2)
+
+num_panels <- length(unique((tmax %>% 
+                               filter(site == site_name))$year))
+if(num_panels %in% 4:6){
+ggsave(paste0(plotsave, "PlotQ_individual_sites_temperature/", site_name, "_tmax_by_day_year.png"),
+       height = 6, width = 9, dpi = 400)
+  }
+
+}
+
+```
+# Plot R: Plots of DO over time for each site (panels by year)
+```{r}
+site_name_vector = unique(dmin$site)
+# plot daily max vs. thresholds
+
+for(site_name in site_name_vector){
+
+print(paste0("Making site ", site_name))
+# for testing
+#x11(height = 7, width = 9)
+  
+max_col = "dodgerblue"
+roll_col = "red"
+
+dmin %>%
+  filter(site == site_name) %>%
+  ggplot() +
+    geom_hline(
+    yintercept = 7,
+    color = max_col,
+    lty = 3,
+    size = .5,
+    alpha = 0.5
+  ) +
+  geom_hline(
+    yintercept = 5,
+    color = max_col,
+    lty = 2,
+    size = .5,
+    alpha = 0.5
+  ) +
+  geom_hline(
+    yintercept = 4,
+    color = max_col,
+    lty = 1,
+    size = .5,
+    alpha = 0.5
+  ) +
+  geom_hline(
+    yintercept = 6,
+    color = roll_col,
+    lty = 2,
+    size = .5,
+    alpha = 0.5
+  ) +
+  geom_hline(
+    yintercept = 5,
+    color = roll_col,
+    lty = 1,
+    size = .5,
+    alpha = 0.5
+  ) +
+  geom_line(aes(x = day, y = min_DO),
+            size = 1, alpha = 0.75, color = max_col) +
+  geom_line(aes(x = day, y = mean24_DO),
+            size = 0.5, alpha = 0.75, color = roll_col) +
+  facet_wrap( ~ year) +
+  scale_x_continuous(
+    breaks = c(91, 152, 213, 274, 335),
+    labels = c("Apr", "Jun", "Aug",
+               "Oct", "Dec")
+  ) +
+  scale_y_continuous(limits = c(0,14.5)) +
+  cowplot::theme_cowplot() +
+  theme(
+    strip.background = element_rect(fill = "white")
+  ) +
+  labs(y = "Dissolved oxygen", x = "",
+       color = "Year", title = paste0("Site: ",site_name)) +
+  annotate("text", x = 335, y = 4.5, label = "NT", 
+           color = "darkgray", size = 2) +
+  annotate("text", x = 335, y = 5.5, label = "TM", 
+           color = "darkgray", size = 2) +
+  annotate("text", x = 335, y = 7.5, label = "TP", 
+           color = "darkgray", size = 2)
+
+num_panels <- length(unique((tmax %>% 
+                               filter(site == site_name))$year))
+if(num_panels %in% 4:6){
+ggsave(paste0(plotsave, "PlotR_individual_sites_DO/", site_name, "_DO_by_day_year.png"),
+       height = 5, width = 8, dpi = 400)
+  }
+
+}
+
+```

@@ -55,16 +55,16 @@ Task 2
 * Models: repaste output into text files after excluding non-fish and del river sites
 * Plot D: remove lines connected points spanning missing data
 
-
-
 Task 1: 
-- TNC_4 missing temp/DO data in 2016? [TNC_4, 16 added to Box on Jan 7]
 * TNC_5 missing temp/DO data in 2017 [no data for that year on Box]
 * same for TNC_80 in 2018 [no data for that year on Box]
+* improve label visibitility in Plot I
 - Plots K & L: exclude Del. river sites (26 and 27)
-- improve label visibitility in Plot I, K, and L
-- Plot I: clarify figure caption (is it a straight-up average)?
+- improve label visibitility in Plot P
+* Plot I: clarify figure caption (is it a straight-up average)?
 - make sure each plot is runnable after running only first chunk
+- TNC_4 missing temp/DO data in 2016? [TNC_4, 16 added to Box on Jan 7]
+- Plot G (individual): remove "connecting lines" across missing years
 
 Task 5: 
 - make sure logger compile will work with new data in 2021 format
@@ -72,6 +72,8 @@ Task 5:
 - make sure macro/habitat compile will work with new data in 2021 format
 - adapt "compile_logger" function to new logger format (michelle will provide)
 - ensure new sites won't break code
+- number all code chunks and add plot or table letter
+- ensure all chunks run after running first one
 
 General to all tasks:
 - make sure 26 & 27 don't figure into any "river-wide" analyses

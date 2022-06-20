@@ -16,9 +16,9 @@ Plot G: The number of days with dissolved oxygen readings below minimum SWQS thr
 
 Plot G (individual plots): the folder "PlotG_individual" contains the same information as Plot G, but with separate plots for each individual site.
 
-Plot H: The number of days with dissolved oxygen readings below minimum SWQS thresholds for each site in each year monitored. Years with < 80% of coverage in summer months (Jun 1-Aug 31) are not shown.
+Plot H: The mean number of days with dissolved oxygen readings below minimum SWQS thresholds for each site in each year monitored. Years with < 80% of coverage in summer months (Jun 1-Aug 31) are not shown.
 
-Plot I: Each site plotted based on the average number of days its temperature and dissolved oxygen exceeded SWQS Trout Maintenance criteria.
+Plot I: Each site plotted based on the average number of days each year its temperature (x-axis) and dissolved oxygen (y-axis) exceeded SWQS Trout Maintenance criteria. Years with < 80% of coverage in summer months (Jun 1-Aug 31) were not included in averages. The monitoring location number is shown within each point. Color brightness is proportional to the average number of days exceeding temperature and dissolved oxygen.
 
 Plot J: The number of days where either dissolved oxygen or temperature readings exceeded SWQS thresholds for each site in each year monitored. Years with < 80% of coverage in summer months (Jun 1-Aug 31) for either temperature or DO are not shown.
 
@@ -34,3 +34,6 @@ Plot O: Predicted mean minimum dissolved oxygen for each site on July 15th each 
 
 Plot P: Predicted mean minimum dissolved oxygen and maximum temperature for each site on July 15th, 2018. Predicting to this date is a way of standardizing estimates of dissolved oxygen (DO) conditions given that each site was measured for different time periods each year. Estimates were based on 2 General Additive Models (GAMs) including daily minimum DO or maximum temperature vs. day for each year, including a covariate for site.
 
+Plot Q: Daily maximum temperature (blue) and 7-day rolling average of daily maximum temperature (red) by year. Separate plots by site. Units are degrees Celsius. Horizontal lines show state Surface Water Quality Standards: NT = Non-trout threshold; TM = Trout maintenance threshold; TP = Trout production threshold.
+
+Plot R: Daily minimum dissolved oxygen (blue) and 7-day rolling average of daily minimum dissolved oxygen (red) by year. Separate plots by site. Units are mg/L. Horizontal lines show state Surface Water Quality Standards: NT = Non-trout threshold; TM = Trout maintenance threshold; TP = Trout production threshold.
