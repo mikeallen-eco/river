@@ -1,8 +1,12 @@
 See Task 2, Plot O and caption for more info.
 
-Linear mixed model fit by REML. t-tests use Satterthwaite's method ['lmerModLmerTest']
+> summary(do_trend_spawn)
+Linear mixed model fit by REML. t-tests use Satterthwaite's method [
+lmerModLmerTest]
 Formula: do ~ yearn + (1 | dayf) + (yearn | site)
-   Data: filter(dodata, is.na(do) == F, season == "spawn")
+   Data: filter(dodata, is.na(do) == F, season == "spawn", site %notin%  
+    exclude, site %notin% c("TNC_26", "TNC_27"))
+Control: lmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 2e+05))
 
 REML criterion at convergence: 104059
 
@@ -13,15 +17,15 @@ Scaled residuals:
 Random effects:
  Groups   Name        Variance Std.Dev. Corr 
  dayf     (Intercept) 0.0717   0.2678        
- site     (Intercept) 1.5750   1.2550        
+ site     (Intercept) 1.5751   1.2550        
           yearn       0.0853   0.2921   -0.96
  Residual             0.7915   0.8897        
 Number of obs: 39884, groups:  dayf, 16; site, 10
 
 Fixed effects:
             Estimate Std. Error       df t value Pr(>|t|)    
-(Intercept)  9.08894    0.42178  8.73596  21.549 7.07e-09 ***
-yearn       -0.04400    0.09809  8.11149  -0.449    0.665    
+(Intercept)  9.08894    0.42180  8.73470  21.548 7.09e-09 ***
+yearn       -0.04400    0.09809  8.11044  -0.449    0.666    
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 

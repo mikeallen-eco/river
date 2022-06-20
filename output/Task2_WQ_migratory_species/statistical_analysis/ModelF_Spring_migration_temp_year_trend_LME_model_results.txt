@@ -1,8 +1,11 @@
 See Task 2, Plot H and caption for more info.
 
-Linear mixed model fit by REML. t-tests use Satterthwaite's method ['lmerModLmerTest']
+> summary(temp_trend_migrate)
+Linear mixed model fit by REML. t-tests use Satterthwaite's method [
+lmerModLmerTest]
 Formula: temp ~ yearn + (1 | dayf) + (yearn | site)
-   Data: filter(tdata, is.na(temp) == F, season == "migrate", site %notin%      exclude)
+   Data: filter(tdata, is.na(temp) == F, season == "migrate", site %notin%  
+    exclude, site %notin% c("TNC_26", "TNC_27"))
 Control: lmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 2e+05))
 
 REML criterion at convergence: 209608.2

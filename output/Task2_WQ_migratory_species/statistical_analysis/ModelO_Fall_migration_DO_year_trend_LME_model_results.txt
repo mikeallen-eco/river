@@ -1,30 +1,33 @@
 See Task 2, Plot S and caption for more info.
 
-Linear mixed model fit by REML. t-tests use Satterthwaite's method ['lmerModLmerTest']
+> summary(do_trend_fall)
+Linear mixed model fit by REML. t-tests use Satterthwaite's method [
+lmerModLmerTest]
 Formula: do ~ yearn + (1 | dayf) + (yearn | site)
-   Data: filter(dodata, is.na(do) == F, season == "fall_mig")
+   Data: filter(dodata, is.na(do) == F, season == "fall_mig", site %notin%  
+    exclude, site %notin% c("TNC_26", "TNC_27"))
 
-REML criterion at convergence: 451110.4
+REML criterion at convergence: 433374
 
 Scaled residuals: 
     Min      1Q  Median      3Q     Max 
--7.3187 -0.5064 -0.0330  0.4974  3.7286 
+-7.2016 -0.5070 -0.0239  0.4974  3.6816 
 
 Random effects:
  Groups   Name        Variance Std.Dev. Corr 
- dayf     (Intercept) 1.9593   1.400         
- site     (Intercept) 3.9785   1.995         
-          yearn       0.2591   0.509    -0.83
- Residual             1.5895   1.261         
-Number of obs: 136428, groups:  dayf, 76; site, 12
+ dayf     (Intercept) 1.9763   1.4058        
+ site     (Intercept) 4.4405   2.1073        
+          yearn       0.2697   0.5193   -0.84
+ Residual             1.6395   1.2804        
+Number of obs: 129843, groups:  dayf, 76; site, 10
 
 Fixed effects:
-            Estimate Std. Error       df t value Pr(>|t|)    
-(Intercept)  9.83700    0.60940 12.63205  16.142 8.31e-10 ***
-yearn       -0.01276    0.15768  9.99096  -0.081    0.937    
+            Estimate Std. Error      df t value Pr(>|t|)    
+(Intercept)  9.66741    0.68682 9.73341  14.076 8.61e-08 ***
+yearn        0.01302    0.16445 8.92392   0.079    0.939    
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
 Correlation of Fixed Effects:
       (Intr)
-yearn -0.804
+yearn -0.812
