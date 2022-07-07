@@ -1,0 +1,41 @@
+
+Family: gaussian 
+Link function: identity 
+
+Formula:
+min_DO ~ s(day, by = yearf) + site
+
+Parametric coefficients:
+            Estimate Std. Error t value Pr(>|t|)    
+(Intercept)  3.95970    0.07292   54.30   <2e-16 ***
+siteTNC_4    4.12369    0.08429   48.92   <2e-16 ***
+siteTNC_5    2.23630    0.08721   25.64   <2e-16 ***
+siteTNC_8    2.93856    0.08417   34.91   <2e-16 ***
+siteTNC_9    2.20896    0.16179   13.65   <2e-16 ***
+siteTNC_10   4.12418    0.13601   30.32   <2e-16 ***
+siteTNC_13   2.68045    0.09170   29.23   <2e-16 ***
+siteTNC_16   3.61248    0.09207   39.23   <2e-16 ***
+siteTNC_18   3.47681    0.08398   41.40   <2e-16 ***
+siteTNC_19   4.06915    0.08500   47.87   <2e-16 ***
+siteTNC_23   3.89957    0.08593   45.38   <2e-16 ***
+siteTNC_24   2.13075    0.10270   20.75   <2e-16 ***
+siteTNC_25   4.07913    0.08733   46.71   <2e-16 ***
+siteTNC_28   4.10257    0.13686   29.98   <2e-16 ***
+siteTNC_80   2.51443    0.11589   21.70   <2e-16 ***
+siteTNC_81   3.52935    0.09023   39.12   <2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Approximate significance of smooth terms:
+                   edf Ref.df      F p-value    
+s(day):yearf2016 8.997  9.000 218.80  <2e-16 ***
+s(day):yearf2017 7.341  7.846  34.36  <2e-16 ***
+s(day):yearf2018 8.131  8.782  93.86  <2e-16 ***
+s(day):yearf2019 8.394  8.897  90.97  <2e-16 ***
+s(day):yearf2020 5.278  5.891 109.77  <2e-16 ***
+s(day):yearf2021 8.992  9.000 105.88  <2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+R-sq.(adj) =   0.52   Deviance explained = 52.3%
+GCV = 2.0069  Scale est. = 1.9927    n = 8936

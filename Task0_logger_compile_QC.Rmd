@@ -8,16 +8,19 @@ output:
 ---
 # Task 0: Load and compile all logger data
 
-## Errors discovered in XLSX files 
-These were fixed in the code (in chunk 0.1) except error no. 2, which was fixed in the xlsx file (tab renamed).
+# How to run this code
+Run the first section ("chunk") of this Rmd document (section 0.0). That will load all libraries and functions. After that, run each chunk sequentially until all the logger data is compiled, QC plots are created (and you are satisfied with the results), and the "compiled_logger_data.rds" file has been created. QC plots will save to the "Initial_QC" sub-folder in the "output" folder. If you see errors or data problems in files added after 2021, FIX THEM (for errors) or FLAG THEM (for spurious data) WITHIN THE ORIGINAL EXCEL FILE. After you are all done with that process, you do not need to run any code from Task 0 again unless you have more logger data you wish to add. All Rmd files after this one will source the compiled data from the rds file. 
 
-1. see 3 QC filter steps for hobo
-2. TNC_25_CLDHY_2_masterfile_2017.xlsx sheet name is "2021"
-  note: I fixed this in temp copy to allow compile to run
+## Errors discovered in 2016-2021 XLSX files 
+The 2016-2021 data files that this code works on were downloaded from the Box folder on January 4-7, 2022. A few errors discovered in the 2016-2021 data files were fixed in the code (in chunk 0.1) except error no. 2, which was fixed in the xlsx file (a tab was renamed). For all code to work properly, these 2016-2021 data files should not be changed any further and any errors you discover in data added later (after 2021) should be fixed within the original excel file. Here are the 2016-2021 errors that were fixed in the code:
+
+1. see 3 QC filter steps for hobo (see section 0.1)
+2. TNC_25_CLDHY_2_masterfile_2017.xlsx sheet name was "2021"
+  note: I fixed this in the xlsx file to allow compile to run
 3. possible naming issue in HYDRO data: is CLDHY-2 the same as CLDHY_2? In file: TNC_81_CLDHY2_2020_masterfile.xlsx
 
-# 0.0 Load libraries and set logger data path
-To load data from a new year, you will place the excel file into the folder linked to at the end of this code chunk (currently "data/Logger_Data"). It should be formatted exactly like the 2021 file. [Note: this functionality not yet implemented.]
+# 0.0. Load libraries and set logger data path
+To load data from a new year, you will place the excel file into the folder linked to at the end of this code chunk (currently "data/Logger_Data"). It should be formatted exactly like the 2021 file.
 ```{r}
 library(dplyr)
 library(here)
@@ -29,11 +32,12 @@ here <- here::here # resolve namespace conflict
 source(here("scripts", "logger_compile_function.R"))
 # load function to plot temp or do over time for each site/year 
 source(here("scripts", "logger_plot_function.R"))
+plotsave <- "output/Task0_Compile_Initial_QC/"
 
 # set path to folder where the latest logger data files are kept
 logger_path <- "data/Logger_Data/" 
 ```
-# 0.1 Read and compile HOBO data using logger_compile function
+# 0.1. Read and compile HOBO data using logger_compile function
 This code section runs the "logger_compile" function on the HOBO logger data files from each year to compile data into one big data frame named "hobo". It has built in fixes for errors discovered in the data excel files from 2016-2021. So, any changes to those files will also require changes to this code. [Note: functionality to handle new years not yet implemented.]
 ```{r}
 hobo <- logger_compile("2016", type = "hobo") %>%
@@ -61,8 +65,8 @@ hobo <- logger_compile("2016", type = "hobo") %>%
          temp != -888.88)
 
 ```
-# 0.2 Various QC checks for HOBO data
-This code section allows you to perform basic checks on the imported HOBO logger data (the 'hobo' object). It will work best to run each line individually (e.g., using ctrl-Enter). The output will appear in the RStudio Console. You can also view the hobo object by clicking on it in the RStudio Environment section.
+# 0.2. Various QC checks for HOBO data
+This code section allows you to perform basic checks on the imported HOBO logger data (the 'hobo' object). It will work best to run each line individually (e.g., using ctrl-Enter in Windows). The output will appear in the RStudio Console. You can also view the hobo object by clicking on it in the RStudio Environment section.
 ```{r}
 # examine the structure of the data frame
 # including the name, data type, and example values for each variable
@@ -101,14 +105,14 @@ hobo_flag5 = hobo[hobo$FLAG_DO == 5,] # view it in the environment
 rm(hobo_flag5) # remove that object when you are done
  
 ```
-# Plotting HOBO data by site for QC
+# 0.3. Plotting HOBO data by site for QC
 Plots raw HOBO data by year (with and without flagged data)
 ```{r}
 # make all HOBO temperature data by site & year for QC
 for(i in as.character(unique(hobo$year))){
 logger_plot(hobo, i, "temp")
 print(paste0("saving ", i, " plot"))
-ggsave(filename = paste0("output/Initial_QC/hobo_temp/", i, 
+ggsave(filename = paste0(plotsave, "hobo_temp/", i, 
               "_hobo_temp.png"), 
               width = 9, height = 9, dpi = 100)
 }
@@ -117,7 +121,7 @@ ggsave(filename = paste0("output/Initial_QC/hobo_temp/", i,
 for(i in as.character(unique(hobo$year))){
 logger_plot(hobo, i, "do")
 print(paste0("saving ", i, " plot"))
-ggsave(paste0("output/Initial_QC/hobo_do/", i, "_hobo_do.png"), 
+ggsave(paste0(plotsave, "hobo_do/", i, "_hobo_do.png"), 
               width = 9, height = 9, dpi = 100)
 }
 
@@ -133,7 +137,7 @@ hobo_no_DO_flags <- hobo %>%
 for(i in as.character(unique(hobo$year))){
 logger_plot(hobo_no_temp_flags, i, "temp")
 print(paste0("saving ", i, " plot"))
-ggsave(filename = paste0("output/Initial_QC/hobo_temp/", i, 
+ggsave(filename = paste0(plotsave, "hobo_temp/", i, 
               "_hobo_temp_noflag.png"), 
               width = 9, height = 9, dpi = 100)
 }
@@ -142,14 +146,14 @@ ggsave(filename = paste0("output/Initial_QC/hobo_temp/", i,
 for(i in as.character(unique(hobo$year))){
 logger_plot(hobo_no_DO_flags, i, "do")
 print(paste0("saving ", i, " plot"))
-ggsave(paste0("output/Initial_QC/hobo_do/", i, 
+ggsave(paste0(plotsave, "hobo_do/", i, 
               "_hobo_do_noflag.png"), 
               width = 9, height = 9, dpi = 100)
 }
 
 rm(hobo_no_temp_flags, hobo_no_DO_flags)
 ```
-# Read and compile HYDRO data using logger_compile function
+# 0.4. Read and compile HYDRO data using logger_compile function
 ```{r}
 
 hydro <- logger_compile("2016", type = "hydro") %>%
@@ -166,9 +170,7 @@ hydro <- logger_compile("2016", type = "hydro") %>%
 #   I corrected it so the code would run; inform TNC
 
 ```
-
-
-# Various QC checks for HYDRO data
+# 0.5. Various QC checks for HYDRO data
 ```{r}
 str(hydro)
 unique(hydro$year) # 2016:2021
@@ -181,13 +183,13 @@ length(unique(hydro$logger)) # 7
 hydro[hydro$logger == "CLDHY-2",]
 
 ```
-# Plotting HYDRO data by site for QC
+# 0.6. Plotting HYDRO data by site for QC
 ```{r}
 # make all HYDRO temperature data by site & year for QC
 for(i in as.character(unique(hydro$year))){
 logger_plot(hydro, i, "temp")
 print(paste0("saving ", i, " plot"))
-ggsave(paste0("output/Initial_QC/hydro_temp/", i, 
+ggsave(paste0(plotsave, "hydro_temp/", i, 
               "_hydro_temp.png"), 
               width = 9, height = 9, dpi = 100)
 }
@@ -196,7 +198,7 @@ ggsave(paste0("output/Initial_QC/hydro_temp/", i,
 for(i in as.character(unique(hydro$year))){
 logger_plot(hydro, i, "do")
 print(paste0("saving ", i, " plot"))
-ggsave(paste0("output/Initial_QC/hydro_do/", i, "_hydro_do.png"), 
+ggsave(paste0(plotsave, "hydro_do/", i, "_hydro_do.png"), 
               width = 9, height = 9, dpi = 100)
 }
 
@@ -212,7 +214,7 @@ hydro_no_DO_flags <- hydro %>%
 for(i in as.character(unique(hydro$year))){
 logger_plot(hydro_no_temp_flags, i, "temp")
 print(paste0("saving ", i, " plot"))
-ggsave(paste0("output/Initial_QC/hydro_temp/", i, "_hydro_temp_noflag.png"), 
+ggsave(paste0(plotsave, "hydro_temp/", i, "_hydro_temp_noflag.png"), 
               width = 9, height = 9, dpi = 100)
 }
 
@@ -220,15 +222,14 @@ ggsave(paste0("output/Initial_QC/hydro_temp/", i, "_hydro_temp_noflag.png"),
 for(i in as.character(unique(hydro$year))){
 logger_plot(hydro_no_DO_flags, i, "do")
 print(paste0("saving ", i, " plot"))
-ggsave(paste0("output/Initial_QC/hydro_do/", i, 
+ggsave(paste0(plotsave, "hydro_do/", i, 
               "_hydro_do_noflag.png"), 
               width = 9, height = 9, dpi = 100)
 }
 
 rm(hydro_no_temp_flags, hydro_no_DO_flags)
 ```
-
-# Make final hobo-hydro file with temp and DO
+# 0.7. Make final hobo-hydro file with temp and DO
 ```{r}
 p <- hobo %>%
   select(site, year, datetime, logger, temp, do, do_adj, do_sat,
@@ -240,7 +241,7 @@ p <- hobo %>%
 
 saveRDS(p, "output/compiled_logger_data.rds")
 ```
-# plot temperature time series for each site/year vs. thresholds (showing loggers)
+# 0.8. plot temperature time series for each site/year vs. thresholds (showing loggers)
 ```{r}
 
 unique(p$site)
@@ -269,13 +270,12 @@ p %>%
        title = station) +
   scale_y_continuous(limits = c(0,35))
 
-ggsave(paste0("output/Initial_QC/temp_by_date_year_site_logger/", 
+ggsave(paste0(plotsave, "temp_by_date_year_site_logger/", 
               station, "_temp.png"),
        height = 6, width = 6, dpi = 400)
 }
 ```
-
-# plot DO time series for each site/year vs. thresholds (showing loggers)
+# 0.9. plot DO time series for each site/year vs. thresholds (showing loggers)
 ```{r}
 
 unique(p$site)
@@ -304,13 +304,12 @@ p %>%
        title = station) +
   scale_y_continuous(limits = c(0,17))
 
-ggsave(paste0("output/Initial_QC/DO_by_date_year_site_logger/", 
+ggsave(paste0(plotsave, "DO_by_date_year_site_logger/", 
               station, "_DO.png"),
        height = 6, width = 6, dpi = 400)
 }
 ```
-
-# plot DO (adjusted) time series for each site/year vs. thresholds (showing loggers)
+# 0.10. plot DO (adjusted) time series for each site/year vs. thresholds (showing loggers)
 ```{r}
 
 unique(p$site)
@@ -339,7 +338,7 @@ p %>%
        title = station) +
   scale_y_continuous(limits = c(0,17))
 
-ggsave(paste0("output/Initial_QC/DO_by_date_year_site_logger/", 
+ggsave(paste0(plotsave, "DO_by_date_year_site_logger/", 
               station, "_DOadj.png"),
        height = 6, width = 6, dpi = 400)
 }

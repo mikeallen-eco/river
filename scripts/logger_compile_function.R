@@ -1,7 +1,7 @@
 ### function to read in and combine HOBO or HYDRO data from excel
 logger_compile <- function(year = "2021",
                            type = "HOBO",
-                           logger_path = "D:/river/Logger_Data_dl_20220104/"){
+                           logger_path = "data/Logger_Data/"){
   
   ###############################################################
   ### 1. ### first create a sub-function to get file paths ######
