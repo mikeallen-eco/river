@@ -4,6 +4,11 @@ author: "Mike Allen"
 date: "4/28/2022"
 output: html_document
 ---
+# How to run this code
+Run the first section ("chunk") of this Rmd document (section 3.0). That will load all libraries, functions, and data. After that, you can scroll down to the plot or table you wish to make or the model you wish to run and run just that section. Plots, tables and models are labeled with letters (A-Z) and correspond to those in the "Task 4" sub-folder in the "output" folder. See the README file in that sub-folder for figure captions and information.
+
+The following text is a general description of Task 4.
+
 # Task 4: Macroinvertebrates and quality scores
 a. Visualize and perform statistical analysis of macroinvertebrate and EPA Habitat Assessment scores, including assessing spatial patterns and temporal trends. 
 
@@ -16,7 +21,7 @@ b. How are the individual component metrics contributing to the resulting macroi
 For example, are all “Poor” sites classified as such for
 the same reason or are there a range of contributing factors?
 
-# Load libraries and read in data
+# 4.0. Load libraries and read in data
 ```{r}
 library(readxl)
 library(dplyr)
@@ -152,13 +157,133 @@ inv21 <- read_xlsx(here(mh_path,
          rating = 11
          )
 
+# Check if 2022 macroinvertebrate data exists. If so, then load it.
+if(max(grepl(list.files("data/Macro_Habitat/"), pattern = "2022"))==1){
+
+# get name of 2022 data file
+file22 <- list.files("data/Macro_Habitat/")[grepl(list.files("data/Macro_Habitat/"), pattern = "2022")]
+
+# Read in Macroinvertebrate data - 2022
+inv22 <- read_xlsx(here(mh_path,
+                        file22),
+                   skip = 3, 
+                   sheet = "macro_2022"
+                   ) %>%
+  select(c(3,4,32:40)) %>%
+  rename(tnc_code = 1,
+         date = 2,
+         num_gen = 3,
+         pct_noninsect = 4,
+         pct_ept = 5,
+         num_scraper = 6,
+         hilsenhoff = 7,
+         num_talu2 = 8,
+         num_talu3 = 9,
+         index = 10,
+         rating = 11
+         ) %>%
+  filter(is.na(num_gen) != T)
+  
+}
+
+# Check if 2023 macroinvertebrate data exists. If so, then load it.
+if(max(grepl(list.files("data/Macro_Habitat/"), pattern = "2023"))==1){
+
+# get name of 2022 data file
+file23 <- list.files("data/Macro_Habitat/")[grepl(list.files("data/Macro_Habitat/"), pattern = "2023")]
+
+# Read in Macroinvertebrate data - 2023
+inv23 <- read_xlsx(here(mh_path,
+                        file23),
+                   skip = 2, 
+                   sheet = "macro_2023"
+                   ) %>%
+  select(c(3,4,32:40)+1) %>%
+  rename(num_gen = 3,
+         pct_noninsect = 4,
+         pct_ept = 5,
+         num_scraper = 6,
+         hilsenhoff = 7,
+         num_talu2 = 8,
+         num_talu3 = 9,
+         index = 10,
+         rating = 11
+         )
+  
+}
+
+# Check if 2024 macroinvertebrate data exists. If so, then load it.
+if(max(grepl(list.files("data/Macro_Habitat/"), pattern = "2024"))==1){
+
+# get name of 2022 data file
+file24 <- list.files("data/Macro_Habitat/")[grepl(list.files("data/Macro_Habitat/"), pattern = "2024")]
+
+# Read in Macroinvertebrate data - 2024
+inv24 <- read_xlsx(here(mh_path,
+                        file24),
+                   skip = 3, 
+                   sheet = "macro_2024"
+                   ) %>%
+  select(c(3,4,32:40)) %>%
+  rename(tnc_code = 1,
+         date = 2,
+         num_gen = 3,
+         pct_noninsect = 4,
+         pct_ept = 5,
+         num_scraper = 6,
+         hilsenhoff = 7,
+         num_talu2 = 8,
+         num_talu3 = 9,
+         index = 10,
+         rating = 11
+         ) %>%
+  filter(is.na(num_gen) != T)
+  
+}
+
+# Check if 2025 macroinvertebrate data exists. If so, then load it.
+if(max(grepl(list.files("data/Macro_Habitat/"), pattern = "2025"))==1){
+
+# get name of 2025 data file
+file25 <- list.files("data/Macro_Habitat/")[grepl(list.files("data/Macro_Habitat/"), pattern = "2025")]
+
+# Read in Macroinvertebrate data - 2025
+inv25 <- read_xlsx(here(mh_path,
+                        file25),
+                   skip = 2, 
+                   sheet = "macro_2025"
+                   ) %>%
+  select(c(3,4,32:40)+1) %>%
+  rename(num_gen = 3,
+         pct_noninsect = 4,
+         pct_ept = 5,
+         num_scraper = 6,
+         hilsenhoff = 7,
+         num_talu2 = 8,
+         num_talu3 = 9,
+         index = 10,
+         rating = 11
+         )
+  
+}
+
+
 # Compile all Macroinvertebrate data into one data frame
-inv <- inv16 %>%
+#   first just the files from 2016-2021
+inv_tmp <- inv16 %>%
   bind_rows(inv17) %>%
   bind_rows(inv18) %>%
   bind_rows(inv19) %>%
   bind_rows(inv20) %>%
-  bind_rows(inv21) %>%
+  bind_rows(inv21)
+
+# now add 2022 up through 2025 (only if they exist!)
+if(is.object(inv22)){inv_tmp <- inv_tmp %>% bind_rows(inv22)}
+if(is.object(inv23)){inv_tmp <- inv_tmp %>% bind_rows(inv23)}
+if(is.object(inv24)){inv_tmp <- inv_tmp %>% bind_rows(inv24)}
+if(is.object(inv25)){inv_tmp <- inv_tmp %>% bind_rows(inv25)}
+
+inv <- inv_tmp %>%
   mutate(year = year(date),
          yearf = as.factor(year)) %>%
   mutate(yearf = fct_reorder(yearf, index, .fun = "mean"),
@@ -171,6 +296,10 @@ inv <- inv16 %>%
 
 # remove data frames of individual years
 rm(inv16, inv17, inv18, inv19, inv20, inv21)
+if(is.object(inv22)){rm(inv22)}
+if(is.object(inv23)){rm(inv23)}
+if(is.object(inv24)){rm(inv24)}
+if(is.object(inv25)){rm(inv25)}
 
 # Read in habitat data - 2016
 hab16 <- read_xlsx(here(mh_path,
@@ -364,7 +493,7 @@ hab.inv <- hab %>%
   left_join(tsum_july, by = "tnc_code") %>%
   left_join(dosum_july, by = "tnc_code")
 ```
-# Plot A - average macroinvertebrate index by site/year
+# 4.1. Plot A: average macroinvertebrate index by site/year
 ```{r}
 color_vector <- c("olivedrab",
             "olivedrab2",
@@ -415,12 +544,11 @@ ggsave(here(task_path,
 
 rm(inv.plot)
 ```
-#PlotB - data visualization of index components
-Scatterplot matrix to inspect data
+# 4.2. Plot B: data visualization of macroinvertebrate index components
+Scatterplot matrix to inspect data. Code adapte from:
+https://www.r-bloggers.com/2016/02/multiple-regression-lines-in-ggpairs/
 ```{r}
-
-# ggpairs plot. Found code here:
-# https://www.r-bloggers.com/2016/02/multiple-regression-lines-in-ggpairs/
+# create ggpairs plot 
 my_smooth_fn <- function(data, mapping, ...){
   p <- ggplot(data = data, mapping = mapping) + 
     geom_point(color = "steelblue", alpha = 0.5, 
@@ -461,15 +589,14 @@ ggsave(plot = g, here(task_path,
 
 rm(g)
 ```
-# Plot C - Spiderweb plot of macroinvertebrate index
-Code from: https://r-graph-gallery.com/142-basic-radar-chart.html
+# 4.3. Plot C: Spiderweb plot of macroinvertebrate index components
+Code adapted from: https://r-graph-gallery.com/142-basic-radar-chart.html
 ```{r}
 # format data
 inv_radar <- inv %>%
   select(c(1, 3:9)) %>%
   group_by(tnc_code) %>%
   summarize_all(mean)
-
 
 for(i in 1:nrow(inv_radar)){
 
@@ -504,7 +631,7 @@ radarchart( data  , axistype=1 , maxmin = T,
 dev.off()
 }
 ```
-# Plot D - macroinvertebrate index over time (separate plots by site)
+# 4.4. Plot D: macroinvertebrate index over time (separate plots by site)
 ```{r}
 # for testing
 i <- unique(inv$tnc_code)[12]
@@ -538,7 +665,7 @@ plot_data %>%
   geom_point(aes(x = year, y = index, color = rating), 
             size = 4, data = plot_data) +
   scale_y_continuous(limits = c(0, 100)) +
-  scale_x_continuous(breaks = 2016:2021) +
+  scale_x_continuous(breaks = 2016:2050) +
   scale_color_manual(values = color_vector,
                      drop = F) +
     theme_classic() +
@@ -553,7 +680,7 @@ ggsave(here(task_path, "PlotD_macro_by_year",
 }
 
 ```
-# Plot E - macroinvertebrate index over time at Columbia Dam sites
+# 4.5. Plot E: macroinvertebrate index over time at Columbia Dam sites
 ```{r}
 sites <- c("TNC_25", "TNC_23", "TNC_80")
 
@@ -618,9 +745,8 @@ columbia_macro_data %>%
   ggsave(here(task_path, 
               "PlotE_macro_by_year_Columbia_Dam.png"),
          width = 6, height = 4, dpi = 400)
-
 ```
-# Plot F - macroinvertebrate index over time at Paulina Dam sites
+# 4.6. Plot F: macroinvertebrate index over time at Paulina Dam sites
 ```{r}
 sites <- c("TNC_18", "TNC_19")
 
@@ -687,9 +813,9 @@ paulina_macro_data %>%
          width = 6, height = 4, dpi = 400)
 
 ```
-# Plot G - dot plot of overall index average habitat score by site/year
+# 4.7. Plot G: dot plot of overall index average habitat score by site/year
 ```{r}
-
+# create a vector of colors for Optimal -> Poor
 color_vector <- c("olivedrab",
             "olivedrab2",
             wes_palettes$BottleRocket2[1:2])
@@ -746,8 +872,9 @@ ggsave(here(task_path,
             "PlotG_mean_habitat_score_by_site.png"),
        height = 4, width = 4.5, dpi = 400)
 ```
-# Plot H - macroinvertebrate index vs. habitat score
+# 4.8. Plot H: macroinvertebrate index vs. habitat score
 ```{r}
+# create a color vector
 color_vector <- c("olivedrab",
             "olivedrab2",
             wes_palettes$BottleRocket2[1:2])
@@ -844,7 +971,7 @@ ggsave(here(task_path,
             "PlotH_habitat_score_vs_macro_by_site.png"),
        height = 4, width = 5, dpi = 400)
 ```
-#Plot I - data visualization of habitat score components
+# 4.9. Plot I: data visualization of habitat score components
 Scatterplot matrix to inspect data
 1. Epifaunal Substrate/Available Cover	2. Pool Substrate Characterization	3. Pool variability	4. Sediment Deposition	5. Channel Flow Status	6. Channel Alteration	7. Channel sinuosity	8. Bank Stability-LB	8. Bank Stability-RB	9. Bank vegetation Protection-LB	9. Bank vegetation Protection-RB	10. Ripariarn Vegetation Zone Width-LB	10. Ripariarn Vegetation Zone Width-RB
 
@@ -897,8 +1024,7 @@ ggsave(plot = g, here(task_path,
 
 rm(g)
 ```
-# Plot J - Spiderweb plot of habitat score data
-Code from: https://r-graph-gallery.com/142-basic-radar-chart.html
+# 4.10. Plot J: Spiderweb plot of habitat score components
 ```{r}
 # format data
 hab_radar <- hab %>%
@@ -941,7 +1067,7 @@ radarchart( data  , axistype=1 , maxmin = T,
 dev.off()
 }
 ```
-# Plot K - habitat score over time (separate plots by site)
+# 4.11. Plot K: habitat score over time (separate plots by site)
 ```{r}
 for(i in unique(hab$tnc_code)){
 
@@ -983,7 +1109,7 @@ hab %>%
              shape = 21,
             size = 4, data = plot_data) +
   scale_y_continuous(limits = c(0, 200)) +
-  scale_x_continuous(breaks = 2016:2021) +
+  scale_x_continuous(breaks = 2016:2050) +
   scale_fill_manual(values = color_vector,
                      drop = F) +
     theme_classic() +
@@ -997,7 +1123,7 @@ hab %>%
          width = 6, height = 4, dpi = 400)
 }
 ```
-# Plot L - habitat & macroinvertebrate index over time 
+# 4.12. Plot L: habitat & macroinvertebrate index over time 
 separate plots by site
 ```{r}
 for(i in unique(inv$tnc_code)){
@@ -1043,11 +1169,11 @@ line_data <- line_data_inv %>%
 
 plot_data <- plot_data_inv %>%
   bind_rows(plot_data_hab)
+
+max_yr <- max(plot_data$year)
   
 topline <- data.frame(type = c("Habitat","Habitat",                               "Macroinvertebrates","Macroinvertebrates"),
-                      year = rep(c(2016, 2021), 2),
-                     # year = rep(c(min(plot_data$year),
-                     #              max(plot_data$year)),2),
+                      year = rep(c(2016, max_yr), 2),
                      index = c(160/2,160/2, 63, 63),
                      rating = c("Optimal", "Optimal", 
                                 "Excellent", "Excellent")
@@ -1056,9 +1182,7 @@ topline <- data.frame(type = c("Habitat","Habitat",                             
 midline <- data.frame(type = c("Habitat","Habitat", 
                               "Macroinvertebrates",
                               "Macroinvertebrates"),
-                      year = rep(c(2016, 2021), 2),
-                     # year = rep(c(min(plot_data$year),
-                     #              max(plot_data$year)),2),
+                      year = rep(c(2016, max_yr), 2),
                      index = c(110/2,110/2, 42, 42),
                      rating = c("Sub-optimal", "Sub-optimal", 
                                 "Good", "Good")
@@ -1067,9 +1191,7 @@ midline <- data.frame(type = c("Habitat","Habitat",
 botline <- data.frame(type = c("Habitat","Habitat", 
                                "Macroinvertebrates",
                                "Macroinvertebrates"),
-                      year = rep(c(2016, 2021), 2),
-                     # year = rep(c(min(plot_data$year),
-                     #              max(plot_data$year)),2),
+                      year = rep(c(2016, max_yr), 2),
                      index = c(60/2,60/2, 21, 21),
                      rating = c("Marginal", "Marginal", 
                                 "Fair", "Fair")
@@ -1078,12 +1200,14 @@ botline <- data.frame(type = c("Habitat","Habitat",
 zeroline <- data.frame(type = c("Habitat","Habitat", 
                                "Macroinvertebrates",
                                "Macroinvertebrates"),
-                      year = rep(c(2016, 2021), 2),
-                     # year = rep(c(min(plot_data$year),
-                     #              max(plot_data$year)),2),
+                      year = rep(c(2016, max_yr), 2),
                      index = c(0, 0, 0, 0),
                      rating = rep("Poor", 4)
   )
+
+# set x value to place Optimal-Poor annotations
+options(digits = 9)
+ann_loc <- max(plot_data$year)- 0.5
 
 ggplot() +
   # top threshold line
@@ -1091,7 +1215,7 @@ ggplot() +
             color = color_vector[1],
              alpha = 0.75,
             data = topline) +
-  geom_text(aes(x = 2020.5, y = index+2.5, label = rating),
+  geom_text(aes(x = ann_loc, y = index+2.5, label = rating),
             data = topline, size = 2,
             color = co[1], hjust = .5,
             alpha = .75) +
@@ -1103,7 +1227,7 @@ ggplot() +
                       color_vector[2]),
              alpha = 0.75,
             data = midline) +
-  geom_text(aes(x = 2020.5, y = index+2.5, label = rating),
+  geom_text(aes(x = ann_loc, y = index+2.5, label = rating),
             data = midline, size = 2,
             color = co[2], hjust = .5,
             alpha = .75) +
@@ -1112,7 +1236,7 @@ ggplot() +
             color = c(color_vector[3]),
              alpha = 0.75,
             data = botline) +
-  geom_text(aes(x = 2020.5, y = index+2.5, label = rating),
+  geom_text(aes(x = ann_loc, y = index+2.5, label = rating),
             data = botline, size = 2,
             color = co[3], hjust = .5,
             alpha = .75) +
@@ -1121,7 +1245,7 @@ ggplot() +
             color = c(color_vector[4]),
              alpha = 0.75,
             data = zeroline) +
-  geom_text(aes(x = 2020.5, y = index+2.5, label = rating),
+  geom_text(aes(x = ann_loc, y = index+2.5, label = rating),
             data = zeroline, size = 2,
             color = co[4], hjust = .5,
             alpha = .75) +
@@ -1132,7 +1256,7 @@ ggplot() +
   geom_point(aes(x = year, y = index, fill = rating), 
             size = 4, shape = 21, data = plot_data) +
   scale_y_continuous(limits = c(0,100)) +
-  scale_x_continuous(breaks = 2016:2021) +
+  scale_x_continuous(breaks = 2016:2050) +
   facet_wrap(~type) +
   theme_bw() +
   guides(fill = "none") +
@@ -1150,10 +1274,9 @@ ggsave(here(task_path, "PlotL_habitat_and_invert_by_year",
          width = 6, height = 4, dpi = 400)
 }
 ```
-# Plot M - mean habitat & macroinvertebrate index over time (all sites)
+# 4.13. Plot M: mean habitat & macroinvertebrate index over time (all sites)
 One plot showing mean +/- 2SE for all sites
 ```{r}
-
 co <- color_vector <- c("olivedrab",
             "olivedrab2",
             wes_palettes$BottleRocket2[1:2])
@@ -1267,13 +1390,20 @@ zeroline <- data.frame(type = c("Habitat","Habitat",
                      rating = rep("Poor", 4)
   )
 
+# set x value to place Optimal-Poor annotations
+options(digits = 9)
+ann_loc <- max(plot_data$year)- 0.5
+
+# get maximumn year
+max_yr <- max(plot_data$year)
+
 ggplot() +
   # top threshold line
   geom_line(aes(x = year, y = index), lty = 2, 
             color = color_vector[1],
              alpha = 0.75,
             data = topline) +
-  geom_text(aes(x = 2020.5, y = index+2.5, label = rating),
+  geom_text(aes(x = ann_loc, y = index+2.5, label = rating),
             data = topline, size = 2,
             color = co[1], hjust = .5,
             alpha = .75) +
@@ -1285,7 +1415,7 @@ ggplot() +
                       color_vector[2]),
              alpha = 0.75,
             data = midline) +
-  geom_text(aes(x = 2020.5, y = index+2.5, label = rating),
+  geom_text(aes(x = ann_loc, y = index+2.5, label = rating),
             data = midline, size = 2,
             color = co[2], hjust = .5,
             alpha = .75) +
@@ -1294,7 +1424,7 @@ ggplot() +
             color = c(color_vector[3]),
              alpha = 0.75,
             data = botline) +
-  geom_text(aes(x = 2020.5, y = index+2.5, label = rating),
+  geom_text(aes(x = ann_loc, y = index+2.5, label = rating),
             data = botline, size = 2,
             color = co[3], hjust = .5,
             alpha = .75) +
@@ -1303,7 +1433,7 @@ ggplot() +
             color = c(color_vector[4]),
              alpha = 0.75,
             data = zeroline) +
-  geom_text(aes(x = 2020.5, y = index+2.5, label = rating),
+  geom_text(aes(x = ann_loc, y = index+2.5, label = rating),
             data = zeroline, size = 2,
             color = co[4], hjust = .5,
             alpha = .75) +
@@ -1318,7 +1448,7 @@ ggplot() +
             size = 4, data = plot_data, fill = plot_data$col,
             shape = 21) +
   scale_y_continuous(limits = c(0,100)) +
-  scale_x_continuous(breaks = 2016:2021) +
+  scale_x_continuous(breaks = 2016:2050) +
   facet_wrap(~type) +
   guides(fill = "none") +
   geom_text(aes(x = year, y = 5, label = n),
@@ -1340,7 +1470,7 @@ ggsave(here(task_path,
                      "_all_sites.png")),
          width = 6, height = 4, dpi = 400)
 ```
-# Plot N - macroinvertebrate index vs. habitat score + temperature
+# 4.14. Plot N: macroinvertebrate index vs. habitat score + temperature
 Based on Plot H, but color coding points based on mean monthly 
 ```{r}
 color_vector <- c("olivedrab",
@@ -1428,7 +1558,7 @@ ggsave(here(task_path,
             "PlotN_habitat_score_vs_macro_by_site_with_July_temp.png"),
        height = 4, width = 5, dpi = 400)
 ```
-# Plot O - macroinvertebrate index vs. habitat score + DO
+# 4.15. Plot O: macroinvertebrate index vs. habitat score + DO
 Based on Plot H, but color coding points based on mean monthly July DO 
 ```{r}
 color_vector <- c("olivedrab",
@@ -1516,7 +1646,8 @@ ggsave(here(task_path,
             "PlotO_habitat_score_vs_macro_by_site_with_July_DO.png"),
        height = 4, width = 5, dpi = 400)
 ```
-# Model A - change in average habitat quality score over time
+# 4.16. Model A: change in average habitat quality score over time
+See Model A text file in the Task 4 "statistical_analysis" folder.
 ```{r}
 # format habitat data, averaging within site/year 
 # and keeping only sites with >= 4 years of data
@@ -1533,7 +1664,8 @@ hab.trend.mod <- lmerTest::lmer(index ~ year + (1 | tnc_code),
 
 summary(hab.trend.mod)
 ```
-# Model B - change in average macroinvertebrate score over time
+# 4.17. Model B: change in average macroinvertebrate score over time
+See Model B text file in the Task 4 "statistical_analysis" folder.
 ```{r}
 # format habitat data, averaging within site/year 
 # and keeping only sites with >= 4 years of data
@@ -1550,7 +1682,8 @@ inv.trend.mod <- lmerTest::lmer(index ~ year + (1 | tnc_code),
 
 summary(inv.trend.mod)
 ```
-# Model C - GLM of mean invertebrate index vs. mean July temp & DO
+# 4.18. Model C: GLM of mean invertebrate index vs. mean July temp & DO
+See Model C text file in the Task 4 "statistical_analysis" folder.
 ```{r}
 inv.temp.mod <- lm(index_mean ~ mean_july_temp,
                        data = hab.inv)
@@ -1569,7 +1702,7 @@ anova(inv.do.mod, inv.temp.do.mod)
 summary(inv.temp.do.mod)
 
 ```
-# Plot P mean invertebrate index vs. mean July DO
+# 4.19. Plot P: mean invertebrate index vs. mean July DO
 ```{r}
 color_vector <- c("olivedrab",
             "olivedrab2",
@@ -1627,8 +1760,8 @@ ggsave(here(task_path,
   
 
 ```
-# Plot Q - macroinvertebrate index over time at tree planting site
-sites 4, 5, and 8
+# 4.20. Plot Q: macroinvertebrate index over time at tree planting site
+sites TNC_4, 5, and 8
 ```{r}
 sites <- c("TNC_4", "TNC_5", "TNC_8")
 
@@ -1695,8 +1828,8 @@ tree_macro_data %>%
          width = 6, height = 4, dpi = 400)
 
 ```
-# Plot R - macroinvertebrate index over time at hyper humus
-site 2
+# 4.21. Plot R: macroinvertebrate index over time at hyper humus
+site TNC_2
 ```{r}
 sites <- c("TNC_2")
 
@@ -1761,5 +1894,4 @@ hyper_macro_data %>%
   ggsave(here(task_path, 
               "PlotR_macro_by_year_hyper_humus.png"),
          width = 6, height = 4, dpi = 400)
-
 ```

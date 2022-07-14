@@ -2,36 +2,19 @@ To do (* = done; - = not done)
 
 Task 5: 
 * recompile logger data with TNC_4 & 16 (2016) and TNC_5 (2017)
-- make sure logger compile will work with new data automatically (reads max year and looks for it)
+- make sure logger compile will work with new years automatically (reads max year and looks for it)
 - make sure logger compile will work with new logger format (new logger type example file)
-- remake all relevant logger-based plots with recompiled data
-  * Task 0
-  * Task 1
-  * Task 2
-  - Task 3 (progress: Model C / Plot I2)
-  - Task 4
-- make sure all code will accomodate data from new years (> 2021)
-  * Task 1
-  * Task 2
-  - Task 3 (progress: Model C / Plot I2)
-  - Task 4
-- ensure new sites won't break code
-  * Task 1
-  * Task 2
-  - Task 3 (progress: Model C / Plot I2)
-  - Task 4
-- number all code chunks and add plot or table letter
-  * Task 1
-  * Task 2
-  - Task 3
-  - Task 4
-- ensure all chunks run after running first one
-  * Task 1
-  * Task 2
-  - Task 3 (progress: Model C / Plot I2)
-  - Task 4
 - make sure macro/habitat compile will work with new data files (> 2021)
-   (in 2021 format)
+   (in 2020-2021 format)
+    * macroinvertebrates
+    - habitat
+* Do the following for all 5 tasks:
+  * remake all relevant logger-based plots with recompiled data
+  * make sure all code will accomodate data from new years (> 2021)
+  * ensure new sites won't break code
+  * number all code chunks and add plot or table letter
+  * ensure all chunks run after running first one
+      
 
 Task 4
 * fix counting of sites in Plot A & G (n = XX)

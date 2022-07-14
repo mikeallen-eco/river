@@ -3,30 +3,31 @@ Estimates based on 3 chains of 10000 iterations,
 adaptation = 100 iterations (sufficient),
 burn-in = 4000 iterations and thin rate = 3,
 yielding 6000 total samples from the joint posterior. 
-MCMC ran in parallel for 0.074 minutes at time 2022-04-07 10:44:13.
+MCMC ran in parallel for 0.079 minutes at time 2022-07-14 14:18:40.
 
                    mean    sd    2.5%     50%   97.5% overlap0     f  Rhat n.eff
-mu.beta0          0.386 0.171   0.082   0.382   0.706    FALSE 0.988 1.000  6000
-mu.beta.year      0.044 0.040  -0.027   0.044   0.116     TRUE 0.931 1.021  6000
-beta0[5]          0.157 0.030   0.099   0.157   0.215    FALSE 1.000 1.000  6000
-beta0[6]          0.406 0.025   0.357   0.407   0.454    FALSE 1.000 1.000  4150
-beta0[7]          0.626 0.024   0.579   0.626   0.674    FALSE 1.000 1.000  6000
-beta0[8]          0.467 0.024   0.420   0.467   0.515    FALSE 1.000 1.001  3372
-beta0[9]          0.257 0.031   0.197   0.257   0.317    FALSE 1.000 1.000  3902
-beta.year[5]      0.055 0.022   0.012   0.055   0.098    FALSE 0.994 1.000  6000
-beta.year[6]      0.071 0.021   0.030   0.071   0.114    FALSE 1.000 1.000  5509
-beta.year[7]      0.007 0.022  -0.035   0.007   0.049     TRUE 0.628 1.000  6000
-beta.year[8]      0.077 0.022   0.036   0.077   0.119    FALSE 1.000 1.001  2793
-beta.year[9]      0.006 0.025  -0.044   0.006   0.052     TRUE 0.601 1.000  6000
-sigma             0.273 0.008   0.257   0.273   0.290    FALSE 1.000 1.000  3863
-sigma.beta0       0.299 0.231   0.118   0.240   0.835    FALSE 1.000 1.004  6000
-sigma.beta.year   0.063 0.058   0.014   0.050   0.185    FALSE 1.000 1.022  6000
-diff_pred[1]     -0.062 0.058  -0.165  -0.063   0.038     TRUE 0.931 1.021  6000
-diff_pred[2]     -0.019 0.017  -0.049  -0.019   0.011     TRUE 0.931 1.021  6000
-diff_pred[3]      0.025 0.023  -0.015   0.025   0.067     TRUE 0.931 1.021  6000
-diff_pred[4]      0.069 0.064  -0.042   0.069   0.182     TRUE 0.931 1.021  6000
-diff_pred[5]      0.112 0.104  -0.069   0.113   0.298     TRUE 0.931 1.021  6000
-deviance        126.428 4.917 118.898 125.687 137.890    FALSE 1.000 1.002  6000
+mu.beta0          0.476 0.163   0.162   0.476   0.790    FALSE 0.992 1.001  4646
+mu.beta.year     -0.062 0.049  -0.158  -0.062   0.033     TRUE 0.938 1.003  6000
+beta0[5]          0.185 0.029   0.128   0.185   0.241    FALSE 1.000 1.000  6000
+beta0[6]          0.529 0.024   0.481   0.529   0.575    FALSE 1.000 1.000  6000
+beta0[7]          0.692 0.024   0.646   0.693   0.740    FALSE 1.000 1.000  4511
+beta0[8]          0.524 0.023   0.478   0.524   0.569    FALSE 1.000 1.000  6000
+beta0[9]          0.447 0.028   0.393   0.447   0.503    FALSE 1.000 1.000  6000
+beta.year[5]     -0.014 0.016  -0.045  -0.014   0.017     TRUE 0.811 1.000  6000
+beta.year[6]     -0.064 0.014  -0.091  -0.063  -0.037    FALSE 1.000 1.001  2601
+beta.year[7]     -0.060 0.013  -0.086  -0.060  -0.033    FALSE 1.000 1.000  6000
+beta.year[8]     -0.024 0.014  -0.050  -0.024   0.003     TRUE 0.958 1.000  6000
+beta.year[9]     -0.150 0.017  -0.183  -0.150  -0.118    FALSE 1.000 1.000  6000
+sigma             0.320 0.008   0.305   0.320   0.336    FALSE 1.000 1.000  6000
+sigma.beta0       0.298 0.200   0.120   0.245   0.792    FALSE 1.000 1.001  4972
+sigma.beta.year   0.087 0.058   0.033   0.071   0.240    FALSE 1.000 1.008  6000
+diff_pred[1]      0.626 0.201   0.235   0.627   1.022    FALSE 0.992 1.000  4093
+diff_pred[2]      0.563 0.177   0.227   0.563   0.913    FALSE 0.993 1.001  4048
+diff_pred[3]      0.501 0.164   0.188   0.501   0.820    FALSE 0.993 1.001  4365
+diff_pred[4]      0.438 0.166   0.117   0.440   0.760    FALSE 0.990 1.001  5259
+diff_pred[5]      0.376 0.181   0.031   0.379   0.718    FALSE 0.981 1.001  6000
+diff_pred[6]      0.314 0.207  -0.085   0.315   0.712     TRUE 0.951 1.001  6000
+deviance        450.593 4.735 443.545 449.911 461.449    FALSE 1.000 1.000  3876
 
 Successful convergence based on Rhat values (all < 1.1). 
 Rhat is the potential scale reduction factor (at convergence, Rhat=1). 
@@ -37,5 +38,5 @@ f is the proportion of the posterior with the same sign as the mean;
 i.e., our confidence that the parameter is positive or negative.
 
 DIC info: (pD = var(deviance)/2) 
-pD = 12.1 and DIC = 138.522 
+pD = 11.2 and DIC = 461.8 
 DIC is an estimate of expected predictive error (lower is better).

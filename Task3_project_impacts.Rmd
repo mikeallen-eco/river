@@ -955,7 +955,7 @@ max_yr <- max(as.numeric(as.character(treet_jags$yearf)))
 # load JAGS model results object
 treet_jags_mod <- readRDS(here(task_path,
              "statistical_analysis/",
-             "ModelC_tree_planting_temperature_trends.rds"))
+             "ModelC_tree_planting_temperature_trends_down_up.rds"))
 
 # get trend, LCI, and UCI
 trend <- round(treet_jags_mod$mean$mu.beta.year, 2)
