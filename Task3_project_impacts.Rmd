@@ -405,14 +405,14 @@ colt_jags_mod <- jagsUI::jags(data = colt_jags_data,
 
 # DIC w/ month: ~500 
     # w/o month: ~550
-dev.new(6,6);plot(colt_jags_mod)
+# dev.new(6,6);plot(colt_jags_mod)
 
 
 # jagsUI::traceplot(colt_jags_mod)
 
-# saveRDS(colt_jags_mod, here("output/Task3_project_impacts/",
-#                             "statistical_analysis/",
-#                           "ModelA_columbia_jags_tmod.rds"))
+saveRDS(colt_jags_mod, here("output/Task3_project_impacts/",
+                            "statistical_analysis/",
+                          "ModelA_columbia_jags_tmod.rds"))
 ```
 # 3.4. Plot C: estimated upstream/downstream tdiff by restoration stage
 ```{r}
@@ -874,6 +874,7 @@ treet_jags <- tree %>%
 
 treet_jags_data <- list(
   N = nrow(treet_jags),
+  n_yr = length(unique(treet_jags$yearf)),
   tdiff = treet_jags$d8.4,
   year_mean = mean(as.numeric(treet_jags$yearf)),
   stage = as.numeric(as.character(treet_jags$stage)),
@@ -905,8 +906,8 @@ model{
   sigma.beta.year ~ dunif(0, 50)
 
   # derrived
-  for(i in 1:5){
-  diff_pred[i] <- mu.beta.year*(i-year_mean)
+  for(i in 1:n_yr){
+  diff_pred[i] <- mu.beta0 + mu.beta.year*(i-year_mean)
   }
   
 }
@@ -935,23 +936,42 @@ treet_jags_mod <- jagsUI::jags(data = treet_jags_data,
 saveRDS(treet_jags_mod, 
         here(task_path,
              "statistical_analysis/",
-             "ModelC_tree_planting_temperature_trends.rds")
+             "ModelC_tree_planting_temperature_trends_down_up.rds")
 )
 ```
 # 3.15. Plot I2: tree planting area down vs. upstream temperature modeled mean trend (downstream - upstream)
 TNC_8 - TNC_4
 Model to estimate mean temperature trend. Redo of plot I showing trend info.
 ```{r}
+# load JAGS data
+treet_jags <- tree %>% 
+  filter(is.na(d8.4) == F,
+         monthf %in% 5:9) %>%
+  droplevels()
+
+# get max year
+max_yr <- max(as.numeric(as.character(treet_jags$yearf)))
+
+# load JAGS model results object
 treet_jags_mod <- readRDS(here(task_path,
              "statistical_analysis/",
              "ModelC_tree_planting_temperature_trends.rds"))
 
-treet_jags_plot <- apply(.495+treet_jags_mod$sims.list$diff_pred, 2, function(x) quantile(x, c(0.025, 0.1, 0.5, 0.90, 0.975))) %>%
+# get trend, LCI, and UCI
+trend <- round(treet_jags_mod$mean$mu.beta.year, 2)
+lci <- round(treet_jags_mod$q2.5$mu.beta.year, 2)
+uci <- round(treet_jags_mod$q97.5$mu.beta.year, 2)
+
+# format data for plotting
+treet_jags_plot <- 
+  apply(treet_jags_mod$sims.list$diff_pred, 2, 
+        function(x) quantile(x, c(0.025, 0.1, 0.5, 0.90, 0.975))) %>%
   t() %>%
   as.data.frame() %>%
   rename(q2.5 = 1, q10 = 2, med = 3, q90 = 4, q97.5 = 5) %>%
-  mutate(year = 2016:2021) 
+  mutate(year = 2016:max_yr) 
 
+# make the plot
 tree %>%
   filter(monthf %in% 5:9) %>%
   droplevels() %>%
@@ -990,11 +1010,13 @@ tree %>%
   labs(x = "", y = "Temp. difference (C)\n(downstream - upstream)",
        title = "Tree planting area",
        color = "Month") +
-  scale_x_discrete(breaks = c(2017,2019,2021)) + 
+  scale_x_discrete(breaks = c(2016:2050)) + 
   scale_color_manual(values = wes_palettes$Darjeeling1) +
  scale_y_continuous(limits = c(-0.5, 1.5)) +
-  annotate("text", x = 5.25, y = -0.49, 
-           label = "mean trend = +0.04 C/yr\n95% CI = -0.003, 0.088", 
+  annotate("text", x = max(as.numeric(treet_jags$yearf)), y = -0.49, 
+           label = paste0("mean trend = ",
+                          trend, " C/yr\n95% CI = ", 
+                          lci, ", ", uci), 
            hjust = 1, vjust = 0)
 
 ggsave(here::here("output/Task3_project_impacts/",
@@ -1002,7 +1024,7 @@ ggsave(here::here("output/Task3_project_impacts/",
                   height = 5, width = 7, dpi = 400)
 
 ```
-# Model D - Tree planting temperature trend (within - upstream)
+# 3.16. Model D: Tree planting temperature trend (within - upstream)
 TNC_5 - TNC_4. Model to estimate mean trend.
 ```{r}
 treet_jags <- tree %>% 
@@ -1012,6 +1034,7 @@ treet_jags <- tree %>%
 
 treet_jags_data <- list(
   N = nrow(treet_jags),
+  n_yr = length(unique(treet_jags$yearf)),
   tdiff = treet_jags$d5.4,
   year_mean = mean(as.numeric(treet_jags$yearf)),
   stage = as.numeric(as.character(treet_jags$stage)),
@@ -1038,29 +1061,45 @@ treet_jags_mod2 <- jagsUI::jags(data = treet_jags_data,
 
 # dev.new(6,6);plot(treet_jags_mod2)
 
-saveRDS(treet_jags_mod, 
+saveRDS(treet_jags_mod2, 
         here(task_path,
              "statistical_analysis/",
              "ModelD_tree_planting_temp_trends_within_up.rds")
 )
 ```
-# Plotting tree planting temperature trend (within - upstream)
+# 3.17. Plot J2: tree planting temperature trend (within - upstream)
 TNC_5 - TNC_4
 Model to estimate mean trend. Redo plot J showing trend info.
 ```{r}
-treet_jags_mod <- here(task_path,
-             "statistical_analysis/",
-             "ModelD_tree_planting_temp_trends_within_up.rds")
+# load the jags data
+treet_jags <- tree %>% 
+  filter(is.na(d5.4) == F,
+         monthf %in% 5:9) %>%
+  droplevels()
 
-treet_jags_plot <- apply(.386+treet_jags_mod2$sims.list$diff_pred, 2, function(x) quantile(x, c(0.025, 0.1, 0.5, 0.90, 0.975))) %>%
+# get max year
+max_yr <- max(as.numeric(as.character(treet_jags$yearf)))
+
+# load JAGS model results object
+treet_jags_mod <- readRDS(here(task_path,
+             "statistical_analysis/",
+             "ModelD_tree_planting_temp_trends_within_up.rds"))
+
+# get trend, LCI, and UCI
+trend <- round(treet_jags_mod$mean$mu.beta.year, 2)
+lci <- round(treet_jags_mod$q2.5$mu.beta.year, 2)
+uci <- round(treet_jags_mod$q97.5$mu.beta.year, 2)
+
+
+
+treet_jags_plot <- apply(treet_jags_mod2$sims.list$diff_pred, 2, function(x) quantile(x, c(0.025, 0.1, 0.5, 0.90, 0.975))) %>%
   t() %>%
   as.data.frame() %>%
   rename(q2.5 = 1, q10 = 2, med = 3, q90 = 4, q97.5 = 5) %>%
-  mutate(year = 2017:2021) 
+  mutate(year = 2016:max_yr) 
 
 tree %>%
-  filter(yearf %in% 2018:2021,
-         monthf %in% 5:9) %>%
+  filter(monthf %in% 5:9) %>%
   droplevels() %>%
   rename(val1 = d5.4) %>%
   group_by(yearf, monthf) %>%
@@ -1100,22 +1139,21 @@ tree %>%
   scale_x_discrete(breaks = c(2017,2019,2021)) + 
   scale_color_manual(values = wes_palettes$Darjeeling1) +
   scale_y_continuous(limits = c(-0.5, 1.5)) +
-  annotate("text", x = 4.25, y = -0.49, 
-           label = "mean trend = +0.044 C/yr\n95% CI = -0.027, 0.116", 
+  annotate("text", x = max(as.numeric(treet_jags$yearf)), y = -0.49, 
+           label = paste0("mean trend = ",
+                          trend, " C/yr\n95% CI = ", 
+                          lci, ", ", uci), 
            hjust = 1, vjust = 0)
-  
-# ggsave(here::here("output/Task3_project_impacts/",
-#                 "PlotJ2_tree_planting_upstream_within_diff_by_mo_year_w_trend.png"),
-#                   height = 5, width = 7, dpi = 400)
 
+ggsave(here::here("output/Task3_project_impacts/",
+                "PlotJ2_trees_up_vs_within_diff_by_mo_trend.png"),
+                  height = 5, width = 7, dpi = 400)
 ```
-
-
-# Plot L - Tree planting - upstream/downstream DO diff by month/year
+# 3.18. Plot L: Tree planting - upstream/downstream DO diff by month/year
 TNC_8 (downstream) - TNC_4 (upstream)
 ```{r}
 treedo %>%
-  filter(yearf != 2016,
+  filter(is.na(d8.4)==F,
          monthf %in% 5:9) %>%
   droplevels() %>%
   rename(val1 = d8.4) %>%
@@ -1150,18 +1188,17 @@ treedo %>%
   labs(x = "", y = "DO difference (mg/L)\n(downstream - upstream)",
        title = "Tree planting area",
        color = "Month") +
-  scale_x_discrete(breaks = c(2017,2019,2021)) + 
-  scale_color_manual(values = wes_palettes$Darjeeling1) +
- scale_y_continuous(limits = c(-2, 1.5))
+  scale_x_discrete(breaks = c(2016:2050)) + 
+  scale_color_manual(values = wes_palettes$Darjeeling1)
   
-# ggsave(here::here("output/Task3_project_impacts/",
-#                   "PlotL_tree_planting_up_downstream_DO_diff_by_mo_year.png"),
-#                   height = 5, width = 7, dpi = 400)
+ggsave(here::here("output/Task3_project_impacts/",
+                  "PlotL_trees_up_vs_downstream_DO_diff_by_mo.png"),
+                  height = 5, width = 7, dpi = 400)
 ```
-# Plot M - Tree planting - upstream/within DO diff by month/year
+# 3.19. Plot M: Tree planting - upstream/within DO diff by month/year
 ```{r}
 treedo %>%
-  filter(yearf %in% 2018:2021,
+  filter(is.na(d5.4)==F,
          monthf %in% 5:9) %>%
   droplevels() %>%
   rename(val1 = d5.4) %>%
@@ -1196,16 +1233,15 @@ treedo %>%
   labs(x = "", y = "DO difference (mg/L)\n(restoration area - upstream)",
        title = "Tree planting area",
        color = "Month") +
-  scale_x_discrete(breaks = c(2017,2019,2021)) + 
-  scale_color_manual(values = wes_palettes$Darjeeling1) #+
-  #scale_y_continuous(limits = c(-0.5, 1.5))
+  scale_x_discrete(breaks = c(2016:2050)) + 
+  scale_color_manual(values = wes_palettes$Darjeeling1)
   
-# ggsave(here::here("output/Task3_project_impacts/",
-#                 "PlotM_tree_planting_upstream_within_DOdiff_by_mo_year.png"),
-#                   height = 5, width = 7, dpi = 400)
+ggsave(here::here("output/Task3_project_impacts/",
+                "PlotM_trees_up_vs_within_DOdiff_by_mo.png"),
+                  height = 5, width = 7, dpi = 400)
 ```
-# Plot N - Columbia Dam - Turbidity upstream vs. downstream - raw data by year
-upstream: TNC_23, downstream: TNC_25 (& 24), in: 80 & 81
+# 3.20. Plot N: Columbia Dam - Turbidity upstream vs. downstream - raw data by year
+Upstream: TNC_23, downstream: TNC_25 (& 24), in: 80 & 81
 first notch July 2018, completed April 2019
 ```{r}
 colturb %>%
@@ -1224,13 +1260,12 @@ colturb %>%
   labs(x = "", y = "Turbidity (NTU)",
        title = "Columbia Dam", fill = "", color = "") 
 
-
-# ggsave(here::here("output/Task3_project_impacts/",
-#                   "PlotN_columbia_turbidity_up_downstream_by_year.png"),
-#                   height = 4, width = 6, dpi = 400)
+ggsave(here::here("output/Task3_project_impacts/",
+                  "PlotN_columbia_turbidity_up_downstream_by_year.png"),
+                  height = 4, width = 6, dpi = 400)
 
 ```
-# Plot O - Columbia Dam - log turbidity difference, upstream vs. downstream - raw data by year
+# 3.21. Plot O: Columbia Dam - log turbidity difference, upstream vs. downstream - raw data by year
 upstream: TNC_23, downstream: TNC_25 (& 24), in: 80 & 81
 first notch July 2018, completed April 2019
 ```{r}
@@ -1246,13 +1281,11 @@ colturb %>%
   labs(x = "", y = "Difference in log turbitity (NTU)\n(downstream - upstream)",
        title = "Columbia Dam") 
 
-
-# ggsave(here::here("output/Task3_project_impacts/",
-#                   "PlotO_columbia_turbitity_up_downstream_diff_by_year.png"),
-#                   height = 4, width = 6, dpi = 400)
-
+ggsave(here::here("output/Task3_project_impacts/",
+          "PlotO_columbia_turbitity_up_downstream_diff_by_year.png"),
+                  height = 4, width = 6, dpi = 400)
 ```
-# PlotP_assessing variability in upstream/downstream turbidity by month/year
+# 3.22. Plot P: assessing variability in upstream/downstream turbidity by month/year
 ```{r}
 colturb %>%
   ggplot() +
@@ -1270,13 +1303,12 @@ colturb %>%
   scale_x_discrete(breaks = c(3,6,9,12),
                      labels = c("Mar","Jun","Sep","Dec"))
   
-# ggsave(here::here("output/Task3_project_impacts/",
-#                   "PlotP_columbia_turbitity_up_downstream_diff_by_year_mo.png"),
-#                   height = 5, width = 7, dpi = 400)
+ggsave(here::here("output/Task3_project_impacts/",
+        "PlotP_columbia_turbitity_up_downstream_diff_by_year_mo.png"),
+                  height = 5, width = 7, dpi = 400)
 ```
-# Model E - Columbia Dam Turbidity - downstream/upstream BACI - by stage
-Upstream: TNC_23
-Downstream: TNC_25
+# 3.23. Model E: Columbia Dam Turbidity - downstream/upstream BACI - by stage
+Upstream: TNC_23; Downstream: TNC_25
 ```{r}
 colturb_jags <- colturb %>% 
   filter(is.na(d25.23) == F,
@@ -1319,9 +1351,8 @@ saveRDS(colturb_jags_mod, here("output/Task3_project_impacts/",
                             "statistical_analysis/",
                           "ModelE_columbia_jags_turbmod.rds"))
 ```
-# Plot Q estimated upstream/downstream tdiff by restoration stage
+# 3.24. Plot Q: estimated upstream/downstream tdiff by restoration stage
 ```{r}
-
 col_jags_turbmod_ni <- readRDS(here::here("output/Task3_project_impacts/",
                             "statistical_analysis/",
                           "ModelE_columbia_jags_turbmod.rds"))
@@ -1371,13 +1402,14 @@ col_turbdiff_plot %>%
        y = "Difference in log turbidity (NTU)\n(downstream - upstream)",
        title = "Columbia Dam")
 
-# ggsave(here::here("output/Task3_project_impacts/",
-#                   "PlotQ_columbia_river_turb_BACI_plot.png"),
-#                   height = 4, width = 6, dpi = 400)
-  
+ggsave(here::here("output/Task3_project_impacts/",
+                  "PlotQ_columbia_river_turb_BACI_plot.png"),
+                  height = 4, width = 6, dpi = 400)
 ```
-# Plot R - Paulina Dam - Temperature
-TNC_18 and TNC_19 (compare with TNC_13?)
+# 3.25. Plot R: Paulina Dam - Temperature
+Sites TNC_18 and TNC_19.
+Note for adding additional years of data: you should update the numbers in this section to reflect new data: "Monthly mean:\n0.3 C warmer on average\nRange: 0 - 1.8 C". The new values can be found by running the command: summary(monthly_diff$diff)
+That appears near the bottom of the code chunk just before the ggsave command.
 ```{r}
 # summarize daily temp data by month
 tsum_paulina <-  tdata %>%
@@ -1457,7 +1489,8 @@ tsum_paulina %>%
             color = "darkgray",
                        data = data.frame(mid = c(100,100),
                                          mean_mean = c(0.5,0.5),
-                          mes = c("Montly mean:\n0.3 C warmer on average\nRange: 0 - 1.8 C", ""),
+    mes = c("Monthly mean:\n0.3 C warmer on average\nRange: 0 - 1.8 C", 
+            ""),
                                          site = c("Downstream",
                                                   "Upstream")))
 
@@ -1471,14 +1504,13 @@ monthly_diff <- data.frame(diff = (filter(tsum_paulina, site == "Downstream")$me
 
 summary(monthly_diff$diff)
 
-# ggsave(here::here("output/Task3_project_impacts/",
-#                   "PlotR_paulina_dam_upstream_ds_temp.png"),
-#                   height = 4, width = 6.5, dpi = 400)
+ggsave(here::here("output/Task3_project_impacts/",
+                  "PlotR_paulina_dam_upstream_ds_temp.png"),
+                  height = 4, width = 6.5, dpi = 400)
 ```
-# Plot S - Paulina downstream (TNC_19) - upstream (TNC_18)
+# 3.26. Plot S: Paulina downstream (TNC_19) - upstream (TNC_18)
 Temp, DO, & Turbidity
 ```{r}
-
 paulall = mutate(pault, meas = "Temperature") %>%
   bind_rows(mutate(pauldo, meas = "DO")) %>%
   bind_rows(mutate(paulturb, meas = "Turbidity"))
@@ -1498,13 +1530,13 @@ paulall %>%
   labs(x = "", y = "Difference\n(downstream - upstream)",
        title = "Paulina Dam")
 
-# ggsave(here::here("output/Task3_project_impacts/",
-#                   "PlotS_paulina_dam_upstream_ds_all.png"),
-#                   height = 4, width = 6.5, dpi = 400)
+ggsave(here::here("output/Task3_project_impacts/",
+                  "PlotS_paulina_dam_upstream_ds_all.png"),
+                  height = 4, width = 6.5, dpi = 400)
 
 ```
-# Plot T - Hyper Humus - Temperature & DO
-TNC_2 (compared with other site means)
+# 3.27. Plot T: Hyper Humus - Temperature & DO
+Site TNC_2 compared with other site means.
 ```{r}
 # summarize daily temp data by month
 tsum_hyper <-  tdata %>%
@@ -1627,8 +1659,8 @@ ggsave(here::here(task_path,
 
 rm(tsum_hyper, dosum_hyper)
 ```
-# Plot U - County Line Dam - Temperature & DO
-TNC_9 and TNC_13 (compared with other site means)
+# 3.28. Plot U: County Line Dam - Temperature & DO
+TNC_9 and TNC_13 compared with other site means.
 ```{r}
 # summarize daily temp data by month
 tsum_county <-  tdata %>%
@@ -1755,11 +1787,12 @@ ggsave(here::here(task_path,
 
 rm(tsum_county, dosum_county)
 ```
-# Plot V - Tree planting area - Temperature & DO
+# 3.29. Plot V: Tree planting area - Temperature & DO
 Monthly averages each year for TNC_4, 5, and 8 (compared with other site means)
 ```{r}
-
+# make a list of the relevant sites
 tree.sites <- c("TNC_4", "TNC_5", "TNC_8")
+
 # summarize daily temp data by month
 tsum_tree <-  tdata %>%
     group_by(site, yearf, month, day, dayf) %>%
@@ -1883,10 +1916,10 @@ ggsave(here::here(task_path,
 
 rm(tsum_tree, dosum_tree)
 ```
-# Plot W - Columbia Dam - Temperature & DO
+# 3.30. Plot W: Columbia Dam - Temperature & DO
 Monthly averages each year for TNC_4, 5, and 8 (compared with other site means)
 ```{r}
-
+# make a list of the relevant sites
 the.sites <- c("TNC_23", "TNC_25", "TNC_80", "TNC_81")
 
 # summarize daily temp data by month
@@ -2012,9 +2045,8 @@ ggsave(here::here(task_path,
 
 rm(tsum_col, dosum_col)
 ```
-# Plot X - Columbia Dam - Temp. upstream vs. downstream - raw data by year
-upstream: TNC_23, downstream: TNC_25 (& 24), in: 80 & 81
-first notch July 2018, completed April 2019
+# 3.31. Plot X: Columbia Dam - Temp. upstream vs. downstream - raw data by year
+upstream: TNC_23, downstream: TNC_25 (& 24), within former impoundment: 80 & 81; first notch July 2018, completed April 2019
 ```{r}
 col %>%
   select(yearf, value = TNC_25, monthf) %>%
@@ -2038,11 +2070,11 @@ col %>%
 
 
 ggsave(here::here("output/Task3_project_impacts/",
-                  "PlotX_columbia_temperature_up_downstream_by_year.png"),
+              "PlotX_columbia_temperature_up_downstream_by_year.png"),
                   height = 4, width = 6, dpi = 400)
 
 ```
-# Plot Y - Columbia Dam - July Temp. upstream vs. downstream - raw data by year
+# 3.32. Plot Y: Columbia Dam - July Temp. upstream vs. downstream - raw data by year
 upstream: TNC_23, downstream: TNC_25 (& 24), in: 80 & 81
 first notch July 2018, completed April 2019
 ```{r}
@@ -2073,9 +2105,8 @@ ggsave(here::here("output/Task3_project_impacts/",
                   height = 4, width = 6, dpi = 400)
 
 ```
-# Plot Z - Columbia Dam - DO upstream vs. downstream - daily data by year
-upstream: TNC_23, downstream: TNC_25 (& 24), in: 80 & 81
-first notch July 2018, completed April 2019
+# 3.33. Plot Z: Columbia Dam - DO upstream vs. downstream - daily data by year
+upstream: TNC_23, downstream: TNC_25 (& 24), within former impoundment: 80 & 81; first notch July 2018, completed April 2019
 ```{r}
 coldo %>%
   select(yearf, value = TNC_25, monthf) %>%
@@ -2101,11 +2132,9 @@ coldo %>%
 ggsave(here::here("output/Task3_project_impacts/",
                   "PlotZ_columbia_DO_up_downstream_by_year.png"),
                   height = 4, width = 6, dpi = 400)
-
 ```
-# Plot ZA - Columbia Dam - DO upstream vs. downstream - daily data by year - JULY data only
-upstream: TNC_23, downstream: TNC_25 (& 24), in: 80 & 81
-first notch July 2018, completed April 2019
+# 3.34. Plot ZA: Columbia Dam - DO upstream vs. downstream - daily data by year - JULY data only
+upstream: TNC_23, downstream: TNC_25 (& 24), within former impoundment: 80 & 81; first notch July 2018, completed April 2019
 ```{r}
 coldo %>%
   select(yearf, value = TNC_25, monthf) %>%
@@ -2132,10 +2161,12 @@ coldo %>%
 ggsave(here::here("output/Task3_project_impacts/",
                   "PlotZA_columbia_July_DO_up_downstream_by_year.png"),
                   height = 4, width = 6, dpi = 400)
-
 ```
-# Plot ZB - Columbia Dam - monthly mean temperature w/ envelope
+# 3.35. Plot ZB: Columbia Dam - monthly mean temperature w/ envelope
 TNC_25, 23, 80, 81
+Note about adding additional years: you will need to update the numbers in this part: "Montly mean\n2016-17: 0.4 C warmer than upstream\n2019-21: 0.1 C warmer than upstream" which can be found by running the following 2 commands near the bottom of the code chunk:
+summary(filter(monthly_diff, yearf %in% 2016:2017)$diff)
+summary(filter(monthly_diff, yearf %in% 2019:2050)$diff)
 ```{r}
 # summarize daily temp data by month
 tsum_col <-  tdata %>%
@@ -2235,16 +2266,15 @@ monthly_diff <-
          n.y >=10)
 
 summary(filter(monthly_diff, yearf %in% 2016:2017)$diff)
-summary(filter(monthly_diff, yearf %in% 2019:2021)$diff)
+summary(filter(monthly_diff, yearf %in% 2019:2050)$diff)
 
 ggsave(here::here("output/Task3_project_impacts/",
                   "PlotZB_columbia_dam_upstream_ds_temp5.png"),
                   height = 4, width = 6.5, dpi = 400)
 ```
-# Plot ZC - Columbia downstream (TNC_25) - upstream (TNC_23)
+# 3.36. Plot ZC: Columbia downstream (TNC_25) - upstream (TNC_23)
 Temp, DO, & Turbidity
 ```{r}
-
 colall = mutate(col, meas = "Temperature") %>%
   bind_rows(mutate(coldo, meas = "DO")) %>%
   bind_rows(mutate(colturb, meas = "Turbidity"))
@@ -2267,5 +2297,4 @@ colall %>%
 ggsave(here::here("output/Task3_project_impacts/",
                   "PlotZC_columbia_dam_upstream_ds_all.png"),
                   height = 4, width = 6.5, dpi = 400)
-
 ```

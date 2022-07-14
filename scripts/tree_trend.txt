@@ -21,8 +21,8 @@ model{
   sigma.beta.year ~ dunif(0, 50)
 
   # derrived
-  for(i in 1:5){
-  diff_pred[i] <- mu.beta.year*(i-year_mean)
+  for(i in 1:n_yr){
+  diff_pred[i] <- mu.beta0 + mu.beta.year*(i-year_mean)
   }
   
 }
