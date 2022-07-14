@@ -8,7 +8,7 @@ output:
 ---
 
 # How to run this code
-Run the first section ("chunk") of this Rmd document (section 1.0). That will load all libraries, functions, and data. After that, you can scroll down to the plot or table you wish to make or the model you wish to run and run just that section. Plots, tables and models are labeled with letters (A-Z) and correspond to those in the "Task 2" sub-folder in the "output" folder.
+Run the first section ("chunk") of this Rmd document (section 1.0). That will load all libraries, functions, and data. After that, you can scroll down to the plot or table you wish to make or the model you wish to run and run just that section. Plots, tables and models are labeled with letters (A-Z) and correspond to those in the "Task 2" sub-folder in the "output" folder. See the README file in that sub-folder for figure captions and information.
 
 The following text is a general description of Task 1.
 

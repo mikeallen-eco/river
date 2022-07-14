@@ -8,7 +8,7 @@ output:
 ---
 
 # How to run this code
-Run the first section ("chunk") of this Rmd document (section 2.0). That will load all libraries, functions, and data. After that, you can scroll down to the plot or table you wish to make or the model you wish to run and run just that section. Plots, tables and models are labeled with letters (A-Z) and correspond to those in the "Task 2" sub-folder in the "output" folder.
+Run the first section ("chunk") of this Rmd document (section 2.0). That will load all libraries, functions, and data. After that, you can scroll down to the plot or table you wish to make or the model you wish to run and run just that section. Plots, tables and models are labeled with letters (A-Z) and correspond to those in the "Task 2" sub-folder in the "output" folder. See the README file in that sub-folder for figure captions and information.
 
 The following text is a general description of Task 2.
 
@@ -670,13 +670,11 @@ save_kable(tmonth_table,
 
 ```
 # 2.8. Table B: average daily temperatures for 1 Jul - 15 Sept
-- For July 1- Sept 15, What’s the mean daily max?
 ```{r}
-
+# Make a list of sites
 sites <- unique(tdata$site)
 
-i = sites[1]
-
+# Make a table for each site
 for(i in sites){
   print(i)
 (t_hotseason_table <- tsum_season %>%
@@ -709,14 +707,12 @@ save_kable(t_hotseason_table,
 }
 ```
 # 2.9. Table C: average daily temperatures for migratory fish seasons
-- What is mean mean/min/max by fish season?
 ```{r}
 # Create list of sites (excluding those not accessible)
 sites <- unique(tdata$site)
 sites <- sites[sites %notin% exclude]
 
-i = sites[1]
-
+# Make a table for each site
 for(i in sites){
   print(i)
 (t_fishseason_table <- tsum_season_exclude %>%
@@ -757,6 +753,7 @@ tdata_migrate <- filter(tdata, is.na(temp)==F,
                            season == "migrate",
                         site %notin% exclude)
 saveRDS(tdata_migrate, "output/Task2_WQ_migratory_species/statistical_analysis/ModelA_tdata_migrate.rds")
+
 temp_mod_migrate <- lmer(temp ~ site + (1 | yearf/dayf), 
              data = tdata_migrate)
 summary(temp_mod_migrate)
@@ -767,12 +764,14 @@ saveRDS(temp_mod_migrate,
 tdata_spawn <- filter(tdata, is.na(temp)==F,
                            season == "spawn",
                         site %notin% exclude)
+
 saveRDS(tdata_spawn, "output/Task2_WQ_migratory_species/statistical_analysis/ModelB_tdata_spawn.rds")
 
 temp_mod_spawn <- 
   lmer(temp ~ site + (1 | yearf/dayf), 
              data = tdata_spawn)
 summary(temp_mod_spawn)
+
 saveRDS(temp_mod_spawn,
         "output/Task2_WQ_migratory_species/statistical_analysis/ModelB_temp_mod_spawn.rds")
 
@@ -780,12 +779,14 @@ saveRDS(temp_mod_spawn,
 tdata_lar <- filter(tdata, is.na(temp)==F,
                            season == "larvae",
                         site %notin% exclude)
+
 saveRDS(tdata_lar, "output/Task2_WQ_migratory_species/statistical_analysis/ModelC_tdata_lar.rds")
 
 temp_mod_lar <- 
   lmer(temp ~ site + (1 | yearf/dayf), 
              data = tdata_lar)
 summary(temp_mod_lar)
+
 saveRDS(temp_mod_lar,
         "output/Task2_WQ_migratory_species/statistical_analysis/ModelC_temp_mod_lar.rds")
 
@@ -793,12 +794,14 @@ saveRDS(temp_mod_lar,
 tdata_juv <- filter(tdata, is.na(temp)==F,
                            season == "juvenile",
                         site %notin% exclude)
+
 saveRDS(tdata_juv, "output/Task2_WQ_migratory_species/statistical_analysis/ModelD_tdata_juv.rds")
 
 temp_mod_juv <- 
   lmer(temp ~ site + (1 | yearf/dayf), 
              data = tdata_juv)
 summary(temp_mod_juv)
+
 saveRDS(temp_mod_juv,
         "output/Task2_WQ_migratory_species/statistical_analysis/ModelD_temp_mod_juv.rds")
 
@@ -806,12 +809,14 @@ saveRDS(temp_mod_juv,
 tdata_fall <- filter(tdata, is.na(temp)==F,
                            season == "fall_mig",
                         site %notin% exclude)
+
 saveRDS(tdata_fall, "output/Task2_WQ_migratory_species/statistical_analysis/ModelE_tdata_fall.rds")
 
 temp_mod_fall <- 
   lmer(temp ~ site + (1 | yearf/dayf), 
              data = tdata_fall)
 summary(temp_mod_fall)
+
 saveRDS(temp_mod_fall,
         "output/Task2_WQ_migratory_species/statistical_analysis/ModelE_temp_mod_fall.rds")
 
@@ -820,7 +825,7 @@ rm(tdata_migrate, tdata_spawn, tdata_lar, tdata_juv, tdata_fall)
 # 2.11. Generate bootstrapped CI's for modeled mean temperature by site estimates (from Models A-E)
 This generates 95% confidence intervals for the modeled mean temperature values in Models A-E. 
 Note: you will need to run the previous code chunk in order for this to work.
-Warning: very long run time (& juv run needs lots of RAM)
+Warning: very long run time (& juv run uses lots of RAM). All outputs from models and bootstrapping were saved as .rds files in the "statistical_analysis" subfolder. So if you do not need to rerun them, you can skip to section 2.12 (Plot G) and it will still work.
 ```{r}
 # First load all model output and data objects
 statpath <- "output/Task2_WQ_migratory_species/statistical_analysis/"

@@ -4,31 +4,31 @@ Task 5:
 * recompile logger data with TNC_4 & 16 (2016) and TNC_5 (2017)
 - make sure logger compile will work with new data automatically (reads max year and looks for it)
 - make sure logger compile will work with new logger format (new logger type example file)
-- remake all logger-based plots with recompiled data
+- remake all relevant logger-based plots with recompiled data
   * Task 0
   * Task 1
-  - Task 2
-  - Task 3
+  * Task 2
+  - Task 3 (progress: Model C / Plot I2)
   - Task 4
 - make sure all code will accomodate data from new years (> 2021)
   * Task 1
-  - Task 2
-  - Task 3
+  * Task 2
+  - Task 3 (progress: Model C / Plot I2)
   - Task 4
 - ensure new sites won't break code
   * Task 1
-  - Task 2
-  - Task 3
+  * Task 2
+  - Task 3 (progress: Model C / Plot I2)
   - Task 4
 - number all code chunks and add plot or table letter
   * Task 1
-  - Task 2
+  * Task 2
   - Task 3
   - Task 4
 - ensure all chunks run after running first one
   * Task 1
-  - Task 2
-  - Task 3
+  * Task 2
+  - Task 3 (progress: Model C / Plot I2)
   - Task 4
 - make sure macro/habitat compile will work with new data files (> 2021)
    (in 2021 format)
@@ -90,7 +90,7 @@ Task 2
 
 Task 1: 
 * TNC_5 missing temp/DO data in 2017 [no data for that year on Box]
-* same for TNC_80 in 2018 [no data for that year on Box]
+* same for TNC_80 in 2018 [Michelle clarified: no 2018 data collected]
 * improve label visibitility in Plot I
 * Plots K & L: exclude Del. river sites (26 and 27)
 * improve label visibitility in Plot P
