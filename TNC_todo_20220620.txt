@@ -31,7 +31,7 @@ Task 5:
   - Task 3
   - Task 4
 - make sure macro/habitat compile will work with new data files (> 2021)
-  - in 2021 format
+   (in 2021 format)
 
 Task 4
 * fix counting of sites in Plot A & G (n = XX)

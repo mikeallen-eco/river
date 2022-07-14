@@ -12,7 +12,7 @@ Run the first section ("chunk") of this Rmd document (section 2.0). That will lo
 
 The following text is a general description of Task 2.
 
-# Task 2: Site specific water quality conditions important to us other than SWQS
+# Task 2 description: Site specific water quality conditions important to us other than SWQS
 a. Determine which sites are more supportive of migrating species during key lifecycle periods over time:
 spring adult migration (~ 15 Apr - 15 May) 
 spring spawning (~ 16-31 May)
@@ -82,8 +82,6 @@ tdata <- p %>%
   filter(as.logical(1-(site == "TNC_23" & 
                          year == 2021 & 
                          day == 118))) %>%
-  # right_join(expand.grid(site = unique(p$site), 
-  #                        year = 2016:2021, day = 82:339)) %>%
   arrange(site, year, day) %>%
   # peak movement ~ 15 April - 15 May in Raritan per RU data
   # dates als based on MD extension ref
@@ -262,14 +260,10 @@ dosum_season_exclude <- dosum_season %>%
 rm(p)
 ```
 # 2.1. Plot A: Daily mean temperature with monthly averages by year (separate plots by site)
-Error bars are the daily min/max. Black circles represent monthly averages of the daily mean.
-i. What is the daily min, max, mean temperature and dissolved oxygen?
 ```{r}
 sites <- unique(tdata$site)
 
-i = sites[2]
 for(i in sites){
-# x11(8,5); 
 print(i)
 tsum %>%
   filter(site == i) %>%
@@ -306,16 +300,17 @@ ggsave(paste0("output/Task2_WQ_migratory_species/PlotA/PlotA_",i,"_daily_monthly
 ```
 # 2.2. Plot B: monthy mean temperatures by year (separate plots for each site)
 ```{r}
+# make list of sites to plot
 sites <- unique(tdata$site)
 
+# format data for min/max ribbon
 tsum_envelope <- tdata %>%
   group_by(site, day) %>%
   summarize(multi_min = min(temp),
             multi_max = max(temp),
             .groups = "drop")
 
-i = sites[1]
-
+# make plots
 for( i in sites ) {
 print(i)
 tsum_month %>%
@@ -351,13 +346,11 @@ ggsave(paste0("output/Task2_WQ_migratory_species/PlotB/PlotB_",i,"_monthly_temps
 }
 ```
 # 2.3. Plot C: Daily mean DO with monthly averages by year (separate plots by site)
-Error bars are the daily min/max. Black circles represent monthly averages of the daily mean.
-i. What is the daily min, max, mean temperature and dissolved oxygen?
 ```{r}
+# make list of sites
 sites <- unique(dodata$site)
 
-i = sites[2]
-
+# make plot for each site
 for(i in sites){
 # x11(8,5); 
 print(i)
@@ -395,18 +388,18 @@ ggsave(paste0("output/Task2_WQ_migratory_species/PlotC/PlotC_",i,"_daily_monthly
 }
 ```
 # 2.4. Plot D: Daily mean DO with monthly averages by year (separate plots by site)
-Error bars are the daily min/max. Black circles represent monthly averages of the daily mean. 
 ```{r}
+# make a list of the sites
 sites <- unique(tdata$site)
 
+# format data for min/max ribbon
 dosum_envelope <- dodata %>%
   group_by(site, day) %>%
   summarize(multi_min = min(do),
             multi_max = max(do),
             .groups = "drop") 
 
-i = "TNC_2"
-
+# make a plot for each site
 for( i in sites) {
 print(i)
 
@@ -455,14 +448,17 @@ rm(plotdata, plotdata2)
 }
 ```
 # 2.5. Plot E: mean/min/max temperature during migratory fish periods
-Only for sites accessible by migratory fish.
+Only include sites accessible by migratory fish.
 ```{r}
 # Create list of sites (excluding those not accessible)
 sites <- unique(tdata$site)
 sites <- sites[sites %notin% exclude]
 
-i = sites[1] # for testing
+# get the year before the overall max year for the study
+# this is needed to properly set up the year factor for plotting
+max_y_b4 <- max(tdata$year) - 1
 
+# make a plot for each site
 for(i in sites){
   print(i)
 
@@ -478,22 +474,31 @@ plot_data <- tsum_season_exclude %>%
          n > 10) %>%
   left_join(color_vector_df, by = "order")
 
-# get the max year
+# get the max year of the data for that site
 max_y <- max(as.numeric(as.character(plot_data$yearf)))
 
-# create a dataframe to map the text annotations
-annotate_df <- data.frame(yearf = as.factor(c(rep(max_y,5),2016:2020)),
-                          mean_mean = 6,
-                          season2 = as.factor(c("Migrate (S)",
-                                      "Spawn",
-                                      "Larvae",
-                                      "Juvenile",
-                                      "Migrate (F)")),
-      ann = c("Migration (15 April - 15 May)",
+# make a (repeating) vector of seasons to add to annotate df
+#   (repeating makes it flexible to accomodate future years)
+seas2_vector <- 
+  rep(c("Migrate (S)", "Spawn", "Larvae", "Juvenile","Migrate (F)"),
+      4)
+
+# same for annotations
+ann_vector <- rep(c("Migration (15 April - 15 May)",
               "Spawning (16-31 May)\nOptimal egg dev.: 17 C",
               "Larvae (1-30 June)\nRequire: 16-26 C",
               "Juvenile (1 July - 15 Sept.)\nRequire: 16-26 C",
-              "Migration (16 Sept. - 30 Nov.)")
+              "Migration (16 Sept. - 30 Nov.)"),4)
+              
+# make vector of years for annotation plot and count them
+year_vector <- c(rep(max_y,5),2016:max_y_b4)
+yv_len <- length(year_vector)
+
+# create a dataframe to map the text annotations
+annotate_df <- data.frame(yearf = as.factor(year_vector),
+                          mean_mean = 6,
+                          season2 = as.factor(seas2_vector[1:yv_len]),
+      ann = ann_vector[1:yv_len]
       ) %>%
   filter(yearf == max_y) %>%
     mutate(order = case_when(season2 == "Migrate (S)" ~ 1,
@@ -503,6 +508,10 @@ annotate_df <- data.frame(yearf = as.factor(c(rep(max_y,5),2016:2020)),
                            season2 == "Migrate (F)" ~ 5),
          season2 = fct_reorder(season2, order)) %>%
   left_join(color_vector_df, by = "order")
+
+# all of that was required to make sure all elements of factors
+#   year and season2 appear in the plot where appropriate,
+#     and in the right order
 
 # make the plot
 ggplot(plot_data) +
@@ -531,17 +540,21 @@ ggplot(plot_data) +
 ggsave(paste0("output/Task2_WQ_migratory_species/PlotE/PlotE_",i,"_fish_seasons_temp.png"), height = 5, width = 6, dpi = 400)
 }
 
-rm(plot_data, annotate_df, max_y)
+rm(plot_data, annotate_df, max_y, color_vector_df, ann_vector,
+   max_y_b4, seas2_vector, year_vector, yv_len)
 ```
 # 2.6. Plot F: mean/min/max DO during migratory fish periods
-Only for sites accessible by migratory fish.
+Only include sites accessible by migratory fish.
 ```{r}
 # Create list of sites (excluding those not accessible)
 sites <- unique(dodata$site)
 sites <- sites[sites %notin% exclude]
 
-i = sites[1] # for testing
+# get the year before the overall max year for the study
+# this is needed to properly set up the year factor for plotting
+max_y_b4 <- max(tdata$year) - 1
 
+# make a plot for each site
 for(i in sites){
   print(i)
 # set up colors
@@ -556,22 +569,31 @@ plot_data <- dosum_season_exclude %>%
          n > 10) %>%
   left_join(color_vector_df, by = "order")
 
-# get the max year
+# get the max year of the data for that site
 max_y <- max(as.numeric(as.character(plot_data$yearf)))
 
-# create a dataframe to map the text annotations
-annotate_df <- data.frame(yearf = as.factor(c(rep(max_y,5),2016:2020)),
-                          mean_mean = 0,
-                          season2 = as.factor(c("Migrate (S)",
-                                      "Spawn",
-                                      "Larvae",
-                                      "Juvenile",
-                                      "Migrate (F)")),
-      ann = c("Migration (15 April - 15 May)",
+# make a (repeating) vector of seasons to add to annotate df
+#   (repeating makes it flexible to accomodate future years)
+seas2_vector <- 
+  rep(c("Migrate (S)", "Spawn", "Larvae", "Juvenile","Migrate (F)"),
+      4)
+
+# same for annotations
+ann_vector <- rep(c("Migration (15 April - 15 May)",
               "Spawning (16-31 May)\nRequire: > 5 mg/L",
               "Larvae (1-30 June)\nRequire: > 5 mg/L",
               "Juvenile (1 July - 15 Sept.)\nRequire: > 5 mg/L",
-              "Migration (16 Sept. - 30 Nov.)")
+              "Migration (16 Sept. - 30 Nov.)"),4)
+              
+# make vector of years for annotation plot and count them
+year_vector <- c(rep(max_y,5),2016:max_y_b4)
+yv_len <- length(year_vector)
+
+# create a dataframe to map the text annotations
+annotate_df <- data.frame(yearf = as.factor(year_vector),
+                          mean_mean = 0,
+                          season2 = as.factor(seas2_vector[1:yv_len]),
+      ann = ann_vector[1:yv_len]
       ) %>%
   filter(yearf == max_y) %>%
     mutate(order = case_when(season2 == "Migrate (S)" ~ 1,
@@ -581,6 +603,10 @@ annotate_df <- data.frame(yearf = as.factor(c(rep(max_y,5),2016:2020)),
                            season2 == "Migrate (F)" ~ 5),
          season2 = fct_reorder(season2, order)) %>%
   left_join(color_vector_df, by = "order")
+
+# all of that was required to make sure all elements of factors
+#   year and season2 appear in the plot where appropriate,
+#     and in the right order
 
 # make the plot
 ggplot(plot_data) +
@@ -613,11 +639,8 @@ ggsave(paste0("output/Task2_WQ_migratory_species/PlotF/PlotF_",i,"_fish_seasons_
 rm(plot_data, annotate_df, max_y)
 ```
 # 2.7. Table A: average daily temperatures by month
-- What is the monthly mean mean/min/max temperature?
 ```{r}
 sites <- unique(tdata$site)
-
-i = sites[1]
 
 for(i in sites){
   print(i)
