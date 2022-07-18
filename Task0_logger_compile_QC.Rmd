@@ -20,14 +20,14 @@ The 2016-2021 data files that this code works on were downloaded from the Box fo
 3. possible naming issue in HYDRO data: is CLDHY-2 the same as CLDHY_2? In file: TNC_81_CLDHY2_2020_masterfile.xlsx
 
 # 0.0. Load libraries and set logger data path
-To load data from a new year, you will place the excel file into the folder linked to at the end of this code chunk (currently "data/Logger_Data"). It should be formatted exactly like the 2021 file.
+To load data from a new year, you will place the excel file into the folder linked to at the end of this code chunk (currently "data/Logger_Data"). It should be formatted exactly like the 2021 file from the corresponding logger type.
 ```{r}
 library(dplyr)
 library(here)
 library(readxl)
 library(lubridate)
 library(ggplot2)
-here <- here::here # resolve namespace conflict
+here <- here::here # set "here" function to be in "here" package
 # load function to compile data files for hobo or hydro loggers 
 source(here("scripts", "logger_compile_function.R"))
 # load function to plot temp or do over time for each site/year 
@@ -40,6 +40,7 @@ logger_path <- "data/Logger_Data/"
 # 0.1. Read and compile HOBO data using logger_compile function
 This code section runs the "logger_compile" function on the HOBO logger data files from each year to compile data into one big data frame named "hobo". It has built in fixes for errors discovered in the data excel files from 2016-2021. So, any changes to those files will also require changes to this code. [Note: functionality to handle new years not yet implemented.]
 ```{r}
+# compile hobo logger data from 2016-2021
 hobo <- logger_compile("2016", type = "hobo") %>%
   bind_rows(logger_compile("2017", type = "hobo")) %>%
   bind_rows(logger_compile("2018", type = "hobo")) %>%
@@ -48,7 +49,7 @@ hobo <- logger_compile("2016", type = "hobo") %>%
   bind_rows(logger_compile("2021", type = "hobo")) %>%
   # remove rows with year = NA (removes ~50k rows)
   filter(is.na(year) != TRUE) %>%
-# temporary fix for 10460 rows in TNC_24_CLDHO_1_2019_masterfile.xlsx
+# fix for 10460 rows in TNC_24_CLDHO_1_2019_masterfile.xlsx
 # with wrong year, site, and logger values (increasing sequentially)
   mutate(site = case_when(year != year(datetime) ~ "TNC_24",
                           TRUE ~ site),
@@ -63,6 +64,45 @@ hobo <- logger_compile("2016", type = "hobo") %>%
   # remove 17952 rows from various files with large negative numbers
   filter(temp != -9999.00,
          temp != -888.88)
+
+
+
+# compile and add in 2022 hobo data if it exists
+if(length(list.files(here(logger_path, "2022 data", "HOBO_2022")))!=0){
+hobo <- hobo %>%
+  bind_rows(logger_compile("2022", type = "hobo")) %>%
+  filter(is.na(year) != TRUE,
+         temp != -9999.00,
+         temp != -888.88)
+}
+
+# compile and add in 2023 hobo data if it exists
+if(length(list.files(here(logger_path, "2023 data", "HOBO_2023")))!=0){
+hobo <- hobo %>%
+  bind_rows(logger_compile("2023", type = "hobo")) %>%
+  filter(is.na(year) != TRUE,
+         temp != -9999.00,
+         temp != -888.88)
+}
+
+# compile and add in 2024 hobo data if it exists
+if(length(list.files(here(logger_path, "2024 data", "HOBO_2024")))!=0){
+hobo <- hobo %>%
+  bind_rows(logger_compile("2024", type = "hobo")) %>%
+  filter(is.na(year) != TRUE,
+         temp != -9999.00,
+         temp != -888.88)
+}
+
+# compile and add in 2025 hobo data if it exists
+if(length(list.files(here(logger_path, "2025 data", "HOBO_2025")))!=0){
+hobo <- hobo %>%
+  bind_rows(logger_compile("2025", type = "hobo")) %>%
+  filter(is.na(year) != TRUE,
+         temp != -9999.00,
+         temp != -888.88)
+}
+
 
 ```
 # 0.2. Various QC checks for HOBO data

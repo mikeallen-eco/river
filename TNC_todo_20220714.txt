@@ -10,11 +10,12 @@ Task 5:
     - habitat
 * Do the following for all 5 tasks:
   * remake all relevant logger-based plots with recompiled data
-  * make sure all code will accomodate data from new years (> 2021)
-  * ensure new sites won't break code
+  * verify that everything works
+  * edit code to ensure it will accomodate data from new years (> 2021)
+  * edit code to ensure new sites won't break code
   * number all code chunks and add plot or table letter
-  * ensure all chunks run after running first one
-      
+  * add / clarify explanatory comments with all code
+
 
 Task 4
 * fix counting of sites in Plot A & G (n = XX)

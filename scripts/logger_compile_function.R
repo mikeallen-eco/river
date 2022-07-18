@@ -10,11 +10,17 @@ logger_compile <- function(year = "2021",
                         type,
                         logger_path){
     
-    # define whether we are compiling Hydro or HOBO files
-    if (type == "hydro") {
+    # define whether we are compiling HYDRO, HOBO, or PLDEUR files
+    if (type %in% c("hydro","HYDRO")) {
       type2 = "HYDRO"
-    } else{
+    } 
+    
+    if (type %in% c("hobo", "HOBO")) {
       type2 = "HOBO"
+    }
+    
+    if (type %in% c("pldeur", "PLDEUR")) {
+      type2 = "PLDEUR"
     }
     
     # define file path for data files based on the TNC folder naming convention
@@ -43,7 +49,7 @@ logger_compile <- function(year = "2021",
   logger_file_paths <- get_files(year, type, logger_path)
   
   ### if type == "hobo": read and compile all the HOBO data from excel
-  if(type == "hobo"){
+  if(type %in% c("hobo", "HOBO")){
     print(paste0("Compiling HOBO files from ", year))
     logger_data_list <- lapply(
       logger_file_paths,
@@ -73,7 +79,7 @@ logger_compile <- function(year = "2021",
   } # close HOBO if statement
   
   ### if type == "hydro": read and compile all the HYDRO data from excel
-  if(type == "hydro") {
+  if(type %in% c("hydro", "HYDRO")) {
     print(paste0("Compiling HYDRO files from ", year))
     
     logger_data_list <- lapply(
@@ -103,6 +109,35 @@ logger_compile <- function(year = "2021",
       } # close HYDRO lapply
     )
   } # close HYDRO if statement
+  
+  ### if type == "pldeur": read and compile all the PLDEUR data from excel
+  if(type %in% c("pldeur", "PLDEUR")) {
+    print(paste0("Compiling PLDEUR files from ", year))
+    
+    logger_data_list <- lapply(
+      logger_file_paths,
+      FUN = function(x) {
+        logger_data_df = readxl::read_xlsx(path = x,
+                                           sheet = year) %>%
+          rename(
+            year = 1,
+            site = 2,
+            logger = 3,
+            date = 4,
+            time = 5,
+            temp = 6,
+            turb = 7,
+            FlagsReviewed = 12
+          ) %>%
+          mutate(datetime = paste0(date, " ", hour(time), 
+                                   ":", minute(time),
+                                   ":", second(time))) %>%
+          select(-date, -time)
+        
+        return(logger_data_df)
+      } # close PLDEUR lapply
+    )
+  } # close PLDEUR if statement
   
   # bind all data together into one dataframe
   logger_data_compiled <- do.call(rbind, logger_data_list)
