@@ -1,0 +1,1 @@
+This folder is here to receive future (2022+) QC plots for the PLDEUR logger data.
