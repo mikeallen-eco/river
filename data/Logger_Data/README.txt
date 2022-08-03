@@ -1,1 +1,3 @@
-The 2016-2021 logger data in these folders was downloaded on January 4, 2022 from the TNC Box drive. Only one small change was made to the files: in file "TNC_25_CLDHY_2_masterfile_2017.xlsx" a sheet name was renamed from "2021" to "2017".
+The 2016-2021 logger data in these folders was downloaded on January 4, 2022 from the TNC Box drive. Only one small change was made to the files: in file "TNC_25_CLDHY_2_masterfile_2017.xlsx" a sheet name was renamed from "2021" to "2017". See the "Task0" .rmd file for more info.
+
+To add future data (2022+), create additional folders (e.g., "2022 data") and subfolders (e.g., "HOBO_2022" or "PLDEUR_2022") as needed. Then place new data within, being sure to 1) only place data files (no others) in the folders; and 2) copy the data formatting from 2021 exactly, including file and tab naming conventions.
