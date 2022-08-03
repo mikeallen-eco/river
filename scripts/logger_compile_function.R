@@ -129,9 +129,9 @@ logger_compile <- function(year = "2021",
             turb = 7,
             FlagsReviewed = 12
           ) %>%
-          mutate(datetime = paste0(date, " ", hour(time), 
+          mutate(datetime = ymd_hms(paste0(date, " ", hour(time), 
                                    ":", minute(time),
-                                   ":", second(time))) %>%
+                                   ":", second(time)))) %>%
           select(-date, -time)
         
         return(logger_data_df)

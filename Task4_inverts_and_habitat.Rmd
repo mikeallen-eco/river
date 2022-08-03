@@ -5,7 +5,7 @@ date: "4/28/2022"
 output: html_document
 ---
 # How to run this code
-Run the first section ("chunk") of this Rmd document (section 3.0). That will load all libraries, functions, and data. After that, you can scroll down to the plot or table you wish to make or the model you wish to run and run just that section. Plots, tables and models are labeled with letters (A-Z) and correspond to those in the "Task 4" sub-folder in the "output" folder. See the README file in that sub-folder for figure captions and information.
+Run the first section ("chunk") of this Rmd document (section 4.0). That will load all libraries, functions, and data. After that, you can scroll down to the plot or table you wish to make or the model you wish to run and run just that section. Plots, tables and models are labeled with letters (A-Z) and correspond to those in the "Task 4" sub-folder in the "output" folder. See the README file in that sub-folder for figure captions and information.
 
 The following text is a general description of Task 4.
 
@@ -34,12 +34,17 @@ library(fmsb)
 library(wesanderson)
 library(lme4)
 source("scripts/load_monthly_logger_data.R")
+source("scripts/future_macro_function.R")
+source("scripts/future_hab_function.R")
 
 # set path to save plots and other output to
 task_path <- "output/Task4_inverts_and_habitat/"
 
 # path where the Macroinvertebrate and Habitat Quality data are stored
 mh_path <- "data/Macro_Habitat"
+
+# Next we read in macroinvertebrate data one year at a time
+  # this was necessary as they all had slightly different formats
 
 # Read in Macroinvertebrate data - 2016
 inv16 <- read_xlsx(here(mh_path,
@@ -157,133 +162,25 @@ inv21 <- read_xlsx(here(mh_path,
          rating = 11
          )
 
-# Check if 2022 macroinvertebrate data exists. If so, then load it.
-if(max(grepl(list.files("data/Macro_Habitat/"), pattern = "2022"))==1){
-
-# get name of 2022 data file
-file22 <- list.files("data/Macro_Habitat/")[grepl(list.files("data/Macro_Habitat/"), pattern = "2022")]
-
-# Read in Macroinvertebrate data - 2022
-inv22 <- read_xlsx(here(mh_path,
-                        file22),
-                   skip = 3, 
-                   sheet = "macro_2022"
-                   ) %>%
-  select(c(3,4,32:40)) %>%
-  rename(tnc_code = 1,
-         date = 2,
-         num_gen = 3,
-         pct_noninsect = 4,
-         pct_ept = 5,
-         num_scraper = 6,
-         hilsenhoff = 7,
-         num_talu2 = 8,
-         num_talu3 = 9,
-         index = 10,
-         rating = 11
-         ) %>%
-  filter(is.na(num_gen) != T)
-  
-}
-
-# Check if 2023 macroinvertebrate data exists. If so, then load it.
-if(max(grepl(list.files("data/Macro_Habitat/"), pattern = "2023"))==1){
-
-# get name of 2022 data file
-file23 <- list.files("data/Macro_Habitat/")[grepl(list.files("data/Macro_Habitat/"), pattern = "2023")]
-
-# Read in Macroinvertebrate data - 2023
-inv23 <- read_xlsx(here(mh_path,
-                        file23),
-                   skip = 2, 
-                   sheet = "macro_2023"
-                   ) %>%
-  select(c(3,4,32:40)+1) %>%
-  rename(num_gen = 3,
-         pct_noninsect = 4,
-         pct_ept = 5,
-         num_scraper = 6,
-         hilsenhoff = 7,
-         num_talu2 = 8,
-         num_talu3 = 9,
-         index = 10,
-         rating = 11
-         )
-  
-}
-
-# Check if 2024 macroinvertebrate data exists. If so, then load it.
-if(max(grepl(list.files("data/Macro_Habitat/"), pattern = "2024"))==1){
-
-# get name of 2022 data file
-file24 <- list.files("data/Macro_Habitat/")[grepl(list.files("data/Macro_Habitat/"), pattern = "2024")]
-
-# Read in Macroinvertebrate data - 2024
-inv24 <- read_xlsx(here(mh_path,
-                        file24),
-                   skip = 3, 
-                   sheet = "macro_2024"
-                   ) %>%
-  select(c(3,4,32:40)) %>%
-  rename(tnc_code = 1,
-         date = 2,
-         num_gen = 3,
-         pct_noninsect = 4,
-         pct_ept = 5,
-         num_scraper = 6,
-         hilsenhoff = 7,
-         num_talu2 = 8,
-         num_talu3 = 9,
-         index = 10,
-         rating = 11
-         ) %>%
-  filter(is.na(num_gen) != T)
-  
-}
-
-# Check if 2025 macroinvertebrate data exists. If so, then load it.
-if(max(grepl(list.files("data/Macro_Habitat/"), pattern = "2025"))==1){
-
-# get name of 2025 data file
-file25 <- list.files("data/Macro_Habitat/")[grepl(list.files("data/Macro_Habitat/"), pattern = "2025")]
-
-# Read in Macroinvertebrate data - 2025
-inv25 <- read_xlsx(here(mh_path,
-                        file25),
-                   skip = 2, 
-                   sheet = "macro_2025"
-                   ) %>%
-  select(c(3,4,32:40)+1) %>%
-  rename(num_gen = 3,
-         pct_noninsect = 4,
-         pct_ept = 5,
-         num_scraper = 6,
-         hilsenhoff = 7,
-         num_talu2 = 8,
-         num_talu3 = 9,
-         index = 10,
-         rating = 11
-         )
-  
-}
-
+# Check if 2022-2026 macroinvertebrate data exists. If so, then load it.
+inv22 <- future_macro("2022")
+inv23 <- future_macro("2023")
+inv24 <- future_macro("2024")
+inv25 <- future_macro("2025")
+inv26 <- future_macro("2026")
 
 # Compile all Macroinvertebrate data into one data frame
-#   first just the files from 2016-2021
-inv_tmp <- inv16 %>%
+inv <- inv16 %>%
   bind_rows(inv17) %>%
   bind_rows(inv18) %>%
   bind_rows(inv19) %>%
   bind_rows(inv20) %>%
-  bind_rows(inv21)
-
-# now add 2022 up through 2025 (only if they exist!)
-if(is.object(inv22)){inv_tmp <- inv_tmp %>% bind_rows(inv22)}
-if(is.object(inv23)){inv_tmp <- inv_tmp %>% bind_rows(inv23)}
-if(is.object(inv24)){inv_tmp <- inv_tmp %>% bind_rows(inv24)}
-if(is.object(inv25)){inv_tmp <- inv_tmp %>% bind_rows(inv25)}
-
-inv <- inv_tmp %>%
+  bind_rows(inv21) %>%
+  bind_rows(inv22) %>%
+  bind_rows(inv23) %>%
+  bind_rows(inv24) %>%
+  bind_rows(inv25) %>%
+  bind_rows(inv26) %>%
   mutate(year = year(date),
          yearf = as.factor(year)) %>%
   mutate(yearf = fct_reorder(yearf, index, .fun = "mean"),
@@ -295,11 +192,11 @@ inv <- inv_tmp %>%
                             TRUE ~ rating))
 
 # remove data frames of individual years
-rm(inv16, inv17, inv18, inv19, inv20, inv21)
-if(is.object(inv22)){rm(inv22)}
-if(is.object(inv23)){rm(inv23)}
-if(is.object(inv24)){rm(inv24)}
-if(is.object(inv25)){rm(inv25)}
+rm(inv16, inv17, inv18, inv19, inv20, inv21,
+   inv22, inv23, inv24, inv25, inv26)
+
+# Next we read in habitat data one year at a time
+  # this was necessary as they all had slightly different formats
 
 # Read in habitat data - 2016
 hab16 <- read_xlsx(here(mh_path,
@@ -430,6 +327,13 @@ hab21 <- read_xlsx(here(mh_path,
          rip_veg_l = 14,
          rip_veg_r = 15)
 
+# Check if 2022-2026 habitat data exists. If so, then load it.
+hab22 <- future_hab("2022")
+hab23 <- future_hab("2023")
+hab24 <- future_hab("2024")
+hab25 <- future_hab("2025")
+hab26 <- future_hab("2026")
+
 # Compile all Habitat data into one data frame
 hab <- hab16 %>%
   bind_rows(hab17) %>%
@@ -437,6 +341,11 @@ hab <- hab16 %>%
   bind_rows(hab19) %>%
   bind_rows(hab20) %>%
   bind_rows(hab21) %>%
+  bind_rows(hab22) %>%
+  bind_rows(hab23) %>%
+  bind_rows(hab24) %>%
+  bind_rows(hab25) %>%
+  bind_rows(hab26) %>%
   rename(date = date_collected) %>%
   mutate(year = year(date),
          yearf = as.factor(year)) %>%
@@ -456,7 +365,8 @@ hab <- hab16 %>%
                                     TRUE ~ habitat_rating))
 
 # remove data frames of individual years
-rm(hab16, hab17, hab18, hab19, hab20, hab21)
+rm(hab16, hab17, hab18, hab19, hab20, hab21,
+   hab22, hab23, hab24, hab25, hab26)
 
 # Create data frame of mean July temperatures for each site
 tsum_july <- tsum_month %>%

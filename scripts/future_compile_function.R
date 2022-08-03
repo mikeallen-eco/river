@@ -1,5 +1,5 @@
 # function to compile future (2022+) data if it exists
-compile_future <- function(year = "2022",
+future_compile <- function(year = "2022",
                             type = "HOBO",
                             logger_path = "data/Logger_Data/"){
   

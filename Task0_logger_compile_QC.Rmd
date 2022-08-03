@@ -14,10 +14,10 @@ Run the first section ("chunk") of this Rmd document (section 0.0). That will lo
 ## Errors discovered in 2016-2021 XLSX files 
 The 2016-2021 data files that this code works on were downloaded from the Box folder on January 4-7, 2022. A few errors discovered in the 2016-2021 data files were fixed in the code (in chunk 0.1) except error no. 2, which was fixed in the xlsx file (a tab was renamed). For all code to work properly, these 2016-2021 data files should not be changed any further and any errors you discover in data added later (after 2021) should be fixed within the original excel file. Here are the 2016-2021 errors that were fixed in the code:
 
-1. see 3 QC filter steps for hobo (see section 0.1)
+1. see 3 QC filter steps for hobo (section 0.1)
 2. TNC_25_CLDHY_2_masterfile_2017.xlsx sheet name was "2021"
   note: I fixed this in the xlsx file to allow compile to run
-3. possible naming issue in HYDRO data: is CLDHY-2 the same as CLDHY_2? In file: TNC_81_CLDHY2_2020_masterfile.xlsx
+3. possible naming issue in HYDRO data: is CLDHY-2 the same as CLDHY_2? In file: TNC_81_CLDHY2_2020_masterfile.xlsx (see section 0.4)
 
 # 0.0. Load libraries and set logger data path
 To load data from a new year, you will place the excel file into the folder linked to at the end of this code chunk (currently "data/Logger_Data"). It should be formatted exactly like the 2021 file from the corresponding logger type.
@@ -30,6 +30,8 @@ library(ggplot2)
 here <- here::here # set "here" function to be in "here" package
 # load function to compile data files for hobo or hydro loggers 
 source(here("scripts", "logger_compile_function.R"))
+# load function to compile logger data from future (2022+) years
+source(here("scripts", "future_compile_function.R"))
 # load function to plot temp or do over time for each site/year 
 source(here("scripts", "logger_plot_function.R"))
 plotsave <- "output/Task0_Compile_Initial_QC/"
@@ -38,7 +40,7 @@ plotsave <- "output/Task0_Compile_Initial_QC/"
 logger_path <- "data/Logger_Data/" 
 ```
 # 0.1. Read and compile HOBO data using logger_compile function
-This code section runs the "logger_compile" function on the HOBO logger data files from each year to compile data into one big data frame named "hobo". It has built in fixes for errors discovered in the data excel files from 2016-2021. So, any changes to those files will also require changes to this code. [Note: functionality to handle new years not yet implemented.]
+This code section runs the "logger_compile" function on the HOBO logger data files from each year to compile data into one big data frame named "hobo". It has built in fixes for errors discovered in the data excel files from 2016-2021. So, any changes to those files will also require changes to this code. [Note: functionality to handle new years through 2026 exists as long as those data are identical in format and file/folder naming convention to the 2021 format. Adding data after that year will require editing the code below to add a new "future_compile" line.]
 ```{r}
 # compile hobo logger data from 2016-2021
 hobo <- logger_compile("2016", type = "hobo") %>%
@@ -47,6 +49,11 @@ hobo <- logger_compile("2016", type = "hobo") %>%
   bind_rows(logger_compile("2019", type = "hobo")) %>%
   bind_rows(logger_compile("2020", type = "hobo")) %>%
   bind_rows(logger_compile("2021", type = "hobo")) %>%
+  bind_rows(future_compile("2022", type = "hobo")) %>%
+  bind_rows(future_compile("2023", type = "hobo")) %>%
+  bind_rows(future_compile("2024", type = "hobo")) %>%
+  bind_rows(future_compile("2025", type = "hobo")) %>%
+  bind_rows(future_compile("2026", type = "hobo")) %>%
   # remove rows with year = NA (removes ~50k rows)
   filter(is.na(year) != TRUE) %>%
 # fix for 10460 rows in TNC_24_CLDHO_1_2019_masterfile.xlsx
@@ -64,45 +71,6 @@ hobo <- logger_compile("2016", type = "hobo") %>%
   # remove 17952 rows from various files with large negative numbers
   filter(temp != -9999.00,
          temp != -888.88)
-
-
-
-# compile and add in 2022 hobo data if it exists
-if(length(list.files(here(logger_path, "2022 data", "HOBO_2022")))!=0){
-hobo <- hobo %>%
-  bind_rows(logger_compile("2022", type = "hobo")) %>%
-  filter(is.na(year) != TRUE,
-         temp != -9999.00,
-         temp != -888.88)
-}
-
-# compile and add in 2023 hobo data if it exists
-if(length(list.files(here(logger_path, "2023 data", "HOBO_2023")))!=0){
-hobo <- hobo %>%
-  bind_rows(logger_compile("2023", type = "hobo")) %>%
-  filter(is.na(year) != TRUE,
-         temp != -9999.00,
-         temp != -888.88)
-}
-
-# compile and add in 2024 hobo data if it exists
-if(length(list.files(here(logger_path, "2024 data", "HOBO_2024")))!=0){
-hobo <- hobo %>%
-  bind_rows(logger_compile("2024", type = "hobo")) %>%
-  filter(is.na(year) != TRUE,
-         temp != -9999.00,
-         temp != -888.88)
-}
-
-# compile and add in 2025 hobo data if it exists
-if(length(list.files(here(logger_path, "2025 data", "HOBO_2025")))!=0){
-hobo <- hobo %>%
-  bind_rows(logger_compile("2025", type = "hobo")) %>%
-  filter(is.na(year) != TRUE,
-         temp != -9999.00,
-         temp != -888.88)
-}
-
 
 ```
 # 0.2. Various QC checks for HOBO data
@@ -202,26 +170,30 @@ hydro <- logger_compile("2016", type = "hydro") %>%
   bind_rows(logger_compile("2019", type = "hydro")) %>%
   bind_rows(logger_compile("2020", type = "hydro")) %>%
   bind_rows(logger_compile("2021", type = "hydro")) %>%
+  bind_rows(future_compile("2022", type = "hydro")) %>%
+  bind_rows(future_compile("2023", type = "hydro")) %>%
+  bind_rows(future_compile("2024", type = "hydro")) %>%
+  bind_rows(future_compile("2025", type = "hydro")) %>%
+  bind_rows(future_compile("2026", type = "hydro")) %>%
   # remove a 12 row with NA year (and other fields)
   filter(is.na(year) != TRUE,
          is.na(temp) != TRUE)
 
 # note: TNC_25_CLDHY_2_masterfile_2017.xlsx sheet name was "2021"
-#   I corrected it so the code would run; inform TNC
+#   I corrected it so the code would run; informed TNC
 
 ```
 # 0.5. Various QC checks for HYDRO data
 ```{r}
 str(hydro)
-unique(hydro$year) # 2016:2021
+unique(hydro$year) # 2016 to max year
 unique(hydro$site)
-length(unique(hydro$site)) # 9
+length(unique(hydro$site)) # should equal number of sites
 unique(hydro$logger)
-length(unique(hydro$logger)) # 7 
-# note: possible naming issue: is CLDHY-2 the same as CLDHY_2?
+length(unique(hydro$logger)) # should equal number of loggers 
+# note: possible logger naming issue: is CLDHY-2 the same as CLDHY_2?
 # file: TNC_81_CLDHY2_2020_masterfile.xlsx
 hydro[hydro$logger == "CLDHY-2",]
-
 ```
 # 0.6. Plotting HYDRO data by site for QC
 ```{r}
@@ -234,7 +206,7 @@ ggsave(paste0(plotsave, "hydro_temp/", i,
               width = 9, height = 9, dpi = 100)
 }
 
-# make all HYDRO temperature data by site & year for QC
+# make all HYDRO DO data by site & year for QC
 for(i in as.character(unique(hydro$year))){
 logger_plot(hydro, i, "do")
 print(paste0("saving ", i, " plot"))
@@ -250,7 +222,7 @@ hydro_no_temp_flags <- hydro %>%
 hydro_no_DO_flags <- hydro %>%
   filter(FLAG_DO == 0)
 
-# make all HYDRO temperature data by site & year for QC
+# make all HYDRO temperature data by site & year for QC (w/o flags)
 for(i in as.character(unique(hydro$year))){
 logger_plot(hydro_no_temp_flags, i, "temp")
 print(paste0("saving ", i, " plot"))
@@ -258,7 +230,7 @@ ggsave(paste0(plotsave, "hydro_temp/", i, "_hydro_temp_noflag.png"),
               width = 9, height = 9, dpi = 100)
 }
 
-# make all HYDRO temperature data by site & year for QC
+# make all HYDRO DO data by site & year for QC (w/o flags)
 for(i in as.character(unique(hydro$year))){
 logger_plot(hydro_no_DO_flags, i, "do")
 print(paste0("saving ", i, " plot"))
@@ -269,7 +241,60 @@ ggsave(paste0(plotsave, "hydro_do/", i,
 
 rm(hydro_no_temp_flags, hydro_no_DO_flags)
 ```
-# 0.7. Make final hobo-hydro file with temp and DO
+# 0.7. Read and compile PLDEUR data using logger_compile function
+```{r}
+# Compile all existing PLDEUR logger data
+pldeur <- logger_compile("2016", type = "pldeur") %>%
+  bind_rows(logger_compile("2017", type = "pldeur")) %>%
+  bind_rows(logger_compile("2018", type = "pldeur")) %>%
+  bind_rows(logger_compile("2019", type = "pldeur")) %>%
+  bind_rows(logger_compile("2020", type = "pldeur")) %>%
+  bind_rows(logger_compile("2021", type = "pldeur")) %>%
+  bind_rows(future_compile("2022", type = "pldeur")) %>%
+  bind_rows(future_compile("2023", type = "pldeur")) %>%
+  bind_rows(future_compile("2024", type = "pldeur")) %>%
+  bind_rows(future_compile("2025", type = "pldeur")) %>%
+  bind_rows(future_compile("2026", type = "pldeur")) %>%
+  # remove rows with NA year (and other fields)
+  filter(is.na(year) != TRUE,
+         is.na(temp) != TRUE)
+```
+# 0.8. Various QC checks for PLDEUR data
+```{r}
+str(pldeur)
+unique(pldeur$year) # 2016 to max year
+unique(pldeur$site)
+length(unique(pldeur$site)) # should equal number of sites
+unique(pldeur$logger)
+length(unique(pldeur$logger)) # should equal number of loggers 
+```
+# 0.9. Plotting PLDEUR data by site for QC
+```{r}
+# make plots of all PLDEUR temperature data by site & year for QC
+for(i in as.character(unique(pldeur$year))){
+logger_plot(pldeur, i, "temp")
+print(paste0("saving ", i, " plot"))
+ggsave(paste0(plotsave, "pldeur_temp/", i, 
+              "_pldeur_temp.png"), 
+              width = 9, height = 9, dpi = 100)
+}
+
+# do the same but now without flagged data
+# make versions of the data without any flagged observations
+pldeur_no_temp_flags <- hydro %>%
+  filter(FLAG_Temp == 0)
+
+# make all PLDEUR temperature data by site & year for QC (w/o flags)
+for(i in as.character(unique(pldeur$year))){
+logger_plot(pldeur_no_temp_flags, i, "temp")
+print(paste0("saving ", i, " plot"))
+ggsave(paste0(plotsave, "pldeur_temp/", i, "_pldeur_temp_noflag.png"), 
+              width = 9, height = 9, dpi = 100)
+}
+
+rm(pldeur_no_temp_flags)
+```
+# 0.10. Make final compiled logger data file with temp, turb, & DO
 ```{r}
 p <- hobo %>%
   select(site, year, datetime, logger, temp, do, do_adj, do_sat,
@@ -277,13 +302,16 @@ p <- hobo %>%
   mutate(spcon = NA, turb = NA, FLAG_NTU = NA, FLAG_SpCnd = NA,
          logger_type = "hobo") %>%
   bind_rows(mutate(hydro, logger_type = "hydro")) %>%
+  bind_rows(mutate(pldeur, spcon = NA, FLAG_SpCnd = NA, 
+                   do = NA, do_adj = NA,
+                   do_sat = NA, FLAG_DO = NA,
+                   logger_type = "pldeur")) %>%
   select(site:logger_type)
 
 saveRDS(p, "output/compiled_logger_data.rds")
 ```
-# 0.8. plot temperature time series for each site/year vs. thresholds (showing loggers)
+# 0.11. plot temperature time series for each site/year vs. thresholds (showing loggers)
 ```{r}
-
 unique(p$site)
 #  [1] "TNC_10" "TNC_18" "TNC_19" "TNC_2"  "TNC_28" "TNC_5"  "TNC_8" 
 #  [8] "TNC_9"  "TNC_16" "TNC_24" "TNC_4"  "TNC_13" "TNC_81" "TNC_80"
@@ -315,9 +343,8 @@ ggsave(paste0(plotsave, "temp_by_date_year_site_logger/",
        height = 6, width = 6, dpi = 400)
 }
 ```
-# 0.9. plot DO time series for each site/year vs. thresholds (showing loggers)
+# 0.12. plot DO time series for each site/year vs. thresholds (showing loggers)
 ```{r}
-
 unique(p$site)
 #  [1] "TNC_10" "TNC_18" "TNC_19" "TNC_2"  "TNC_28" "TNC_5"  "TNC_8" 
 #  [8] "TNC_9"  "TNC_16" "TNC_24" "TNC_4"  "TNC_13" "TNC_81" "TNC_80"
@@ -349,9 +376,8 @@ ggsave(paste0(plotsave, "DO_by_date_year_site_logger/",
        height = 6, width = 6, dpi = 400)
 }
 ```
-# 0.10. plot DO (adjusted) time series for each site/year vs. thresholds (showing loggers)
+# 0.13. plot DO (adjusted) time series for each site/year vs. thresholds (showing loggers)
 ```{r}
-
 unique(p$site)
 #  [1] "TNC_10" "TNC_18" "TNC_19" "TNC_2"  "TNC_28" "TNC_5"  "TNC_8" 
 #  [8] "TNC_9"  "TNC_16" "TNC_24" "TNC_4"  "TNC_13" "TNC_81" "TNC_80"
@@ -383,4 +409,3 @@ ggsave(paste0(plotsave, "DO_by_date_year_site_logger/",
        height = 6, width = 6, dpi = 400)
 }
 ```
-
