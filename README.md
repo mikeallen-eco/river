@@ -1,6 +1,5 @@
-# river
-
-Water quality monitoring code and data.
+# River Data
+Code to analyze and visualize river water quality monitoring data including data loggers (temperature, DO, turbidity) and macroinvertebrate/habitat quality indices. See "output" folder for examples.
 
 ## Steps to run this code
 0. Make sure you have R and RStudio installed.
