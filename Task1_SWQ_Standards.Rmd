@@ -400,10 +400,13 @@ rm(day_table, days_over_table)
 ```
 # 1.5. Plot C: number of days exceeding temperature thresholds
 ```{r}
+# make data frame of sites with low coverage of summer days
+  # these will be plotted as separate symbols
 temp_count_bad <- temp_count %>%
   left_join(temp_cov) %>%
   filter(is.na(low) == F)
 
+# make the main plot
 temp_count %>%
   filter(summer_days >= 0.8) %>%
 ggplot() +
@@ -446,6 +449,9 @@ temp_count_bad <- temp_count %>%
   filter(is.na(low) == F, 
          site == i)
 
+# get max year across all sites
+maxyr <- max(temp_count$year)
+
 if(nrow(temp_count_bad)==0){
   temp_count_bad <- data.frame(
     site = i,
@@ -470,9 +476,9 @@ ggplot() +
              size = 4) +
   scale_color_brewer(palette = "Dark2") +
   scale_y_continuous(limits = c(0,150)) +
-  scale_x_continuous(breaks = 2016:2021,
-                     labels = as.character(2016:2021),
-                     limits = c(2016, 2021)) +
+  scale_x_continuous(breaks = 2016:maxyr,
+                     labels = as.character(2016:maxyr),
+                     limits = c(2016, maxyr)) +
   theme_bw() +
   theme(text = element_text(size = 14),
         axis.text.x = element_text(size = 10),
@@ -704,6 +710,9 @@ DO_count_bad <- DO_count %>%
   filter(is.na(low) == F, 
          site == i)
 
+# get max year across all sites
+maxyr <- max(DO_count$year)
+
 if(nrow(DO_count_bad)==0){
   temp_count_bad <- data.frame(
     site = i,
@@ -728,9 +737,9 @@ ggplot() +
              size = 4) +
   scale_color_brewer(palette = "Dark2") +
   scale_y_continuous(limits = c(0,150)) +
-  scale_x_continuous(breaks = 2016:2021,
-                     labels = as.character(2016:2021),
-                     limits = c(2016, 2021)) +
+  scale_x_continuous(breaks = 2016:maxyr,
+                     labels = as.character(2016:maxyr),
+                     limits = c(2016, maxyr)) +
   theme_bw() +
   theme(text = element_text(size = 14),
         axis.text.x = element_text(size = 10),
@@ -1785,7 +1794,6 @@ ggsave(
 # 1.29. Plot Q: Plots of temperature over time for each site (panels by year)
 ```{r}
 site_name_vector = unique(tmax$site)
-# plot daily max vs. thresholds
 
 for(site_name in site_name_vector){
 
@@ -1867,10 +1875,9 @@ tmax %>%
 
 num_panels <- length(unique((tmax %>% 
                                filter(site == site_name))$year))
-if(num_panels %in% 4:6){
+
 ggsave(paste0(plotsave, "PlotQ_individual_sites_temperature/", site_name, "_tmax_by_day_year.png"),
        height = 6, width = 9, dpi = 400)
-  }
 
 }
 
@@ -1953,10 +1960,9 @@ dmin %>%
 
 num_panels <- length(unique((tmax %>% 
                                filter(site == site_name))$year))
-if(num_panels %in% 4:6){
+
 ggsave(paste0(plotsave, "PlotR_individual_sites_DO/", site_name, "_DO_by_day_year.png"),
        height = 5, width = 8, dpi = 400)
-  }
 
 }
 
