@@ -71,6 +71,9 @@ p <- readRDS("output/compiled_logger_data.rds") %>%
   mutate(order = as.numeric(substr(site, 5, 6)),
          site = fct_reorder(site, order))
 
+# get max year
+maxyr <- max(p$year)
+
 # format final compiled temperature data
 tmax <- p %>%
   filter(FLAG_Temp == 0) %>%
@@ -93,7 +96,7 @@ tmax <- p %>%
                          year == 2021 & 
                          day == 118))) %>%
   right_join(expand.grid(site = unique(p$site), 
-                         year = 2016:2021, day = 82:339)) %>%
+                         year = 2016:maxyr, day = 82:339)) %>%
   arrange(site, year, day) %>%
   mutate(summer = case_when(day %in% 152:243 ~ 1,
                             TRUE ~ 0))
@@ -160,7 +163,7 @@ dmin <- p %>%
             .groups = "drop") %>%
   droplevels() %>%
   right_join(expand.grid(site = unique(p$site), 
-                         year = 2016:2021, day = 82:339)) %>%
+                         year = 2016:maxyr, day = 82:339)) %>%
   arrange(site, year, day) %>%
   mutate(summer = case_when(day %in% 152:243 ~ 1,
                             TRUE ~ 0))
