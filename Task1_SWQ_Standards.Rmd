@@ -896,7 +896,7 @@ n_years <- length(unique(tstatJAGS$yearf))
 n_sites <- length(unique(tstatJAGS$site))
 TMex_mat <- matrix(data = NA, nrow = n_sites, ncol = n_years)
 TMex_n_mat <- matrix(data = NA, nrow = n_sites, ncol = n_years)
-yearf_mat <- matrix(data = rep(1:6, n_sites), nrow = n_sites, ncol = n_years, byrow = T)
+yearf_mat <- matrix(data = rep(1:n_years, n_sites), nrow = n_sites, ncol = n_years, byrow = T)
 
 year1_mat <- matrix(data = c(rep(1,n_sites), 
                              rep(0,length(TMex_mat)-n_sites)),
