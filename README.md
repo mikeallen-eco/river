@@ -1,4 +1,4 @@
-# River Data
+# River Data Analysis
 Code to analyze and visualize river water quality monitoring data including data loggers (temperature, DO, turbidity) and macroinvertebrate/habitat quality indices. See "output" folder for examples.
 
 ## About the analysis
