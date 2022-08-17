@@ -1,10 +1,9 @@
 # River Data Analysis
-[![DOI](https://zenodo.org/badge/444492875.svg)](https://zenodo.org/badge/latestdoi/444492875)
 
 Code to analyze and visualize river water quality monitoring data including data loggers (temperature, DO, turbidity) and macroinvertebrate/habitat quality indices. See "output" folder for examples.
 
 ## About the analysis
-This analysis was performed in 2022 (with 2016-2021 data) in collaboration with The Nature Conservancy in support of their Paulinskill River restoration and monitoring efforts. For questions about the project or the data contact Michelle DiBlasio at michelle (d o t) diblasio (a t) tnc (d o t) org.
+This analysis was performed in 2022 (with 2016-2021 data) in collaboration with The Nature Conservancy in support of their Paulinskill River restoration and monitoring efforts. For questions about the project or the data contact Michelle DiBlasio at michelle (d o t) diblasio (a t) tnc (d o t) org. The archived version of the repository as it was handed off in 2022 lives here (release v1.0.0): [![DOI](https://zenodo.org/badge/444492875.svg)](https://zenodo.org/badge/latestdoi/444492875) 
 
 ## Steps to run this code
 0. Make sure you have R and RStudio installed.
