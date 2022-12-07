@@ -27,6 +27,7 @@ library(here)
 library(readxl)
 library(lubridate)
 library(ggplot2)
+library(wesanderson)
 here <- here::here # set "here" function to be in "here" package
 # load function to compile data files for hobo or hydro loggers 
 source(here("scripts", "logger_compile_function.R"))
@@ -281,7 +282,7 @@ ggsave(paste0(plotsave, "pldeur_temp/", i,
 
 # do the same but now without flagged data
 # make versions of the data without any flagged observations
-pldeur_no_temp_flags <- hydro %>%
+pldeur_no_temp_flags <- pldeur %>%
   filter(FLAG_Temp == 0)
 
 # make all PLDEUR temperature data by site & year for QC (w/o flags)
@@ -296,6 +297,8 @@ rm(pldeur_no_temp_flags)
 ```
 # 0.10. Make final compiled logger data file with temp, turb, & DO
 ```{r}
+if(exists("pldeur")==F){pldeur <- data.frame()}
+
 p <- hobo %>%
   select(site, year, datetime, logger, temp, do, do_adj, do_sat,
          FLAG_Temp = FLAG_temp, FLAG_DO) %>%
