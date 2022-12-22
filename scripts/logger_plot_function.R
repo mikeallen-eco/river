@@ -29,6 +29,20 @@ logger_plot <- function(df, year, variable){
     labs(x = "", y = "DO", title = year)
   }
   
+  if(variable == "turb"){
+    the_plot <- df %>%
+      filter(year == year_num) %>%
+      mutate(order = as.numeric(gsub("TNC_", "", site)),
+             site = forcats::fct_reorder(site, order),
+             site_logger = paste0(site," ", logger)) %>%
+      ggplot() + 
+      geom_line(aes(x = datetime, y = turb+0.1), size = 0.1) +
+      facet_wrap(~site_logger) +
+      theme_bw() +
+      scale_y_log10() +
+      labs(x = "", y = "Turbidity", title = year)
+  }
+  
   # return the plot
   return(the_plot)
 }

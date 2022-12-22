@@ -28,6 +28,7 @@ library(readxl)
 library(lubridate)
 library(ggplot2)
 library(wesanderson)
+'%notin%' <- Negate('%in%')
 here <- here::here # set "here" function to be in "here" package
 # load function to compile data files for hobo or hydro loggers 
 source(here("scripts", "logger_compile_function.R"))
@@ -126,7 +127,7 @@ ggsave(filename = paste0(plotsave, "hobo_temp/", i,
               width = 9, height = 9, dpi = 100)
 }
 
-# make all HOBO temperature data by site & year for QC
+# make all HOBO DO data by site & year for QC
 for(i in as.character(unique(hobo$year))){
 logger_plot(hobo, i, "do")
 print(paste0("saving ", i, " plot"))
@@ -215,6 +216,22 @@ ggsave(paste0(plotsave, "hydro_do/", i, "_hydro_do.png"),
               width = 9, height = 9, dpi = 100)
 }
 
+# make all HYDRO turbidity data by site & year for QC
+
+# first create "hydro_turb" folder if needed
+if(!dir.exists("output/Task0_Compile_Initial_QC/hydro_turb")){
+dir.create("output/Task0_Compile_Initial_QC/hydro_turb") 
+}
+
+# now make hydro_turb plots
+
+for(i in as.character(unique(hydro$year))){
+logger_plot(hydro, i, "turb")
+print(paste0("saving ", i, " plot"))
+ggsave(paste0(plotsave, "hydro_turb/", i, "_hydro_turb.png"), 
+              width = 9, height = 9, dpi = 100)
+}
+
 # do the same but now without flagged data
 # make versions of the data without any flagged observations
 hydro_no_temp_flags <- hydro %>%
@@ -222,6 +239,9 @@ hydro_no_temp_flags <- hydro %>%
 
 hydro_no_DO_flags <- hydro %>%
   filter(FLAG_DO == 0)
+
+hydro_no_turb_flags <- hydro %>%
+  filter(FLAG_NTU == 0)
 
 # make all HYDRO temperature data by site & year for QC (w/o flags)
 for(i in as.character(unique(hydro$year))){
@@ -240,7 +260,16 @@ ggsave(paste0(plotsave, "hydro_do/", i,
               width = 9, height = 9, dpi = 100)
 }
 
-rm(hydro_no_temp_flags, hydro_no_DO_flags)
+# make all HYDRO turbidity data by site & year for QC (w/o flags)
+for(i in as.character(unique(hydro$year))){
+logger_plot(hydro_no_turb_flags, i, "turb")
+print(paste0("saving ", i, " plot"))
+ggsave(paste0(plotsave, "hydro_turb/", i, 
+              "_hydro_turb_noflag.png"), 
+              width = 9, height = 9, dpi = 100)
+}
+
+rm(hydro_no_temp_flags, hydro_no_DO_flags, hydro_no_turb_flags)
 ```
 # 0.7. Read and compile PLDEUR data using logger_compile function
 ```{r}
@@ -280,10 +309,28 @@ ggsave(paste0(plotsave, "pldeur_temp/", i,
               width = 9, height = 9, dpi = 100)
 }
 
+# make plots of all PLDEUR turbidity data by site & year for QC
+# first create "pldeur_turb" folder if needed
+if(!dir.exists("output/Task0_Compile_Initial_QC/pldeur_turb")){
+dir.create("output/Task0_Compile_Initial_QC/pldeur_turb") 
+}
+
+# now make pldeur_turb plots
+for(i in as.character(unique(pldeur$year))){
+logger_plot(pldeur, i, "turb")
+print(paste0("saving ", i, " plot"))
+ggsave(paste0(plotsave, "pldeur_turb/", i, 
+              "_pldeur_turb.png"), 
+              width = 9, height = 9, dpi = 100)
+}
+
 # do the same but now without flagged data
 # make versions of the data without any flagged observations
 pldeur_no_temp_flags <- pldeur %>%
   filter(FLAG_Temp == 0)
+
+pldeur_no_turb_flags <- pldeur %>%
+  filter(FLAG_NTU == 0)
 
 # make all PLDEUR temperature data by site & year for QC (w/o flags)
 for(i in as.character(unique(pldeur$year))){
@@ -293,7 +340,15 @@ ggsave(paste0(plotsave, "pldeur_temp/", i, "_pldeur_temp_noflag.png"),
               width = 9, height = 9, dpi = 100)
 }
 
-rm(pldeur_no_temp_flags)
+# make all PLDEUR turbidity data by site & year for QC (w/o flags)
+for(i in as.character(unique(pldeur$year))){
+logger_plot(pldeur_no_turb_flags, i, "turb")
+print(paste0("saving ", i, " plot"))
+ggsave(paste0(plotsave, "pldeur_turb/", i, "_pldeur_turb_noflag.png"), 
+              width = 9, height = 9, dpi = 100)
+}
+
+rm(pldeur_no_temp_flags, pldeur_no_turb_flags)
 ```
 # 0.10. Make final compiled logger data file with temp, turb, & DO
 ```{r}
@@ -409,6 +464,45 @@ p %>%
 
 ggsave(paste0(plotsave, "DO_by_date_year_site_logger/", 
               station, "_DOadj.png"),
+       height = 6, width = 6, dpi = 400)
+}
+```
+# 0.14. plot turbidity time series for each site/year (showing loggers)
+```{r}
+unique(p$site)
+#  [1] "TNC_10" "TNC_18" "TNC_19" "TNC_2"  "TNC_28" "TNC_5"  "TNC_8" 
+#  [8] "TNC_9"  "TNC_16" "TNC_24" "TNC_4"  "TNC_13" "TNC_81" "TNC_80"
+# [15] "TNC_23" "TNC_25" "TNC_26" "TNC_27"
+
+# get list of sites with turbidity data
+turbsites <- unique(p[is.na(p$turb)==F,]$site)
+
+# first create "turb_by_date_year_site_logger" folder if needed
+if(!dir.exists("output/Task0_Compile_Initial_QC/turb_by_date_year_site_logger")){
+dir.create("output/Task0_Compile_Initial_QC/turb_by_date_year_site_logger") 
+}
+
+for(station in turbsites){
+  print(paste0("working on... ", station))
+# station = "TNC_2"
+p %>%
+  filter(FLAG_NTU == 0,
+         site == station) %>%
+  ggplot() +
+ geom_point(aes(x = yday(datetime), y = turb+0.1, color = logger), 
+             shape = 1, alpha = 0.5, size = 0.1) +
+  facet_wrap(~year) +
+  scale_color_manual(values = wes_palette("Darjeeling1")) +
+  theme_bw() +
+  theme(text = element_text(size = 14),
+        legend.position = "none",
+        strip.background = element_rect(fill = "white")) +
+  labs(y = "Turbidity", x = "Day of year",
+       title = station) +
+  scale_y_log10()
+
+ggsave(paste0(plotsave, "turb_by_date_year_site_logger/", 
+              station, "_turb.png"),
        height = 6, width = 6, dpi = 400)
 }
 ```
